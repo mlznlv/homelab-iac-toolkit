@@ -101,10 +101,13 @@ Approve:
 - Review-thread resolution requirements.
 - Administrator/bypass policy.
 - Force-push policy.
-- Branch-deletion policy.
+- Post-merge source-branch cleanup policy requiring every repository-owned PR branch to be deleted after a successful merge.
+- Whether GitHub's automatic deletion of merged head branches should be enabled.
 - Signed-commit policy, if any.
 - Linear-history policy, if any.
 - Controls deferred until CI exists.
+
+The policy must never authorize deletion of `main`. It must distinguish repository-owned PR branches from external-fork branches that this repository does not control, and it must require an explicit cleanup decision for abandoned or unmerged branches.
 
 ### AP-006 — Approve the security-disclosure mechanism
 
@@ -1445,3 +1448,12 @@ Maintenance must preserve historical context, identify invalidated work, avoid a
 - [ ] Required validation is explicit.
 - [ ] Risks and destructive impact are explicit.
 - [ ] The handoff contains no unrelated future tickets.
+
+### E. POST-MERGE CLEANUP GATE
+
+- [ ] The PR merged successfully.
+- [ ] The linked Issue and execution status were reconciled where applicable.
+- [ ] The merged repository-owned source branch was deleted.
+- [ ] No stale branch was retained without an explicit documented reason.
+
+Never delete `main`. Do not assume external-fork branches are controlled by this repository. Abandoned or unmerged branches require an explicit cleanup decision; this post-merge gate does not authorize their automatic deletion.
