@@ -1,11 +1,11 @@
 name: Implementation task
-description: Implement one approved specification.
+description: Track implementation of one approved specification.
 title: "[Task]: "
 body:
   - type: markdown
     attributes:
       value: |
-        Claude Code implements one approved specification at a time. Do not expand scope or introduce architecture decisions during implementation.
+        Link one approved specification and track its implementation. The specification remains the authoritative source for scope and requirements.
 
   - type: input
     id: spec
@@ -17,22 +17,20 @@ body:
       required: true
 
   - type: textarea
-    id: changes
+    id: implementation_status
     attributes:
-      label: Required changes
-      description: Summarize the implementation work defined by the specification.
+      label: Implementation status
+      description: Record current progress and blockers without restating the specification.
+      placeholder: "Not started."
     validations:
       required: true
 
   - type: textarea
-    id: validation
+    id: validation_status
     attributes:
-      label: Validation
-      description: List the checks that must pass before review.
-      placeholder: |
-        - [ ] Relevant automated checks pass
-        - [ ] Documentation is updated where required
-        - [ ] No private or environment-specific data is included
+      label: Validation status
+      description: Record validation completed or still required.
+      placeholder: "Not run."
     validations:
       required: true
 
