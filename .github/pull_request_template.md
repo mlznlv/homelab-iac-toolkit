@@ -2,7 +2,7 @@
 
 <!-- What changed and why? -->
 
-## Approved spec
+## Approved specification
 
 <!-- Link the specification implemented by this PR. -->
 
@@ -15,6 +15,7 @@ Closes #
 ## Review checklist
 
 - [ ] The change stays within the approved specification.
+- [ ] No unrelated changes are included.
 - [ ] Architecture decisions are documented and approved outside this PR.
 - [ ] Documentation and examples are updated where needed.
 - [ ] No secrets, private deployment data, or generated state are included.
