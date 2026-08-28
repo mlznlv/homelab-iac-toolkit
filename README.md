@@ -27,8 +27,6 @@ The project currently focuses on:
 - [age](https://age-encryption.org/)
 - [GitHub Actions](https://github.com/features/actions)
 
-This list describes the project direction, not currently available functionality.
-
 ## Repository model
 
 This public repository will contain reusable toolkit components, documentation, examples, and validation.
@@ -39,11 +37,11 @@ Everything in this repository must be safe to publish and must not contain real 
 
 ## Status
 
-The project is currently in its bootstrap, pre-release stage, with its initial roadmap and design documentation being developed.
+The project is currently in its bootstrap, pre-release stage.
 
 ## Roadmap and documentation
 
-The project roadmap, architecture documentation, and Architecture Decision Records will be added as the design is developed and approved.
+The roadmap, architecture documentation, and Architecture Decision Records will live in this repository as they are developed and approved.
 
 ## License
 
