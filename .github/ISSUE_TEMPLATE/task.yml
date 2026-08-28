@@ -1,0 +1,43 @@
+name: Implementation task
+description: Track implementation of one approved specification.
+title: "[Task]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Link one approved specification and track its implementation. The specification remains the authoritative source for scope and requirements.
+
+  - type: input
+    id: spec
+    attributes:
+      label: Approved specification
+      description: Link the approved specification implemented by this task.
+      placeholder: "#123"
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation_status
+    attributes:
+      label: Implementation status
+      description: Record current progress and blockers without restating the specification.
+      placeholder: "Not started."
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation_status
+    attributes:
+      label: Validation status
+      description: Record validation completed or still required.
+      placeholder: "Not run."
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: readiness
+    attributes:
+      label: Ready for implementation
+      options:
+        - label: The linked specification is approved and has no unresolved architecture decisions.
+          required: true
