@@ -10,9 +10,9 @@ body:
   - type: input
     id: roadmap
     attributes:
-      label: Roadmap item
-      description: Link the approved roadmap issue this specification supports.
-      placeholder: "#123"
+      label: Approved roadmap reference
+      description: Link the approved roadmap entry or document this specification supports.
+      placeholder: "docs/roadmap.md#approved-item"
     validations:
       required: true
 
@@ -36,6 +36,16 @@ body:
       required: true
 
   - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: List related changes that are explicitly excluded.
+      placeholder: |
+        - Excluded change
+    validations:
+      required: true
+
+  - type: textarea
     id: acceptance
     attributes:
       label: Acceptance criteria
@@ -43,6 +53,14 @@ body:
       placeholder: |
         - [ ] Criterion one
         - [ ] Criterion two
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: Link accepted decisions, prerequisite work, or known blockers. Write "None" if there are none.
     validations:
       required: true
 
@@ -62,3 +80,11 @@ body:
       description: How will the implementation be checked?
     validations:
       required: true
+
+  - type: checkboxes
+    id: public_safety
+    attributes:
+      label: Public safety
+      options:
+        - label: The specified work can be implemented without committing secrets, private deployment data, or generated state.
+          required: true
