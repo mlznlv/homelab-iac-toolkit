@@ -1,0 +1,64 @@
+name: Specification
+description: Define an implementation-ready unit of work from an approved roadmap item.
+title: "[Spec]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Specifications are owned by Product Ownership. Architecture & PR Review confirms architectural alignment before implementation starts.
+
+  - type: input
+    id: roadmap
+    attributes:
+      label: Roadmap item
+      description: Link the approved roadmap issue this specification supports.
+      placeholder: "#123"
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: State the user-visible or repository outcome.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List the changes included in this specification.
+      placeholder: |
+        - Included change
+        - Included change
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use concrete, testable criteria.
+      placeholder: |
+        - [ ] Criterion one
+        - [ ] Criterion two
+    validations:
+      required: true
+
+  - type: textarea
+    id: architecture
+    attributes:
+      label: Architecture alignment
+      description: Link accepted decisions and relevant documentation. Flag any decision still required; do not decide architecture here.
+      placeholder: "Links or: Architecture review required"
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: How will the implementation be checked?
+    validations:
+      required: true
