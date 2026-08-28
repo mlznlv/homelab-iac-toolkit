@@ -10,12 +10,10 @@ This project separates the reusable toolkit from the concrete deployment. The go
 
 ## Goals
 
-- Provide reusable and composable infrastructure and configuration building blocks.
-- Support reproducible and reviewable homelab workflows.
-- Keep public toolkit code separate from private deployments.
-- Favor clear interfaces, deterministic behavior, and low magic.
-- Validate public components without requiring access to a private homelab.
-- Document changes and provide migration guidance as interfaces mature.
+- Provide reusable infrastructure and configuration building blocks.
+- Make homelab environments easier to reproduce and maintain.
+- Make infrastructure changes easier to understand and review.
+- Keep reusable public code separate from private deployments.
 
 ## Technology
 
@@ -39,19 +37,13 @@ A separate private deployment repository will contain concrete environment confi
 
 Everything in this repository must be safe to publish and must not contain real secrets or private deployment data.
 
-[`mlznlv/dotfiles`](https://github.com/mlznlv/dotfiles) is a separate optional public project and is not required by this toolkit.
-
 ## Status
 
-The project is currently in its bootstrap, pre-release stage.
-
-Architecture, public interfaces, compatibility, and initial capabilities are still being designed. The project does not yet claim stable APIs, production readiness, or supported releases.
+The project is currently in its bootstrap, pre-release stage, with its initial roadmap and design documentation being developed.
 
 ## Roadmap and documentation
 
 The project roadmap, architecture documentation, and Architecture Decision Records will be added as the design is developed and approved.
-
-Until then, planned components should not be treated as implemented or stable.
 
 ## License
 
