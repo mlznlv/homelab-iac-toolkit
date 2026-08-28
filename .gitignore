@@ -1,0 +1,24 @@
+# OpenTofu working data and sensitive outputs
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Local environment and secret material
+.env
+.env.*
+!.env.example
+*.decrypted.*
+*.secret
+
+# Private deployment data
+inventory/private/
+inventories/private/
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+*.swp
+*~
