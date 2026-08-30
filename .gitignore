@@ -17,19 +17,17 @@ crash.*.log
 .env
 .env.*
 !.env.example
+!.env.*.example
 *.decrypted.*
 *.secret
 
 # Key material. age and SSH private keys decrypt everything else, so they live
 # outside this repository entirely; only the SOPS-encrypted form is committed.
-*.pem
 *.key
 *.p12
 *.pfx
 *.agekey
 *.age-key
-key.txt
-keys.txt
 id_rsa
 id_dsa
 id_ecdsa
@@ -57,7 +55,5 @@ inventories/private/
 Thumbs.db
 *.swp
 *~
-.vscode/
-.idea/
 __pycache__/
 .venv/
