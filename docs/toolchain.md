@@ -68,11 +68,18 @@ python -m pip install --requirement requirements-dev.txt
 ```
 
 Install each runtime and standalone tool at its declared version from the
-upstream project listed above, or let a version manager that reads
-`.tool-versions`, such as [mise](https://mise.jdx.dev/) or
-[asdf](https://asdf-vm.com/), install them. A version manager is a convenience
-and is not required; what matters is that the installed versions match the
-declarations.
+upstream project listed above, or install all of them with
+[mise](https://mise.jdx.dev/), which reads `.tool-versions` directly:
+
+```sh
+mise install
+```
+
+A version manager is a convenience and is not required; what matters is that the
+installed versions match the declarations. Version managers differ in what they
+accept: mise resolves a declared runtime series to its current patch release,
+while others require an exact version and use their own tool names. Confirm the
+result with the commands below whichever way the tools were installed.
 
 ## Checking installed versions
 
