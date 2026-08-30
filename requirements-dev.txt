@@ -1,0 +1,18 @@
+# Supported versions of the Python packages used to develop and validate this
+# repository.
+#
+# This file is the authoritative declaration for the Python package dependency
+# class. Language runtimes and standalone command-line tools are declared in
+# .tool-versions. See docs/toolchain.md for how to read, obtain, and change
+# these versions.
+#
+# Install into a virtual environment with:
+#
+#     python -m pip install --requirement requirements-dev.txt
+#
+# ansible-core provides the Ansible engine only. Collection dependencies are
+# declared by the milestone that introduces Ansible content.
+
+ansible-core==2.21.3
+check-jsonschema==0.36.1
+yamllint==1.37.1
