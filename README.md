@@ -41,7 +41,7 @@ The project is currently in its bootstrap, pre-release stage.
 
 ## Roadmap and documentation
 
-The roadmap, architecture documentation, and Architecture Decision Records will live in this repository as they are developed and approved.
+The [roadmap](docs/roadmap.md), architecture documentation, and Architecture Decision Records will live in this repository as they are developed and approved.
 
 ## License
 
