@@ -1,0 +1,4 @@
+config:
+  # GitHub templates are fragments rather than standalone documents.
+  first-line-heading: false
+  line-length: false
