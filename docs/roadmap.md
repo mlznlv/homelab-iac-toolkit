@@ -5,7 +5,7 @@
 - **Current phase:** M1 — Architecture and roadmap baseline
 - **Implementation state:** No Developer work item is Ready.
 - **Current blocker:** Foundational architecture baseline.
-**Next action:** Architecture defines and commits the foundational architecture baseline.
+- **Next action:** Architecture defines and commits the foundational architecture baseline.
 
 The repository already includes its public project contract, license, public-safety rules, editor defaults, contribution templates, dependency automation, CI and validation foundations, and shared Claude Code configuration. These artifacts must be reviewed and reconciled with accepted Architecture where they depend on decisions not yet recorded.
 
