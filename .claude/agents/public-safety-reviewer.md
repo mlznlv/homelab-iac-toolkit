@@ -32,6 +32,7 @@ Judge by whether a value is **real**, not by whether it looks sensitive. A place
 - **Generated state**: `*.tfstate` and its backups, `*.tfplan`, `.terraform/` contents, crash logs, Ansible retry files, rendered output.
 
 Distinguish carefully:
+
 - **Documentation and examples may show shapes**, and should — `proxmox_node = "pve-01"` in an `.example` file teaches the interface. Ask whether the value is a teaching placeholder or a real environment leaking through. RFC 5737 addresses (`192.0.2.0/24`), RFC 2606 domains (`example.com`), and obvious stand-ins are the safe forms.
 - **A committed `.example` file is the intended mechanism** for showing what a private value looks like. Flag the absence of one when a module requires configuration but ships no example.
 
