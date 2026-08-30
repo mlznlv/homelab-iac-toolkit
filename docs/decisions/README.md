@@ -17,7 +17,7 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 
 | ADR | Title | Status |
 | --- | --- | --- |
-| [0001](0001-public-toolkit-private-deployment-boundary.md) | Public toolkit and private deployment boundary | Proposed |
-| [0002](0002-lifecycle-orchestration-ownership.md) | Lifecycle and orchestration ownership | Proposed |
-| [0003](0003-development-environment-tool-version-policy.md) | Development environment and tool-version policy | Proposed |
-| [0004](0004-local-validation-task-ci-security-boundary.md) | Local validation, Task, and CI security boundary | Proposed |
+| [0001](0001-public-toolkit-private-deployment-boundary.md) | Public toolkit and private deployment boundary | Accepted |
+| [0002](0002-lifecycle-orchestration-ownership.md) | Lifecycle and orchestration ownership | Accepted |
+| [0003](0003-development-environment-tool-version-policy.md) | Development environment and tool-version policy | Accepted |
+| [0004](0004-local-validation-task-ci-security-boundary.md) | Local validation, Task, and CI security boundary | Accepted |
