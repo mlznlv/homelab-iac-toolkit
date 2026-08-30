@@ -6,6 +6,13 @@
 crash.log
 crash.*.log
 
+# Variable files hold environment-specific values; commit the examples instead.
+# The provider lock file (.terraform.lock.hcl) is deliberately not ignored.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
+
 # Local environment and secret material
 .env
 .env.*
@@ -13,12 +20,44 @@ crash.*.log
 *.decrypted.*
 *.secret
 
+# Key material. age and SSH private keys decrypt everything else, so they live
+# outside this repository entirely; only the SOPS-encrypted form is committed.
+*.pem
+*.key
+*.p12
+*.pfx
+*.agekey
+*.age-key
+key.txt
+keys.txt
+id_rsa
+id_dsa
+id_ecdsa
+id_ed25519
+
 # Private deployment data
 inventory/private/
 inventories/private/
 
-# Editor and operating-system files
+# Ansible working data and the plaintext secret convention
+*.retry
+.ansible/
+**/group_vars/secrets.yml
+**/host_vars/secrets.yml
+
+# Task runner state
+.task/
+
+# Claude Code personal overrides. The shared project configuration in
+# .claude/ (settings.json, hooks, agents) is committed.
+.claude/settings.local.json
+
+# Editor, operating-system and language tooling files
 .DS_Store
 Thumbs.db
 *.swp
 *~
+.vscode/
+.idea/
+__pycache__/
+.venv/
