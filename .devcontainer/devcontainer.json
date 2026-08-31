@@ -1,0 +1,20 @@
+// Canonical development environment for this repository.
+//
+// The image built from ./Dockerfile already contains the toolchain declared by
+// .tool-versions and requirements-dev.txt. No mounts, features, credentials or
+// privileged host interfaces are declared here, because normal validation needs
+// none of them and nothing here is pointed at a deployment.
+{
+  "name": "homelab-iac-toolkit",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+
+  // Re-reads the workspace declarations, so a checkout whose .tool-versions has
+  // moved ahead of the image is reconciled, and prints the resolved versions.
+  // The workspace is trusted through MISE_TRUSTED_CONFIG_PATHS in the image.
+  "postCreateCommand": "mise install --yes && mise current"
+}

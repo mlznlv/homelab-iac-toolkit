@@ -62,6 +62,9 @@ grep '^yamllint==' requirements-dev.txt
 
 ## Obtaining the supported versions
 
+The [development environment](development-environment.md) installs all of these
+from the declarations below, and is the canonical way to obtain them.
+
 Install the Python packages into a virtual environment:
 
 ```sh

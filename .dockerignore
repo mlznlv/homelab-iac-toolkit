@@ -1,0 +1,5 @@
+# The container build only needs the version declarations; everything else is
+# excluded so the build context stays small and carries no local working data.
+*
+!.tool-versions
+!requirements-dev.txt
