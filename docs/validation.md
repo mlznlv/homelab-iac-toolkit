@@ -31,11 +31,21 @@ python -m venv .venv
 .venv/bin/python -m pip install --requirement requirements-dev.txt
 ```
 
-The Python tools are invoked by path, as `.venv/bin/yamllint` and
-`.venv/bin/check-jsonschema`, so the commands below behave the same whether or
-not the virtual environment is activated in the calling shell. For a virtual
-environment kept somewhere else, run the tools from that path directly, or
-override the Task variable: `task validate VENV_BIN=path/to/bin`.
+The commands on this page invoke the Python tools by path, as
+`.venv/bin/yamllint` and `.venv/bin/check-jsonschema`, so they behave the same
+whether or not the virtual environment is activated in the calling shell.
+
+The Task wrappers resolve those two tools when Task starts. They use `.venv/bin`
+when the tools there run, and otherwise take them from `PATH`, which is how an
+environment that already provides the declared packages supplies them; a printed
+command of bare `yamllint` means it came from `PATH`. Each candidate is probed
+by running it rather than by testing that the file exists, because a virtual
+environment built on one platform and then used from another is present and
+executable yet cannot run there. If neither source provides a working tool, the
+task stops with the setup instruction above rather than a command-not-found
+error. For a virtual environment kept somewhere else, run the tools from that
+path directly, or override the Task variable:
+`task validate VENV_BIN=path/to/bin`.
 
 Run every command on this page from the repository root. `.venv/` is ignored by
 git and is never committed.

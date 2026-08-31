@@ -20,13 +20,30 @@ version: '3'
 set: [pipefail]
 
 vars:
-  # The Python validation tools are installed from requirements-dev.txt into a
-  # virtual environment, so they are invoked by path rather than by name: the
-  # command a task prints is then the same command docs/validation.md documents,
-  # with no dependence on which environment the calling shell has activated.
-  # For a virtual environment kept elsewhere, override it on the command line:
+  # The directory to prefer for the Python validation tools that
+  # requirements-dev.txt installs. For a virtual environment kept somewhere
+  # else, override it on the command line:
   # `task validate VENV_BIN=path/to/bin`.
   VENV_BIN: .venv/bin
+
+  # The prefix the tasks below actually invoke those tools with, resolved each
+  # time Task starts: the directory above when the tools there run, and
+  # otherwise empty, so the tools are taken from PATH as a development
+  # container provides them.
+  #
+  # Each candidate is probed by running it rather than by testing that the file
+  # exists. A virtual environment built on the host and then bind-mounted into a
+  # container of another platform is present and executable, yet cannot run
+  # there, so an existence test would select a tool that fails at use.
+  #
+  # An empty result is not assumed to be working: every task using these tools
+  # has a precondition that runs the resolved command before the check does.
+  # The probe is delegated to /bin/sh because Task's own shell reports a binary
+  # it cannot execute as a fatal error rather than as a failed command, which
+  # is precisely the case being probed for. The trailing `exit 0` keeps an
+  # unusable candidate from failing the whole run.
+  PYTHON_TOOL_PREFIX:
+    sh: sh -c '"{{.VENV_BIN}}/yamllint" --version >/dev/null 2>&1 && "{{.VENV_BIN}}/check-jsonschema" --version >/dev/null 2>&1 && printf "%s/" "{{.VENV_BIN}}"; exit 0'
 
 tasks:
   default:
@@ -72,22 +89,22 @@ tasks:
   validate:yaml:
     desc: 'GitHub configuration: lint tracked YAML.'
     preconditions:
-      - sh: test -x {{.VENV_BIN}}/yamllint
-        msg: '{{.VENV_BIN}}/yamllint is missing. See docs/validation.md for the setup commands.'
+      - sh: '{{.PYTHON_TOOL_PREFIX}}yamllint --version >/dev/null 2>&1'
+        msg: 'yamllint runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
     cmds:
       # The pathspec covers the file names yamllint selects by default: the two
       # YAML suffixes and its own configuration file.
-      - git ls-files -z '*.yml' '*.yaml' '.yamllint' | xargs -0 {{.VENV_BIN}}/yamllint
+      - git ls-files -z '*.yml' '*.yaml' '.yamllint' | xargs -0 {{.PYTHON_TOOL_PREFIX}}yamllint
 
   validate:schemas:
     desc: 'GitHub configuration: validate workflow, Dependabot, and Taskfile schemas.'
     preconditions:
-      - sh: test -x {{.VENV_BIN}}/check-jsonschema
-        msg: '{{.VENV_BIN}}/check-jsonschema is missing. See docs/validation.md for the setup commands.'
+      - sh: '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --version >/dev/null 2>&1'
+        msg: 'check-jsonschema runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
     cmds:
-      - '{{.VENV_BIN}}/check-jsonschema --builtin-schema github-workflows .github/workflows/*.yml'
-      - '{{.VENV_BIN}}/check-jsonschema --builtin-schema dependabot .github/dependabot.yml'
-      - '{{.VENV_BIN}}/check-jsonschema --builtin-schema vendor.taskfile Taskfile.yml'
+      - '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --builtin-schema github-workflows .github/workflows/*.yml'
+      - '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --builtin-schema dependabot .github/dependabot.yml'
+      - '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --builtin-schema vendor.taskfile Taskfile.yml'
 
   validate:workflows:
     desc: 'GitHub configuration: lint GitHub Actions workflows.'
