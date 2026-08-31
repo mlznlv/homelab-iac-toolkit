@@ -41,9 +41,11 @@ id_ed25519
 key.txt
 keys.txt
 
-# Private deployment data
-inventory/private/
-inventories/private/
+# Private deployment data. The leading **/ matches these directories at any
+# depth, because a pattern containing a slash is otherwise anchored to the
+# repository root while the write-time hook matches them anywhere.
+**/inventory/private/
+**/inventories/private/
 
 # Ansible working data and the plaintext secret convention. These names denote
 # the plaintext form wherever they appear, including group_vars and host_vars,
@@ -56,10 +58,9 @@ secrets.yaml
 # Task runner state
 .task/
 
-# Claude Code personal overrides and local session history. The shared project
-# configuration in .claude/ (settings.json, hooks, agents) is committed.
+# Claude Code personal overrides. The shared project configuration in
+# .claude/ (settings.json, hooks, agents) is committed.
 .claude/settings.local.json
-.remember/
 
 # Editor, operating-system and language tooling files
 .DS_Store

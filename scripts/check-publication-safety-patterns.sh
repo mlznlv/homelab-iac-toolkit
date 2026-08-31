@@ -11,7 +11,7 @@
 # ignored but remains writable, because tools legitimately produce it.
 #
 # Usage: scripts/check-publication-safety-patterns.sh
-# Requires: git, and the jq the hook itself depends on.
+# Requires: git, and the jq declared in .tool-versions, which the hook needs too.
 
 set -euo pipefail
 
@@ -67,7 +67,10 @@ echo
 echo "Private inventory, which no placeholder suffix rescues:"
 check "inventory/private/hosts.yml"                ignored denied
 check "inventories/private/group_vars/all.yml"     ignored denied
+check "ansible/inventory/private/hosts.yml"        ignored denied
+check "fictional/deep/inventories/private/all.yml" ignored denied
 check "inventory/private/hosts.yml.example"        ignored denied
+check "ansible/inventory/private/hosts.yml.example" ignored denied
 
 echo
 echo "Environment and variable files, with their placeholder forms:"
@@ -129,7 +132,6 @@ check "fictional.retry"                            ignored allowed
 check ".venv/bin/python"                           ignored allowed
 check "__pycache__/fictional.pyc"                  ignored allowed
 check ".claude/settings.local.json"                ignored allowed
-check ".remember/now.md"                           ignored allowed
 
 echo
 if [ "$failures" -eq 0 ]; then
