@@ -31,21 +31,26 @@ python -m venv .venv
 .venv/bin/python -m pip install --requirement requirements-dev.txt
 ```
 
-The commands on this page invoke the Python tools by path, as
-`.venv/bin/yamllint` and `.venv/bin/check-jsonschema`, so they behave the same
-whether or not the virtual environment is activated in the calling shell.
+An environment that already provides the declared packages on `PATH` needs
+none of that, and the commands on this page are written for both cases: they
+name `yamllint` and `check-jsonschema` plainly. When the packages come from a
+virtual environment, put it on `PATH` first, either by activating it:
 
-The Task wrappers resolve those two tools when Task starts. They use `.venv/bin`
-when the tools there run, and otherwise take them from `PATH`, which is how an
-environment that already provides the declared packages supplies them; a printed
-command of bare `yamllint` means it came from `PATH`. Each candidate is probed
-by running it rather than by testing that the file exists, because a virtual
-environment built on one platform and then used from another is present and
-executable yet cannot run there. If neither source provides a working tool, the
-task stops with the setup instruction above rather than a command-not-found
-error. For a virtual environment kept somewhere else, run the tools from that
-path directly, or override the Task variable:
-`task validate VENV_BIN=path/to/bin`.
+```sh
+. .venv/bin/activate
+```
+
+or by prefixing those two commands with `.venv/bin/`.
+
+The Task wrappers do that resolution themselves, so `task validate` needs no
+activation in either case. They use `.venv/bin` when the tools there run, and
+otherwise take them from `PATH`; a printed command of bare `yamllint` means it
+came from `PATH`. Each candidate is probed by running it rather than by testing
+that the file exists, because a virtual environment built on one platform and
+then used from another is present and executable yet fails at use. If neither
+source provides a working tool, the task stops with the setup instruction above
+rather than a command-not-found error. For a virtual environment kept somewhere
+else, override the Task variable: `task validate VENV_BIN=path/to/bin`.
 
 Run every command on this page from the repository root. `.venv/` is ignored by
 git and is never committed.
@@ -92,7 +97,7 @@ covers the file names yamllint selects by default: the two YAML suffixes and its
 own configuration file.
 
 ```sh
-git ls-files -z '*.yml' '*.yaml' '.yamllint' | xargs -0 .venv/bin/yamllint
+git ls-files -z '*.yml' '*.yaml' '.yamllint' | xargs -0 yamllint
 ```
 
 Task entry point: `task validate:yaml`.
@@ -101,9 +106,9 @@ Validate the repository's GitHub metadata and its Taskfile against their
 published schemas.
 
 ```sh
-.venv/bin/check-jsonschema --builtin-schema github-workflows .github/workflows/*.yml
-.venv/bin/check-jsonschema --builtin-schema dependabot .github/dependabot.yml
-.venv/bin/check-jsonschema --builtin-schema vendor.taskfile Taskfile.yml
+check-jsonschema --builtin-schema github-workflows .github/workflows/*.yml
+check-jsonschema --builtin-schema dependabot .github/dependabot.yml
+check-jsonschema --builtin-schema vendor.taskfile Taskfile.yml
 ```
 
 Task entry point: `task validate:schemas`.
