@@ -27,14 +27,16 @@ What exists today:
 - **Contribution governance:** the Issue templates and [`pull_request_template.md`](.github/pull_request_template.md) described below, plus [`dependabot.yml`](.github/dependabot.yml).
 - **Declared tool versions:** [`.tool-versions`](.tool-versions) for language runtimes and standalone command-line tools, and [`requirements-dev.txt`](requirements-dev.txt) for Python packages. These declarations are authoritative for supported versions; [`docs/toolchain.md`](docs/toolchain.md) explains how to read, obtain, check and change them.
 - **Validation configuration:** [`.markdownlint-cli2.yaml`](.markdownlint-cli2.yaml), [`.yamllint`](.yamllint) and [`.editorconfig`](.editorconfig).
+- **Local validation:** [`docs/validation.md`](docs/validation.md) documents the direct command behind every current check, and [`Taskfile.yml`](Taskfile.yml) wraps them as discoverable entry points, with `task validate` running the whole set. Both work without the other: the direct commands need no Task, and the wrappers only invoke what the documentation shows.
+- **Canonical development environment:** [`.devcontainer/`](.devcontainer) builds the supported toolchain from the declarations above, and [`docs/development-environment.md`](docs/development-environment.md) explains how to open and check it. Native development remains supported when the installed versions match.
 - **Publication-safety controls:** [`.gitignore`](.gitignore), which applies to every contributor, and the optional write-time hook described below. [`scripts/check-publication-safety-patterns.sh`](scripts/check-publication-safety-patterns.sh) asserts that the two agree; it creates no files, needs only `git` and the declared `jq`, and can be run today.
 - **Continuous integration:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which is currently the definition of what is checked on every pull request.
 
 What does not exist yet, and must not be written about as though it did:
 
 - **No toolkit source.** There is no `tofu/`, `ansible/` or `examples/` content. Their approved placement is in the repository design; the components themselves are later milestone work.
-- **No repository-owned local validation entry point, Task interface or Dev Container.** The architecture and ADRs 0003 and 0004 approve these as the shape of the contributor control plane, but none of them is implemented; the roadmap sequences that work. Until it lands, `.github/workflows/ci.yml` is the accurate description of the checks, run with the versions declared in `.tool-versions` and `requirements-dev.txt`.
-- **No build system or test suite,** so there are no build or test commands to run.
+- **No reconciled continuous integration.** The workflow still defines its checks inline and repeats several declared tool versions rather than consuming the declarations and the local check definitions; the roadmap sequences that work. Local validation and CI therefore express the same expectations today by agreement rather than by construction, and a change to one has to be carried to the other.
+- **No build system or test suite.** The commands that exist validate the repository's own content; there is nothing to build or unit-test yet.
 
 Do not document a command, path or setup procedure here or anywhere else in this repository without running it first.
 
