@@ -37,6 +37,7 @@ other tool is pinned to an exact release.
 | gitleaks | `.tool-versions` | Secret scanning | [gitleaks/gitleaks](https://github.com/gitleaks/gitleaks) |
 | lychee | `.tool-versions` | Documentation link checking | [lycheeverse/lychee](https://github.com/lycheeverse/lychee) |
 | zizmor | `.tool-versions` | GitHub Actions security auditing | [zizmorcore/zizmor](https://github.com/zizmorcore/zizmor) |
+| jq | `.tool-versions` | JSON handling in the publication-safety checks and the optional write-time hook | [jqlang/jq](https://github.com/jqlang/jq) |
 | ansible-core | `requirements-dev.txt` | Guest configuration management | [ansible-core](https://pypi.org/project/ansible-core/) |
 | check-jsonschema | `requirements-dev.txt` | GitHub metadata schema validation | [check-jsonschema](https://pypi.org/project/check-jsonschema/) |
 | yamllint | `requirements-dev.txt` | YAML linting | [yamllint](https://pypi.org/project/yamllint/) |
@@ -96,6 +97,7 @@ result with the commands below whichever way the tools were installed.
 | gitleaks | `gitleaks version` |
 | lychee | `lychee --version` |
 | zizmor | `zizmor --version` |
+| jq | `jq --version` |
 | ansible-core | `ansible --version` |
 | check-jsonschema | `check-jsonschema --version` |
 | yamllint | `yamllint --version` |

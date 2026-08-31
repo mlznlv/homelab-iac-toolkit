@@ -3,6 +3,7 @@
 *.tfstate
 *.tfstate.*
 *.tfplan
+*.tfplan.*
 crash.log
 crash.*.log
 
@@ -18,12 +19,16 @@ crash.*.log
 .env.*
 !.env.example
 !.env.*.example
+*.decrypted
 *.decrypted.*
 *.secret
+*.secrets
 
 # Key material. age and SSH private keys decrypt everything else, so they live
 # outside this repository entirely; only the SOPS-encrypted form is committed.
+# Public certificates share the .pem suffix; commit those as .pem.example.
 *.key
+*.pem
 *.p12
 *.pfx
 *.agekey
@@ -32,16 +37,23 @@ id_rsa
 id_dsa
 id_ecdsa
 id_ed25519
+# Default identity filenames of age-keygen and SOPS_AGE_KEY_FILE.
+key.txt
+keys.txt
 
-# Private deployment data
-inventory/private/
-inventories/private/
+# Private deployment data. The leading **/ matches these directories at any
+# depth, because a pattern containing a slash is otherwise anchored to the
+# repository root while the write-time hook matches them anywhere.
+**/inventory/private/
+**/inventories/private/
 
-# Ansible working data and the plaintext secret convention
+# Ansible working data and the plaintext secret convention. These names denote
+# the plaintext form wherever they appear, including group_vars and host_vars,
+# so a committed SOPS-encrypted file carries a different name.
 *.retry
 .ansible/
-**/group_vars/secrets.yml
-**/host_vars/secrets.yml
+secrets.yml
+secrets.yaml
 
 # Task runner state
 .task/

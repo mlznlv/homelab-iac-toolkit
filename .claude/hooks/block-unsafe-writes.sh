@@ -9,7 +9,11 @@
 #
 # The deny list mirrors .gitignore so that the two agree on what "unsafe to
 # publish" means; .gitignore keeps such files out of a commit, this hook keeps
-# them from being written in the first place.
+# them from being written in the first place. The hook is optional defense in
+# depth for Claude Code sessions only: repository safety rests on .gitignore
+# and the public-safety checks in CI, which apply to every contributor.
+#
+# scripts/check-publication-safety-patterns.sh asserts that both controls agree.
 
 input=$(cat)
 path=$(jq -r '.tool_input.file_path // empty' <<<"$input")
@@ -28,28 +32,38 @@ deny() {
   exit 0
 }
 
-# Templates and examples carry no real values, so they stay writable even when
-# their name would otherwise match a pattern below.
-case "$base" in
-  *.example|*.example.*|*.sample|*.sample.*|*.tpl|*.tmpl) exit 0 ;;
-esac
-
+# Generated state, sensitive plans, decrypted material and private inventory
+# have no public-safe form, so no placeholder suffix rescues them. These rules
+# are checked before the exception below, matching .gitignore, which ignores
+# those forms as well.
 case "$path" in
   */inventory/private/*|*/inventories/private/*|inventory/private/*|inventories/private/*)
     deny "Private inventory data belongs in the private deployment repository, not in this public toolkit (CLAUDE.md: public/private split)." ;;
 esac
 
 case "$base" in
-  *.tfstate|*.tfstate.*|*.tfplan)
+  *.tfstate|*.tfstate.*|*.tfplan|*.tfplan.*)
     deny "OpenTofu/Terraform state and plan files are generated state and must never be committed to this public repository (CLAUDE.md: no generated state)." ;;
+  *.decrypted|*.decrypted.*)
+    deny "Decrypted secret material must never be committed. Commit only the SOPS-encrypted form." ;;
+esac
+
+# Placeholders carry no real values, so they stay writable even when their name
+# would otherwise match a pattern below. `.example` is the only sanctioned
+# placeholder suffix, and .gitignore negates the same form.
+case "$base" in
+  *.example|*.example.*) exit 0 ;;
+esac
+
+case "$base" in
   .env|.env.*)
     deny "Environment files hold real configuration values. Use a committed .env.example instead (CLAUDE.md: nothing unsafe to publish)." ;;
-  *.tfvars|*.tfvars.json|*.auto.tfvars|*.auto.tfvars.json)
+  *.tfvars|*.tfvars.json)
     deny "Variable files carry environment-specific values and belong in the private deployment repository. Commit a .tfvars.example instead." ;;
-  *.pem|*.key|*.p12|*.pfx|id_rsa|id_dsa|id_ecdsa|id_ed25519|*.agekey|*.age-key)
+  *.pem|*.key|*.p12|*.pfx|id_rsa|id_dsa|id_ecdsa|id_ed25519|*.agekey|*.age-key|key.txt|keys.txt)
     deny "Private key material must never be committed. Encrypt secrets with SOPS + age and keep the keys outside this repository." ;;
-  *.decrypted|*.decrypted.*|*.secret|*.secrets|secrets.yml|secrets.yaml)
-    deny "Decrypted or plaintext secret material must never be committed. Commit only the SOPS-encrypted form." ;;
+  *.secret|*.secrets|secrets.yml|secrets.yaml)
+    deny "Plaintext secret material must never be committed. Commit only the SOPS-encrypted form." ;;
   crash.log|crash.*.log)
     deny "Crash logs are generated state and can contain environment details; they are excluded from this repository." ;;
 esac
