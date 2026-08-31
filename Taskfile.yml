@@ -1,0 +1,115 @@
+# Developer workflow entry points for this repository.
+#
+# Every task below is a thin wrapper around a command documented in
+# docs/validation.md that can also be run directly, without Task. Task prints
+# each command before running it, so a task never does more than it shows.
+#
+# Task orchestrates workflow only. Nothing here owns infrastructure state, runs
+# an infrastructure apply or destroy, decrypts secrets, reads a private
+# repository or inventory, or contacts deployment infrastructure. No task
+# declares `sources:` or `status:`, so no result is cached between runs and no
+# check is silently skipped.
+#
+# Tool versions come from .tool-versions and requirements-dev.txt; see
+# docs/toolchain.md.
+
+version: '3'
+
+# The Markdown, YAML, and link checks are pipelines, so a failure in the
+# file-listing stage must fail the task rather than being masked by the tool.
+set: [pipefail]
+
+vars:
+  # The Python validation tools are installed from requirements-dev.txt into a
+  # virtual environment, so they are invoked by path rather than by name: the
+  # command a task prints is then the same command docs/validation.md documents,
+  # with no dependence on which environment the calling shell has activated.
+  # For a virtual environment kept elsewhere, override it on the command line:
+  # `task validate VENV_BIN=path/to/bin`.
+  VENV_BIN: .venv/bin
+
+tasks:
+  default:
+    desc: List the available tasks.
+    cmds:
+      - task --list
+    silent: true
+
+  validate:
+    desc: Run every local validation check. Non-mutating; stops at the first failure.
+    cmds:
+      # Ordered cheapest and most local first, so the slowest check and the only
+      # one that needs network access run last.
+      - task: validate:whitespace
+      - task: validate:markdown
+      - task: validate:yaml
+      - task: validate:schemas
+      - task: validate:workflows
+      - task: validate:workflow-audit
+      - task: validate:public-safety
+      - task: validate:safety-patterns
+      - task: validate:secrets
+      - task: validate:links
+
+  validate:whitespace:
+    desc: 'Hygiene: check every tracked file for whitespace errors.'
+    cmds:
+      - git diff --check "$(git hash-object -t tree /dev/null)" HEAD
+
+  validate:markdown:
+    desc: 'Documentation: lint tracked Markdown.'
+    cmds:
+      # Scoped to tracked files: an untracked or ignored Markdown file in a
+      # local working tree is absent from a CI checkout, so linting it would
+      # make the local result diverge from CI. See docs/validation.md.
+      - git ls-files -z '*.md' | xargs -0 markdownlint-cli2
+
+  validate:links:
+    desc: 'Documentation: check links in tracked Markdown. Needs public network access.'
+    cmds:
+      - git ls-files -z '*.md' | xargs -0 lychee --no-progress
+
+  validate:yaml:
+    desc: 'GitHub configuration: lint tracked YAML.'
+    preconditions:
+      - sh: test -x {{.VENV_BIN}}/yamllint
+        msg: '{{.VENV_BIN}}/yamllint is missing. See docs/validation.md for the setup commands.'
+    cmds:
+      # The pathspec covers the file names yamllint selects by default: the two
+      # YAML suffixes and its own configuration file.
+      - git ls-files -z '*.yml' '*.yaml' '.yamllint' | xargs -0 {{.VENV_BIN}}/yamllint
+
+  validate:schemas:
+    desc: 'GitHub configuration: validate workflow, Dependabot, and Taskfile schemas.'
+    preconditions:
+      - sh: test -x {{.VENV_BIN}}/check-jsonschema
+        msg: '{{.VENV_BIN}}/check-jsonschema is missing. See docs/validation.md for the setup commands.'
+    cmds:
+      - '{{.VENV_BIN}}/check-jsonschema --builtin-schema github-workflows .github/workflows/*.yml'
+      - '{{.VENV_BIN}}/check-jsonschema --builtin-schema dependabot .github/dependabot.yml'
+      - '{{.VENV_BIN}}/check-jsonschema --builtin-schema vendor.taskfile Taskfile.yml'
+
+  validate:workflows:
+    desc: 'GitHub configuration: lint GitHub Actions workflows.'
+    cmds:
+      - actionlint
+
+  validate:workflow-audit:
+    desc: 'Security: audit GitHub Actions workflows.'
+    cmds:
+      - zizmor --no-online-audits .github/workflows/
+
+  validate:public-safety:
+    desc: 'Security: check tracked content for ignored files and personal paths.'
+    cmds:
+      - ./scripts/check-publication-safety.sh
+
+  validate:safety-patterns:
+    desc: 'Security: check that the publication-safety file controls agree.'
+    cmds:
+      - ./scripts/check-publication-safety-patterns.sh
+
+  validate:secrets:
+    desc: 'Security: scan repository history for secrets.'
+    cmds:
+      - gitleaks git --redact --verbose .

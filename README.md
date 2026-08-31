@@ -41,7 +41,7 @@ The project is currently in its bootstrap, pre-release stage.
 
 ## Roadmap and documentation
 
-See the [roadmap](docs/roadmap.md), [architecture](docs/architecture.md), [repository design](docs/repository-design.md), [supported tool versions](docs/toolchain.md), and [Architecture Decision Records](docs/decisions/README.md).
+See the [roadmap](docs/roadmap.md), [architecture](docs/architecture.md), [repository design](docs/repository-design.md), [supported tool versions](docs/toolchain.md), [local validation](docs/validation.md), and [Architecture Decision Records](docs/decisions/README.md).
 
 ## License
 
