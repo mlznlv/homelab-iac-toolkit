@@ -33,7 +33,7 @@ What exists today:
 What does not exist yet, and must not be written about as though it did:
 
 - **No toolkit source.** There is no `tofu/`, `ansible/` or `examples/` content. Their approved placement is in the repository design; the components themselves are later milestone work.
-- **No repository-owned local validation entry point, Task interface or Dev Container.** The architecture and ADRs 0003 and 0004 approve these as the shape of the contributor control plane, but the implementation is later work in the current milestone. Until it lands, `.github/workflows/ci.yml` is the accurate description of the checks, run with the versions declared in `.tool-versions` and `requirements-dev.txt`.
+- **No repository-owned local validation entry point, Task interface or Dev Container.** The architecture and ADRs 0003 and 0004 approve these as the shape of the contributor control plane, but none of them is implemented; the roadmap sequences that work. Until it lands, `.github/workflows/ci.yml` is the accurate description of the checks, run with the versions declared in `.tool-versions` and `requirements-dev.txt`.
 - **No build system or test suite,** so there are no build or test commands to run.
 
 Do not document a command, path or setup procedure here or anywhere else in this repository without running it first.
