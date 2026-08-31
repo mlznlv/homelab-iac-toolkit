@@ -2,9 +2,11 @@
 
 <!-- What changed and why? -->
 
-## Approved specification
+## Approved specification or Architecture authority
 
-<!-- Link the specification implemented by this PR. -->
+<!-- Developer implementation: link the approved specification this pull request implements.
+     Architecture-owned change: cite the roadmap item or Architecture document that authorizes
+     it, and state that no Developer specification applies. -->
 
 Closes #
 
@@ -14,8 +16,8 @@ Closes #
 
 ## Review checklist
 
-- [ ] The change stays within the approved specification.
+- [ ] The change stays within the approved specification, or within the cited roadmap or Architecture authority.
 - [ ] No unrelated changes are included.
-- [ ] Architecture decisions are documented and approved outside this PR.
+- [ ] Any architecture decision this change relies on is already accepted, or this is the Architecture-owned change that records it.
 - [ ] Documentation and examples are updated where needed.
 - [ ] No secrets, private deployment data, or generated state are included.

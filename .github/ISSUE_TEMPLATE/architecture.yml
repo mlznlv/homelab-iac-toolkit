@@ -1,0 +1,80 @@
+name: Architecture change
+description: Record an Architecture-owned change to the roadmap, architecture, repository design, or decisions.
+title: "[Architecture]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Architecture-owned changes are authorized by the approved roadmap or by accepted Architecture. They are not Developer implementation tickets and do not require an implementation specification. Use the Specification template for implementation work.
+
+  - type: input
+    id: authority
+    attributes:
+      label: Roadmap or Architecture authority
+      description: Link the approved roadmap item or Architecture document that authorizes this change.
+      placeholder: "docs/roadmap.md#architecture-prerequisites"
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: State the decision or durable documentation this change produces.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List the documents and decisions this change covers.
+      placeholder: |
+        - Included document or decision
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: List the related decisions and implementation work this change explicitly excludes.
+      placeholder: |
+        - Excluded decision or implementation work
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use concrete, checkable criteria, such as the documents committed and the decisions recorded.
+      placeholder: |
+        - [ ] Criterion one
+        - [ ] Criterion two
+    validations:
+      required: true
+
+  - type: textarea
+    id: reconciliation
+    attributes:
+      label: Reconciliation required
+      description: List the existing documentation, templates, configuration, or planned work this change obliges someone to reconcile. Write "None" if there is none.
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Validation
+      description: How will the change be checked? Documentation changes still run the repository's validation.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: public_safety
+    attributes:
+      label: Public safety
+      options:
+        - label: This change can be recorded without committing secrets, private deployment data, or generated state.
+          required: true

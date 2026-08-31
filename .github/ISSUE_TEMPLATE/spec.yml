@@ -7,6 +7,8 @@ body:
       value: |
         Specifications are owned by Product Ownership. Architecture & PR Review confirms architectural alignment before implementation starts.
 
+        This template is for Developer implementation work. Architecture-owned changes to the roadmap, architecture, repository design, or decisions use the Architecture change template instead.
+
   - type: input
     id: roadmap
     attributes:
@@ -68,7 +70,7 @@ body:
     id: architecture
     attributes:
       label: Architecture alignment
-      description: Link accepted decisions and relevant documentation. Flag any decision still required; do not decide architecture here.
+      description: Link accepted decisions and relevant documentation. Flag any decision still required and track it as an Architecture change; do not decide architecture here.
       placeholder: "Links or: Architecture review required"
     validations:
       required: true
