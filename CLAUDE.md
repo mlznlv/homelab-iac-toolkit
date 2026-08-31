@@ -2,33 +2,65 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status
+The project is a reusable, open-source infrastructure-as-code toolkit for Proxmox VE homelabs. This file is orientation, not authority: the documents below decide, this file points at them and must not restate their decisions. Where this file and a durable document disagree, the durable document is right and this file needs fixing.
 
-This repository is in its bootstrap, pre-release stage: it currently contains only project documentation, licensing, and GitHub governance templates (issue templates, PR template). There is no source code, build system, or test suite yet, so there are no build/lint/test commands to run. As toolkit code (OpenTofu, Ansible, Task, etc.) is added, this file should be updated with the actual commands.
+## Authoritative documents
 
-## What this repository is
+| For | Read |
+| --- | --- |
+| Project scope, maturity and navigation | [`README.md`](README.md) |
+| The approved plan, milestone boundaries and what is currently blocked | [`docs/roadmap.md`](docs/roadmap.md) |
+| Cross-cutting boundaries, lifecycle ownership and validation philosophy | [`docs/architecture.md`](docs/architecture.md) |
+| Where content belongs and what each area of the repository owns | [`docs/repository-design.md`](docs/repository-design.md) |
+| Durable decisions and their status | [`docs/decisions/README.md`](docs/decisions/README.md) |
+| Supported tool versions, and how to obtain and check them | [`docs/toolchain.md`](docs/toolchain.md) |
 
-A reusable, open-source infrastructure-as-code toolkit for Proxmox VE homelabs (see README.md). It is meant to provide public building blocks — infrastructure and configuration modules, examples, and validation — that a separate, private deployment repository composes with environment-specific configuration.
+Architecture is not decided in code, in a pull request, or in this file. An unresolved architectural question is raised through the workflow below and recorded in an Architecture Decision Record.
 
-The intended technology stack:
+## Current state
 
-- [OpenTofu](https://opentofu.org/) for infrastructure provisioning
-- [Proxmox VE](https://www.proxmox.com/en/proxmox-virtual-environment/overview) as the virtualization platform
-- [Ansible](https://www.ansible.com/) for configuration management
-- [Task](https://taskfile.dev/) as the task runner
-- [SOPS](https://github.com/getsops/sops) + [age](https://age-encryption.org/) for secrets encryption
-- GitHub Actions for CI
+The project is in its bootstrap, pre-release stage. The roadmap records the current phase, the active blocker and the next action; read it there rather than inferring it from the repository.
 
-## Architectural constraint: public/private split
+What exists today:
 
-The core design principle of this project is separating reusable toolkit code (this repo) from concrete environment configuration (a separate private repo). This has one hard consequence for any change made here: **everything committed to this repository must be safe to publish** — no real secrets, no private deployment data, no generated state — and the toolkit must remain usable without access to the private deployment repository.
+- **Project documentation:** the README, roadmap, architecture, repository design, the ADR index and ADRs 0001–0004, and the supported-tool-version documentation.
+- **Contribution governance:** the Issue templates and [`pull_request_template.md`](.github/pull_request_template.md) described below, plus [`dependabot.yml`](.github/dependabot.yml).
+- **Declared tool versions:** [`.tool-versions`](.tool-versions) for language runtimes and standalone command-line tools, and [`requirements-dev.txt`](requirements-dev.txt) for Python packages. These declarations are authoritative for supported versions; [`docs/toolchain.md`](docs/toolchain.md) explains how to read, obtain, check and change them.
+- **Validation configuration:** [`.markdownlint-cli2.yaml`](.markdownlint-cli2.yaml), [`.yamllint`](.yamllint) and [`.editorconfig`](.editorconfig).
+- **Publication-safety controls:** [`.gitignore`](.gitignore), which applies to every contributor, and the optional write-time hook described below. [`scripts/check-publication-safety-patterns.sh`](scripts/check-publication-safety-patterns.sh) asserts that the two agree; it creates no files, needs only `git` and the declared `jq`, and can be run today.
+- **Continuous integration:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which is currently the definition of what is checked on every pull request.
+
+What does not exist yet, and must not be written about as though it did:
+
+- **No toolkit source.** There is no `tofu/`, `ansible/` or `examples/` content. Their approved placement is in the repository design; the components themselves are later milestone work.
+- **No repository-owned local validation entry point, Task interface or Dev Container.** The architecture and ADRs 0003 and 0004 approve these as the shape of the contributor control plane, but none of them is implemented; the roadmap sequences that work. Until it lands, `.github/workflows/ci.yml` is the accurate description of the checks, run with the versions declared in `.tool-versions` and `requirements-dev.txt`.
+- **No build system or test suite,** so there are no build or test commands to run.
+
+Do not document a command, path or setup procedure here or anywhere else in this repository without running it first.
+
+## Public and private repository boundary
+
+This repository is the public half of a public/private split: reusable toolkit code is published here, while concrete environment configuration lives in a separate private deployment repository. [ADR 0001](docs/decisions/0001-public-toolkit-private-deployment-boundary.md) defines what each side owns, and [`docs/architecture.md`](docs/architecture.md) states the boundary in context. Read those for the detail; two consequences bind every change made here:
+
+- **Everything committed must be safe to publish.** No real secrets, credentials, decryption identities, private deployment data, or generated state.
+- **The toolkit must remain usable without the private deployment repository.** Nothing here may depend on an unpublished file.
+
+Examples and documentation therefore use fictional or standards-reserved values, such as RFC 5737 addresses and RFC 2606 domain names. The file-name controls listed above are a backstop for the obvious cases, not a substitute for reading what a change actually publishes.
 
 ## Contribution workflow
 
-The GitHub issue/PR templates encode a specific process — follow it when creating or reviewing issues/PRs in this repo:
+Work is tracked in GitHub Issues and delivered in focused pull requests. The templates are the current definition of that process — follow the template that applies rather than improvising around it.
 
-1. **Specification** (`Spec` issue template): an implementation-ready unit of work, owned by Product Ownership, and must reference an approved roadmap item. It defines outcome, scope, out-of-scope items, acceptance criteria, dependencies, and architecture alignment (or flags that architecture review is still required). Architecture decisions are not made inside a spec issue.
-2. **Implementation task** (`Task` issue template): tracks implementation of exactly one approved specification. It records only implementation/validation status, not a restatement of the spec, and requires the linked spec to be approved with no unresolved architecture decisions before work starts.
-3. **Pull request** (`pull_request_template.md`): must stay within the approved specification it closes, contain no unrelated changes, and not introduce secrets/private data/generated state. Architecture decisions are expected to already be documented and approved outside the PR itself.
+- **Developer implementation work** starts from a [Specification](.github/ISSUE_TEMPLATE/spec.yml) issue: an implementation-ready unit of work that cites an approved roadmap item and defines outcome, scope, out-of-scope items, acceptance criteria, dependencies and architecture alignment. Architecture is not decided there. An [Implementation task](.github/ISSUE_TEMPLATE/task.yml) issue then tracks exactly one approved specification, recording implementation and validation status rather than restating the spec, and requires that specification to be approved with no unresolved architecture decisions before work starts.
+- **Architecture-owned changes** to the roadmap, architecture, repository design or ADRs use the [Architecture change](.github/ISSUE_TEMPLATE/architecture.yml) issue instead. They cite the roadmap item or Architecture document that authorizes them and do not invent an implementation specification.
 
-Roadmap, architecture documentation, and ADRs are expected to live in this repository as the project matures (per README.md), but do not exist yet.
+A pull request cites the specification it closes or the authority it acts under, stays inside it, and introduces no secrets, private deployment data or generated state. Unrelated changes are grounds for rejection, however small and however tempting: an opportunistic ignore rule or drive-by fix belongs in its own Issue and its own pull request.
+
+## Optional Claude Code configuration
+
+The committed `.claude/` directory is optional, non-authoritative assistance for Claude Code sessions, as the repository design requires. It defines no project behavior and is not enforcement: repository safety and validation rest on `.gitignore`, the repository's validation configuration and CI, which apply to every contributor whatever tools they use. Removing `.claude/` must leave the repository fully usable.
+
+- [`.claude/settings.json`](.claude/settings.json) pre-approves inspection and validation commands and registers the hook below. Its command list is limited to `git` and `gh` inspection and to tools this repository declares in `.tool-versions` or `requirements-dev.txt`; it pre-approves nothing a contributor could not run by hand, and it decides no check — the repository's validation configuration and CI do that.
+- [`.claude/hooks/block-unsafe-writes.sh`](.claude/hooks/block-unsafe-writes.sh) refuses to write files that must never exist in this repository. It shortens the feedback loop during a session; `.gitignore` is the control that protects the repository.
+- [`.claude/agents/public-safety-reviewer.md`](.claude/agents/public-safety-reviewer.md) is a review aid for the boundary above. Its authority is ADR 0001, not the agent file.
+- `.claude/settings.local.json` is personal, ignored by git, and must not be committed.
