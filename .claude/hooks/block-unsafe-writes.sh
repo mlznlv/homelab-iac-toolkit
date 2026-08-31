@@ -5,7 +5,9 @@
 # published, while concrete environment configuration lives in a separate
 # private deployment repository. Secrets, private deployment data and generated
 # state are therefore not merely discouraged here, they are out of scope by
-# design (see CLAUDE.md and README.md).
+# design. That boundary is decided in ADR 0001 under docs/decisions/ and
+# summarized for a session in CLAUDE.md; this hook decides nothing, it only
+# refuses the file names those documents rule out.
 #
 # The deny list mirrors .gitignore so that the two agree on what "unsafe to
 # publish" means; .gitignore keeps such files out of a commit, this hook keeps
