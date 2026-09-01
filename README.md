@@ -39,9 +39,19 @@ Everything in this repository must be safe to publish and must not contain real 
 
 The project is currently in its bootstrap, pre-release stage.
 
-## Roadmap and documentation
+## Documentation
 
-See the [roadmap](docs/roadmap.md), [architecture](docs/architecture.md), [repository design](docs/repository-design.md), [supported tool versions](docs/toolchain.md), the [development environment](docs/development-environment.md), [local validation](docs/validation.md), and [Architecture Decision Records](docs/decisions/README.md).
+| Document | What it covers |
+| --- | --- |
+| [Contributing](CONTRIBUTING.md) | How to set up, validate a change, and get it reviewed |
+| [Security](SECURITY.md) | Security posture of this repository and how to report a problem |
+| [Development environment](docs/development-environment.md) | The canonical container, and what it deliberately omits |
+| [Supported tool versions](docs/toolchain.md) | The declared versions, and how to obtain and check them |
+| [Local validation](docs/validation.md) | Every check, its direct command, and its Task entry point |
+| [Roadmap](docs/roadmap.md) | The approved plan and current milestone |
+| [Architecture](docs/architecture.md) | Cross-cutting boundaries and lifecycle ownership |
+| [Repository design](docs/repository-design.md) | Where content belongs and what each area owns |
+| [Architecture Decision Records](docs/decisions/README.md) | Durable decisions and their status |
 
 ## License
 

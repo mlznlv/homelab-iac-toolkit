@@ -14,6 +14,8 @@ The project is a reusable, open-source infrastructure-as-code toolkit for Proxmo
 | Where content belongs and what each area of the repository owns | [`docs/repository-design.md`](docs/repository-design.md) |
 | Durable decisions and their status | [`docs/decisions/README.md`](docs/decisions/README.md) |
 | Supported tool versions, and how to obtain and check them | [`docs/toolchain.md`](docs/toolchain.md) |
+| How a contributor sets up, validates a change and gets it reviewed | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| The repository's security posture and how a problem is reported | [`SECURITY.md`](SECURITY.md) |
 
 Architecture is not decided in code, in a pull request, or in this file. An unresolved architectural question is raised through the workflow below and recorded in an Architecture Decision Record.
 
