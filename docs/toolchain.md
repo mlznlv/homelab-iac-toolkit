@@ -78,10 +78,11 @@ grep '^yamllint==' requirements-dev.txt
 The [development environment](development-environment.md) installs all of these
 from the declarations below, and is the canonical way to obtain them.
 
-Install the Python packages into a virtual environment:
+Install the Python packages into a virtual environment from the lock, so the
+downloads are verified against its hashes:
 
 ```sh
-python -m pip install --requirement requirements-dev.txt
+python -m pip install --require-hashes --requirement requirements-dev.lock
 ```
 
 Install each runtime and standalone tool at its declared version from the
@@ -124,8 +125,13 @@ result with the commands below whichever way the tools were installed.
 A version change is an ordinary repository change: edit the declaration file in
 a pull request, where it is reviewed like any other change.
 
-The declarations are authoritative and are now the only place these versions
-appear: the development environment and the GitHub Actions workflows both
-install from them rather than restating them, so a version change takes effect
-everywhere once the declaration changes. A change to a Python package version
-also needs its lock regenerated, as described above.
+The declarations are authoritative, and no consumer restates them: the
+development environment and the GitHub Actions workflows install from them, so
+a version change takes effect everywhere once the declaration changes.
+
+`requirements-dev.lock` is the one file that repeats a declared version, because
+a lock has to name what it hashes. It is generated, not edited, so a Python
+package change is made in `requirements-dev.txt` and the lock is regenerated
+from it. `scripts/check-python-lock.sh` asserts that the two still agree, and
+runs as part of local validation and in continuous integration, so a
+regeneration that was forgotten fails the build rather than going unnoticed.

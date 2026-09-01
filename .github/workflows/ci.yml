@@ -28,8 +28,8 @@ jobs:
       - name: Install the declared toolchain
         uses: ./.github/actions/install-toolchain
 
-      - name: Check whitespace
-        run: task validate:whitespace
+      - name: Check whitespace and the dependency lock
+        run: task validate:whitespace validate:python-lock
 
   docs:
     name: Documentation

@@ -74,6 +74,15 @@ git diff --check "$(git hash-object -t tree /dev/null)" HEAD
 
 Task entry point: `task validate:whitespace`.
 
+Check that the generated Python dependency lock still matches the declaration
+it comes from, so a version change cannot be installed from a stale lock.
+
+```sh
+./scripts/check-python-lock.sh
+```
+
+Task entry point: `task validate:python-lock`.
+
 ### Documentation
 
 Lint the Markdown, using the repository's `.markdownlint-cli2.yaml`
