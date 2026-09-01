@@ -51,6 +51,7 @@ The project is currently in its bootstrap, pre-release stage.
 | [Roadmap](docs/roadmap.md) | The approved plan and current milestone |
 | [Architecture](docs/architecture.md) | Cross-cutting boundaries and lifecycle ownership |
 | [Repository design](docs/repository-design.md) | Where content belongs and what each area owns |
+| [Compatibility](docs/compatibility.md) | Current platform targets, evidence, and explicit non-claims |
 | [Architecture Decision Records](docs/decisions/README.md) | Durable decisions and their status |
 
 ## License
