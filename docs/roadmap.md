@@ -2,12 +2,13 @@
 
 ## Current state
 
-- **Current phase:** M1 — Architecture and roadmap baseline
-- **Implementation state:** No Developer work item is Ready.
-- **Current blocker:** Foundational architecture baseline.
-- **Next action:** Architecture defines and commits the foundational architecture baseline.
+- **Current phase:** M3 — First reusable toolkit slice
+- **Milestone state:** M1 and M2 are complete; first-slice Architecture is accepted.
+- **Implementation state:** M3 implementation is the current execution focus.
+- **Current blocker:** None at milestone level.
+- **Next action:** Implement and validate the accepted first slice through focused Developer Issues.
 
-The repository already includes its public project contract, license, public-safety rules, editor defaults, contribution templates, dependency automation, CI and validation foundations, and shared Claude Code configuration. These artifacts must be reviewed and reconciled with accepted Architecture where they depend on decisions not yet recorded.
+The foundational Architecture and reproducible development foundation are complete. ADR 0005 defines the accepted first reusable slice: a coordinated OpenTofu VM capability and independently usable Ansible guest-agent capability. Implementation and credential-free contract validation now proceed through focused GitHub Issues.
 
 ## Milestone sequence
 
@@ -167,28 +168,7 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 ## Near-term Developer work
 
-All near-term Developer work is blocked by the foundational architecture baseline.
-
-### DEV-001 — Reconcile the existing repository foundation
-
-- **Milestone:** M2
-- **Status:** Blocked
-
-Align existing CI, validation configuration, templates, dependency automation, safety controls and repository layout with accepted Architecture. Do not rebuild working foundations without an approved reason.
-
-### DEV-002 — Add the reproducible developer environment
-
-- **Milestone:** M2
-- **Status:** Blocked
-
-Implement and document the approved developer environment after Architecture defines its model, tool versions, contents and credential boundaries.
-
-### DEV-003 — Align local validation with public CI
-
-- **Milestone:** M2
-- **Status:** Blocked
-
-Provide repeatable local checks equivalent to approved public CI expectations. Add Task entry points only if approved. Live infrastructure, private credentials and infrastructure apply remain out of scope.
+Near-term Developer work implements the accepted first slice through focused GitHub Issues. Issue-level scope, dependencies, and execution state live in GitHub rather than this milestone roadmap. M4 work remains deferred.
 
 ## Deferred work
 
