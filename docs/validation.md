@@ -75,7 +75,9 @@ git diff --check "$(git hash-object -t tree /dev/null)" HEAD
 Task entry point: `task validate:whitespace`.
 
 Check that the generated Python dependency lock still matches the declaration
-it comes from, so a version change cannot be installed from a stale lock.
+it comes from. The packages the lock records as directly required, and their
+versions, must be exactly the declared ones, so a version change, an addition
+or a removal cannot be installed from a stale lock.
 
 ```sh
 ./scripts/check-python-lock.sh
