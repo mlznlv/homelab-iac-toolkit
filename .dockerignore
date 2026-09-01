@@ -2,4 +2,4 @@
 # excluded so the build context stays small and carries no local working data.
 *
 !.tool-versions
-!requirements-dev.txt
+!requirements-dev.lock

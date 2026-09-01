@@ -53,7 +53,7 @@ USER vscode
 
 # The declarations are copied on their own so that editing unrelated files does
 # not invalidate the layer that installs the toolchain.
-COPY --chown=vscode:vscode .tool-versions requirements-dev.txt /opt/toolchain/
+COPY --chown=vscode:vscode .tool-versions requirements-dev.lock /opt/toolchain/
 
 RUN set -eux; \
     cd /opt/toolchain; \
@@ -61,5 +61,5 @@ RUN set -eux; \
     mise install --yes; \
     mise exec -- python -m venv "${VIRTUAL_ENV}"; \
     "${VIRTUAL_ENV}"/bin/python -m pip install --no-cache-dir --disable-pip-version-check \
-      --requirement requirements-dev.txt; \
+      --require-hashes --requirement requirements-dev.lock; \
     mise reshim

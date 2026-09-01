@@ -18,6 +18,18 @@ Each dependency class has exactly one authoritative declaration.
 | Language runtimes and standalone command-line tools | [`.tool-versions`](../.tool-versions) | One `<tool> <version>` pair per line |
 | Python packages | [`requirements-dev.txt`](../requirements-dev.txt) | pip requirements with exact `==` pins |
 
+[`requirements-dev.lock`](../requirements-dev.lock) is generated from that
+declaration, not written by hand. It pins the full dependency closure with
+SHA-256 hashes so an install can be verified, and it is what the container,
+continuous integration and the documented local setup install. Change a version
+in `requirements-dev.txt`, then regenerate the lock with the command recorded in
+its header:
+
+```sh
+uv pip compile requirements-dev.txt --universal --generate-hashes \
+  --python-version 3.13 --output-file requirements-dev.lock
+```
+
 Runtimes are declared at their supported series, such as `python 3.13`, because
 the patch release is supplied by the platform that provides the runtime. Every
 other tool is pinned to an exact release.
@@ -38,6 +50,7 @@ other tool is pinned to an exact release.
 | lychee | `.tool-versions` | Documentation link checking | [lycheeverse/lychee](https://github.com/lycheeverse/lychee) |
 | zizmor | `.tool-versions` | GitHub Actions security auditing | [zizmorcore/zizmor](https://github.com/zizmorcore/zizmor) |
 | jq | `.tool-versions` | JSON handling in the publication-safety checks and the optional write-time hook | [jqlang/jq](https://github.com/jqlang/jq) |
+| uv | `.tool-versions` | Regenerating the Python dependency lock | [astral-sh/uv](https://github.com/astral-sh/uv) |
 | ansible-core | `requirements-dev.txt` | Guest configuration management | [ansible-core](https://pypi.org/project/ansible-core/) |
 | check-jsonschema | `requirements-dev.txt` | GitHub metadata schema validation | [check-jsonschema](https://pypi.org/project/check-jsonschema/) |
 | yamllint | `requirements-dev.txt` | YAML linting | [yamllint](https://pypi.org/project/yamllint/) |
@@ -65,10 +78,11 @@ grep '^yamllint==' requirements-dev.txt
 The [development environment](development-environment.md) installs all of these
 from the declarations below, and is the canonical way to obtain them.
 
-Install the Python packages into a virtual environment:
+Install the Python packages into a virtual environment from the lock, so the
+downloads are verified against its hashes:
 
 ```sh
-python -m pip install --requirement requirements-dev.txt
+python -m pip install --require-hashes --requirement requirements-dev.lock
 ```
 
 Install each runtime and standalone tool at its declared version from the
@@ -101,6 +115,7 @@ result with the commands below whichever way the tools were installed.
 | lychee | `lychee --version` |
 | zizmor | `zizmor --version` |
 | jq | `jq --version` |
+| uv | `uv --version` |
 | ansible-core | `ansible --version` |
 | check-jsonschema | `check-jsonschema --version` |
 | yamllint | `yamllint --version` |
@@ -110,8 +125,13 @@ result with the commands below whichever way the tools were installed.
 A version change is an ordinary repository change: edit the declaration file in
 a pull request, where it is reviewed like any other change.
 
-The declarations are authoritative. The GitHub Actions workflows currently pin
-several of the same versions inline and have not yet been wired to read the
-declarations, so a version change must update those workflow pins in the same
-pull request until they do. Consuming the declarations from continuous
-integration and from a reproducible development environment is separate work.
+The declarations are authoritative, and no consumer restates them: the
+development environment and the GitHub Actions workflows install from them, so
+a version change takes effect everywhere once the declaration changes.
+
+`requirements-dev.lock` is the one file that repeats a declared version, because
+a lock has to name what it hashes. It is generated, not edited, so a Python
+package change is made in `requirements-dev.txt` and the lock is regenerated
+from it. `scripts/check-python-lock.sh` asserts that the two still agree, and
+runs as part of local validation and in continuous integration, so a
+regeneration that was forgotten fails the build rather than going unnoticed.

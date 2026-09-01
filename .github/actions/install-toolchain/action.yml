@@ -1,0 +1,40 @@
+name: Install the declared toolchain
+description: >
+  Installs the tools this repository declares in .tool-versions, and optionally
+  the Python packages declared in requirements-dev.txt, so a workflow runs the
+  same versions as a contributor.
+
+inputs:
+  python-packages:
+    description: >
+      Install the declared Python packages into .venv, the way the documented
+      local setup does. Only the jobs that need them ask for them.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    # mise is the installer that reads the declarations, so its own version is
+    # not one of them. The container definition pins it; this reads that pin
+    # rather than repeating it, keeping one source for the bootstrap version.
+    - name: Read the declared mise version
+      id: bootstrap
+      shell: bash
+      run: |
+        version="$(awk -F= '/^ARG MISE_VERSION=/ { print $2 }' .devcontainer/Dockerfile)"
+        test -n "${version}"
+        echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+    - name: Install mise and the declared tools
+      uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c  # v4.3.0
+      with:
+        version: ${{ steps.bootstrap.outputs.version }}
+
+    - name: Install the declared Python packages
+      if: inputs.python-packages == 'true'
+      shell: bash
+      run: |
+        python -m venv .venv
+        .venv/bin/python -m pip install --disable-pip-version-check \
+          --require-hashes --requirement requirements-dev.lock

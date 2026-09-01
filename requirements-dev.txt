@@ -6,9 +6,13 @@
 # .tool-versions. See docs/toolchain.md for how to read, obtain, and change
 # these versions.
 #
-# Install into a virtual environment with:
+# This file is the declaration. Installs use requirements-dev.lock, which is
+# generated from it and carries hashes, so that what is installed is verified:
 #
-#     python -m pip install --requirement requirements-dev.txt
+#     python -m pip install --require-hashes --requirement requirements-dev.lock
+#
+# After changing a version here, regenerate the lock with the command in its
+# header. scripts/check-python-lock.sh asserts the two still agree.
 #
 # ansible-core provides the Ansible engine only. Collection dependencies are
 # declared by the milestone that introduces Ansible content.
