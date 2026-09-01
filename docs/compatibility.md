@@ -30,15 +30,15 @@ The consumer-supplied source template must support the cloud-init bootstrap inpu
 
 The first slice requires public, credential-free static and contract validation for:
 
-- module inputs, input validation, full-clone configuration, static addressing, disabled-by-default guest-agent integration, and declared outputs;
+- module inputs, input validation, full-clone configuration, static addressing, disabled-by-default guest-agent integration, the default and overridden destroy policy, and the required `connection` output;
 - Ansible syntax, lint, and the static package and service contract;
-- optional connection-value composition without an OpenTofu-state dependency in the role; and
+- connection-value composition without an OpenTofu-state dependency in the role; and
 - repository validation and publication safety.
 
 This evidence does not demonstrate:
 
 - live compatibility with a PVE 9.x installation or a particular `bpg/proxmox` release;
-- successful plan, apply, clone, start, reconciliation, or destroy behavior;
+- successful plan, apply, clone, start, reconciliation, or destroy behavior, including graceful shutdown or reliable forced stop;
 - successful cloud-init execution, SSH connectivity, or privilege escalation;
 - Ansible convergence or idempotency on Debian Stable, Kali Rolling, or another real guest; or
 - a running guest agent or successful provider-side integration after the role runs.

@@ -38,7 +38,7 @@ The first reusable slice has exactly these approved component roots:
 - `tofu/modules/proxmox-linux-vm/` for the single full-clone Linux VM module;
 - `ansible/roles/qemu_guest_agent/` for the independently usable guest-agent role.
 
-Component documentation and contract tests are co-located with their owning component. A small test fixture may demonstrate optional connection-value composition, but it must not become a consumer example, read real state, or couple the Ansible role to OpenTofu.
+Component documentation and contract tests are co-located with their owning component. A small test fixture may demonstrate required connection-descriptor composition, but it must not become a consumer example, read real state, or couple the Ansible role to OpenTofu.
 
 Additional module, role, collection, shared-library, or platform hierarchies remain deferred until approved content requires them.
 

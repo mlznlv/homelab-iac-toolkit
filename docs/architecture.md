@@ -62,14 +62,17 @@ The OpenTofu capability manages one Proxmox Linux VM under `tofu/modules/proxmox
 - creates a full clone from a consumer-supplied cloud-init template;
 - accepts consumer-owned VM identity, target and template identifiers, target datastore, CPU and memory sizing, and one network bridge;
 - applies a consumer-supplied static IPv4 CIDR, gateway, and DNS servers;
-- uses a consumer-supplied username and SSH public keys only to bootstrap initial guest access; and
+- uses a consumer-supplied username and SSH public keys only to bootstrap initial guest access;
+- accepts an `ssh_port` value, defaulting to `22`, only as connection metadata; and
 - inherits the source template's disk layout rather than managing disk changes in this slice.
 
 The bootstrap username and public keys do not give OpenTofu continuing ownership of guest users, authorized keys, or SSH configuration. Those remain Ansible or consumer concerns after creation.
 
 Provider-side guest-agent integration is optional and disabled by default. A consumer may enable it only when the consumer guarantees that `qemu-guest-agent` is already installed, enabled, and running. The module never uses agent-reported addressing for initial creation or access.
 
-Public outputs are limited to non-sensitive resource identity and composition values declared by the module. The module may expose an optional connection descriptor containing `host`, `user`, and `port`; this is a consumer convenience, not an Ansible dependency.
+The module exposes a `stop_on_destroy` input that defaults to `true`. With that default, the provider stops the VM rather than requesting a graceful shutdown before destroying it, avoiding reliance on ACPI while guest-agent integration is disabled. A stop can interrupt guest workloads and lose unwritten data. A consumer may set the input to `false` only when the consumer accepts reliance on reliable guest shutdown through ACPI or an enabled guest agent, including the risk that destroy can time out or remain blocked when shutdown fails. This setting does not change the required plan, human review, and explicit apply workflow.
+
+The module exposes a required, non-sensitive `connection` output containing `host`, `user`, and `port`. `host` is the declared static IPv4 address without its prefix, `user` is the bootstrap username, and `port` is the `ssh_port` metadata value. The module does not configure the guest's SSH port, and the descriptor does not give OpenTofu continuing ownership of guest access. It is a consumer composition convenience, not an Ansible dependency. Other public outputs are limited to non-sensitive resource identity and composition values required by the module.
 
 ### Ansible guest-agent capability
 
@@ -84,7 +87,7 @@ Its guest contract is capability-based: supported Python and Ansible requirement
 The expected composition is:
 
 1. The consumer applies the OpenTofu module with static addressing and guest-agent integration disabled.
-2. The consumer composes inventory from independent values or the module's optional non-sensitive outputs.
+2. The consumer composes inventory from independent values or the module's required non-sensitive `connection` output.
 3. The consumer runs the Ansible role to install and enable the guest agent.
 4. The consumer may enable provider-side guest-agent integration in a later OpenTofu reconciliation.
 
@@ -97,15 +100,16 @@ Credential-free contract validation must prove at minimum:
 - required module inputs and locally decidable input validation;
 - full-clone configuration and declared static addressing behavior;
 - provider-side guest-agent integration disabled by default;
-- the module's declared public outputs;
+- `stop_on_destroy` defaulting to `true` and an explicit `false` override reaching the provider resource;
+- the required `connection` output and its declared `host`, `user`, and `port` derivation;
 - Ansible syntax and lint correctness;
 - the static package and service contract;
-- composition of optional connection values without coupling the role to OpenTofu state; and
+- composition of the connection descriptor without coupling the role to OpenTofu state; and
 - the existing repository validation and publication-safety expectations.
 
 The current implementation may use OpenTofu provider mocking to obtain module evidence, but the required evidence rather than a particular test mechanism is the durable constraint.
 
-This evidence does not prove live PVE plan, apply, or destroy behavior; template cloning or cloud-init bootstrapping; SSH connectivity; Ansible convergence or idempotency on a real guest; or successful provider-side guest-agent integration. Static and contract proof must not be represented as live compatibility evidence.
+This evidence does not prove live PVE plan, apply, or destroy behavior; graceful guest shutdown or reliable forced stop; template cloning or cloud-init bootstrapping; SSH connectivity; Ansible convergence or idempotency on a real guest; or successful provider-side guest-agent integration. Static and contract proof must not be represented as live compatibility evidence.
 
 Locally decidable invalid inputs fail early and clearly. Runtime prerequisites remain visible responsibilities of their owning tools, and their failures are surfaced rather than hidden. The slice introduces no fallback orchestration, automatic recovery, blind apply, or implicit infrastructure mutation.
 
