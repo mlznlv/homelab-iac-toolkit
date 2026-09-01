@@ -6,7 +6,7 @@ supported toolchain without depending on how their own machine is configured.
 
 The container is a consumer of the version declarations, not a second source of
 truth for them: it installs exactly what [`.tool-versions`](../.tool-versions)
-and [`requirements-dev.txt`](../requirements-dev.txt) declare. See
+and [`requirements-dev.txt`](../requirements-dev.txt) declare, installed from the verified lock generated from it. See
 [supported tool versions](toolchain.md) for those declarations and for the
 native path.
 
@@ -16,7 +16,8 @@ native path.
 - mise, pinned by version and verified against its published checksum, which
   reads `.tool-versions` and installs every tool declared there.
 - A Python virtual environment holding the packages `requirements-dev.txt`
-  declares, placed on `PATH` so `yamllint` and `check-jsonschema` are directly
+  declares, installed from `requirements-dev.lock` with hash verification and
+  placed on `PATH` so `yamllint` and `check-jsonschema` are directly
   runnable.
 
 Nothing else is added: no credentials, no decryption identities, no private

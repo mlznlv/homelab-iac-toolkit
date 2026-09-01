@@ -37,4 +37,4 @@ runs:
       run: |
         python -m venv .venv
         .venv/bin/python -m pip install --disable-pip-version-check \
-          --requirement requirements-dev.txt
+          --require-hashes --requirement requirements-dev.lock

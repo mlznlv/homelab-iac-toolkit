@@ -28,8 +28,12 @@ Install the declared runtimes and standalone command-line tools so they are on
 
 ```sh
 python -m venv .venv
-.venv/bin/python -m pip install --requirement requirements-dev.txt
+.venv/bin/python -m pip install --require-hashes --requirement requirements-dev.lock
 ```
+
+The lock is generated from `requirements-dev.txt` and pins the whole dependency
+closure with hashes, so the install is verified rather than trusted; see
+[supported tool versions](toolchain.md) for how it is regenerated.
 
 An environment that already provides the declared packages on `PATH` needs
 none of that, and the commands on this page are written for both cases: they
@@ -233,8 +237,8 @@ unchanged.
 
 ## Relationship to continuous integration
 
-The checks above are the same checks the CI workflow runs, with the same tool
-versions, the same repository-owned configuration, and the same pass or fail
-semantics. Two local checks have no CI step yet: the publication-safety pattern
-check and the Taskfile schema validation. Reconciling the workflow with this
-check set is separate work and is not part of this page's scope.
+The CI workflow runs these checks by invoking the same Task entry points, so
+the check set, tool versions, repository-owned configuration and pass or fail
+semantics are shared rather than restated. Every check on this page has a CI
+counterpart, and the four CI jobs together invoke exactly the checks
+`task validate` invokes.

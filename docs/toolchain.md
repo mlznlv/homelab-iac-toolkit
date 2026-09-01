@@ -18,6 +18,18 @@ Each dependency class has exactly one authoritative declaration.
 | Language runtimes and standalone command-line tools | [`.tool-versions`](../.tool-versions) | One `<tool> <version>` pair per line |
 | Python packages | [`requirements-dev.txt`](../requirements-dev.txt) | pip requirements with exact `==` pins |
 
+[`requirements-dev.lock`](../requirements-dev.lock) is generated from that
+declaration, not written by hand. It pins the full dependency closure with
+SHA-256 hashes so an install can be verified, and it is what the container,
+continuous integration and the documented local setup install. Change a version
+in `requirements-dev.txt`, then regenerate the lock with the command recorded in
+its header:
+
+```sh
+uv pip compile requirements-dev.txt --universal --generate-hashes \
+  --python-version 3.13 --output-file requirements-dev.lock
+```
+
 Runtimes are declared at their supported series, such as `python 3.13`, because
 the patch release is supplied by the platform that provides the runtime. Every
 other tool is pinned to an exact release.
@@ -38,6 +50,7 @@ other tool is pinned to an exact release.
 | lychee | `.tool-versions` | Documentation link checking | [lycheeverse/lychee](https://github.com/lycheeverse/lychee) |
 | zizmor | `.tool-versions` | GitHub Actions security auditing | [zizmorcore/zizmor](https://github.com/zizmorcore/zizmor) |
 | jq | `.tool-versions` | JSON handling in the publication-safety checks and the optional write-time hook | [jqlang/jq](https://github.com/jqlang/jq) |
+| uv | `.tool-versions` | Regenerating the Python dependency lock | [astral-sh/uv](https://github.com/astral-sh/uv) |
 | ansible-core | `requirements-dev.txt` | Guest configuration management | [ansible-core](https://pypi.org/project/ansible-core/) |
 | check-jsonschema | `requirements-dev.txt` | GitHub metadata schema validation | [check-jsonschema](https://pypi.org/project/check-jsonschema/) |
 | yamllint | `requirements-dev.txt` | YAML linting | [yamllint](https://pypi.org/project/yamllint/) |
@@ -101,6 +114,7 @@ result with the commands below whichever way the tools were installed.
 | lychee | `lychee --version` |
 | zizmor | `zizmor --version` |
 | jq | `jq --version` |
+| uv | `uv --version` |
 | ansible-core | `ansible --version` |
 | check-jsonschema | `check-jsonschema --version` |
 | yamllint | `yamllint --version` |
@@ -110,8 +124,8 @@ result with the commands below whichever way the tools were installed.
 A version change is an ordinary repository change: edit the declaration file in
 a pull request, where it is reviewed like any other change.
 
-The declarations are authoritative. The GitHub Actions workflows currently pin
-several of the same versions inline and have not yet been wired to read the
-declarations, so a version change must update those workflow pins in the same
-pull request until they do. Consuming the declarations from continuous
-integration and from a reproducible development environment is separate work.
+The declarations are authoritative and are now the only place these versions
+appear: the development environment and the GitHub Actions workflows both
+install from them rather than restating them, so a version change takes effect
+everywhere once the declaration changes. A change to a Python package version
+also needs its lock regenerated, as described above.
