@@ -9,18 +9,19 @@
 | `docs/roadmap.md` | Approved milestone-level plan |
 | `docs/architecture.md` | Cross-cutting architecture and boundaries |
 | `docs/repository-design.md` | Repository structure and ownership |
+| `docs/compatibility.md` | Public compatibility targets, evidence levels, and non-claims |
 | `docs/decisions/` | Architecture Decision Records |
 | `.devcontainer/` | Canonical reproducible contributor environment when implemented |
 | `.github/` | GitHub workflows, dependency automation, and contribution templates |
 | `Taskfile.yml` | Transparent developer workflow entry point when implemented |
 | `scripts/` | Small portable repository helpers when direct commands are insufficient |
 | Root tool configuration and version declarations | Conventional, discoverable repository-wide tooling configuration |
-| `tofu/` | Future reusable OpenTofu content |
-| `ansible/` | Future reusable Ansible content |
+| `tofu/` | Reusable OpenTofu modules and their component-local documentation and tests |
+| `ansible/` | Reusable Ansible roles and their component-local documentation and tests |
 | `examples/` | Future cross-component consumer examples |
 | `.claude/` | Optional Claude Code assistance and defense-in-depth controls |
 
-Areas described for future use need not be created until they contain approved content.
+Areas described for deferred use need not be created until they contain approved content.
 
 ## Documentation
 
@@ -30,9 +31,16 @@ ADRs use `docs/decisions/NNNN-title.md`. Their index is `docs/decisions/README.m
 
 ## OpenTofu and Ansible
 
-Future OpenTofu components belong under `tofu/`. Future Ansible components belong under `ansible/`.
+OpenTofu components belong under `tofu/`. Ansible components belong under `ansible/`.
 
-Their internal module, collection, role, test, and packaging structures are deferred until the first reusable slice is selected. M1 and M2 must not create empty speculative component hierarchies.
+The first reusable slice has exactly these approved component roots:
+
+- `tofu/modules/proxmox-linux-vm/` for the single full-clone Linux VM module;
+- `ansible/roles/qemu_guest_agent/` for the independently usable guest-agent role.
+
+Component documentation and contract tests are co-located with their owning component. A small test fixture may demonstrate optional connection-value composition, but it must not become a consumer example, read real state, or couple the Ansible role to OpenTofu.
+
+Additional module, role, collection, shared-library, or platform hierarchies remain deferred until approved content requires them.
 
 ## Examples
 
@@ -51,11 +59,11 @@ Task provides thin, readable wrappers around documented commands. Small shared h
 
 Tool-specific configuration such as `.claude/` is optional and non-authoritative.
 
-## Structure not yet permitted
+## Structure still not permitted
 
-M1 and M2 must not create:
+The first slice must not create:
 
-- speculative module, role, service, platform, or environment hierarchies;
+- speculative additional module, role, service, platform, or environment hierarchies;
 - private inventories or deployment roots;
 - real backend, provider, endpoint, topology, or sizing configuration;
 - generated state or sensitive plans in public source or artifacts;
