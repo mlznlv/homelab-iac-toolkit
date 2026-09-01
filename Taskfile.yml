@@ -97,13 +97,14 @@ tasks:
       - git ls-files -z '*.yml' '*.yaml' '.yamllint' | xargs -0 {{.PYTHON_TOOL_PREFIX}}yamllint
 
   validate:schemas:
-    desc: 'GitHub configuration: validate workflow, Dependabot, and Taskfile schemas.'
+    desc: 'GitHub configuration: validate workflow, action, Dependabot, and Taskfile schemas.'
     preconditions:
       - sh: '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --version >/dev/null 2>&1'
         msg: 'check-jsonschema runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
     cmds:
       - '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --builtin-schema github-workflows .github/workflows/*.yml'
       - '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --builtin-schema dependabot .github/dependabot.yml'
+      - '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --builtin-schema vendor.github-actions .github/actions/*/action.yml'
       - '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --builtin-schema vendor.taskfile Taskfile.yml'
 
   validate:workflows:
@@ -112,9 +113,11 @@ tasks:
       - actionlint
 
   validate:workflow-audit:
-    desc: 'Security: audit GitHub Actions workflows.'
+    desc: 'Security: audit GitHub Actions workflows and actions.'
     cmds:
-      - zizmor --no-online-audits .github/workflows/
+      # zizmor does not descend into .github/actions on its own, so the action
+      # definitions are named alongside the workflows.
+      - zizmor --no-online-audits .github/workflows/ .github/actions/
 
   validate:public-safety:
     desc: 'Security: check tracked content for ignored files and personal paths.'

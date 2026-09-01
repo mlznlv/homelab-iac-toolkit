@@ -108,6 +108,7 @@ published schemas.
 ```sh
 check-jsonschema --builtin-schema github-workflows .github/workflows/*.yml
 check-jsonschema --builtin-schema dependabot .github/dependabot.yml
+check-jsonschema --builtin-schema vendor.github-actions .github/actions/*/action.yml
 check-jsonschema --builtin-schema vendor.taskfile Taskfile.yml
 ```
 
@@ -127,7 +128,7 @@ Audit the GitHub Actions workflows for security problems. Online audits are
 disabled so the check needs no network access and no GitHub token.
 
 ```sh
-zizmor --no-online-audits .github/workflows/
+zizmor --no-online-audits .github/workflows/ .github/actions/
 ```
 
 Task entry point: `task validate:workflow-audit`.
