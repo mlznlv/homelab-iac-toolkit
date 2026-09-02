@@ -39,8 +39,10 @@ resource "proxmox_virtual_environment_vm" "this" {
   }
 
   # Destroy stops the VM by default rather than asking the guest to shut down,
-  # so destroy does not depend on ACPI or on a guest agent that is disabled by
-  # default. See the README for the trade-off both values carry.
+  # so it does not depend on ACPI, nor on a guest agent that may not be running
+  # yet: the channel is attached from creation, but nothing answers on it until
+  # the agent is installed. See the README for the trade-off both values carry,
+  # and for which side of that line a shutdown falls on.
   stop_on_destroy = var.stop_on_destroy
 
   cpu {
