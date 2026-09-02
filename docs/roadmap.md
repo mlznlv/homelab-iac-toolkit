@@ -8,7 +8,7 @@
 - **Current blocker:** None at milestone level.
 - **Next action:** Implement and validate the accepted first slice through focused Developer Issues.
 
-The foundational Architecture and reproducible development foundation are complete. ADR 0005 defines the accepted first reusable slice: a coordinated OpenTofu VM capability and independently usable Ansible guest-agent capability. Implementation and credential-free contract validation now proceed through focused GitHub Issues.
+The foundational Architecture and reproducible development foundation are complete. ADR 0006 defines the accepted first reusable slice, superseding ADR 0005: a coordinated OpenTofu VM capability and independently usable Ansible guest-agent capability, with the guest-agent channel present from creation. Implementation and credential-free contract validation now proceed through focused GitHub Issues.
 
 ## Milestone sequence
 
