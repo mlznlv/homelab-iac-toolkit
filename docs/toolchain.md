@@ -56,9 +56,10 @@ other tool is pinned to an exact release.
 | yamllint | `requirements-dev.txt` | YAML linting | [yamllint](https://pypi.org/project/yamllint/) |
 
 OpenTofu, Ansible, Task, SOPS, and age are declared because they are the project
-technologies a contributor needs available. Reusable OpenTofu and Ansible
-content, and the workflow definitions that would invoke these tools, are added
-by later milestones.
+technologies a contributor needs available. The `proxmox-linux-vm` module is the
+first reusable content that uses one of them; Ansible content, and the workflow
+definitions that would run an infrastructure change, come with the milestones
+that introduce them.
 
 ## Determining a supported version
 
