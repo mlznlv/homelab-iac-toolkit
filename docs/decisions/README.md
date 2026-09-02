@@ -21,4 +21,5 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 | [0002](0002-lifecycle-orchestration-ownership.md) | Lifecycle and orchestration ownership | Accepted |
 | [0003](0003-development-environment-tool-version-policy.md) | Development environment and tool-version policy | Accepted |
 | [0004](0004-local-validation-task-ci-security-boundary.md) | Local validation, Task, and CI security boundary | Accepted |
-| [0005](0005-first-reusable-toolkit-slice.md) | Adopt the coordinated OpenTofu VM and Ansible guest-agent first slice | Accepted |
+| [0005](0005-first-reusable-toolkit-slice.md) | Adopt the coordinated OpenTofu VM and Ansible guest-agent first slice | Superseded |
+| [0006](0006-guest-agent-channel-at-creation.md) | Adopt the coordinated first slice with the guest-agent channel present from creation | Accepted |

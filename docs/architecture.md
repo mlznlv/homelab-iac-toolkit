@@ -52,7 +52,7 @@ Live infrastructure testing, if introduced later, requires separate Architecture
 
 ## First reusable toolkit slice
 
-The first slice is a coordinated OpenTofu VM capability and Ansible guest-agent capability, as accepted in [ADR 0005](decisions/0005-first-reusable-toolkit-slice.md). The components are independently usable and have no direct runtime dependency on one another.
+The first slice is a coordinated OpenTofu VM capability and Ansible guest-agent capability, as accepted in [ADR 0006](decisions/0006-guest-agent-channel-at-creation.md). The components are independently usable and have no direct runtime dependency on one another.
 
 ### OpenTofu VM capability
 
@@ -68,15 +68,21 @@ The OpenTofu capability manages one Proxmox Linux VM under `tofu/modules/proxmox
 
 The bootstrap username and public keys do not give OpenTofu continuing ownership of guest users, authorized keys, or SSH configuration. Those remain Ansible or consumer concerns after creation.
 
-Provider-side guest-agent integration is optional and disabled by default. A consumer may enable it only when the consumer guarantees that `qemu-guest-agent` is already installed, enabled, and running. The module never uses agent-reported addressing for initial creation or access.
+The module attaches the guest-agent channel when it creates the VM, and its guest-agent input defaults to enabled. The channel therefore exists before any guest configuration runs, which is what lets the Ansible capability start the agent on its first run: Proxmox attaches the channel only when the setting is enabled, and a guest whose service is bound to that device cannot start it before the device exists.
 
-The module exposes a `stop_on_destroy` input that defaults to `true`. With that default, the provider stops the VM rather than requesting a graceful shutdown before destroying it, avoiding reliance on ACPI while guest-agent integration is disabled. A stop can interrupt guest workloads and lose unwritten data. A consumer may set the input to `false` only when the consumer accepts reliance on reliable guest shutdown through ACPI or an enabled guest agent, including the risk that destroy can time out or remain blocked when shutdown fails. This setting does not change the required plan, human review, and explicit apply workflow.
+The module never waits for agent-reported addressing. Provider IP waiting is disabled unconditionally, so apply and refresh do not block on an agent that is not yet installed or running, and creation and access use the declared static address. The module publishes no agent-reported address.
+
+A consumer may turn the channel off. That produces a VM in which the guest agent cannot run, and adding the channel afterwards requires stopping and starting the VM, because Proxmox does not hot-plug the change.
+
+The module exposes a `stop_on_destroy` input that defaults to `true`. With that default, the provider stops the VM rather than requesting a graceful shutdown before destroying it, avoiding reliance on ACPI or on a guest agent that may not yet be running. A stop can interrupt guest workloads and lose unwritten data. A consumer may set the input to `false` only when the consumer accepts reliance on reliable guest shutdown through ACPI or an enabled guest agent, including the risk that destroy can time out or remain blocked when shutdown fails. This setting does not change the required plan, human review, and explicit apply workflow.
 
 The module exposes a required, non-sensitive `connection` output containing `host`, `user`, and `port`. `host` is the declared static IPv4 address without its prefix, `user` is the bootstrap username, and `port` is the `ssh_port` metadata value. The module does not configure the guest's SSH port, and the descriptor does not give OpenTofu continuing ownership of guest access. It is a consumer composition convenience, not an Ansible dependency. Other public outputs are limited to non-sensitive resource identity and composition values required by the module.
 
 ### Ansible guest-agent capability
 
-The Ansible capability lives under `ansible/roles/qemu_guest_agent/`. It installs the `qemu-guest-agent` package and ensures that its systemd service is enabled and running.
+The Ansible capability lives under `ansible/roles/qemu_guest_agent/`. It installs the `qemu-guest-agent` package and ensures that its service is running.
+
+Whether that service can also be enabled for boot belongs to the target's packaging rather than to the role. Where the unit is device-activated and static, as Debian's is, it is started from a udev rule when the channel appears and carries no installation configuration to enable; `systemctl is-enabled` reports `static`, which Ansible treats as already enabled. The capability's obligation is therefore that the package is installed and the service is running once the channel is present, and that enabling at boot is honoured where the packaging supports it rather than claimed where it does not.
 
 The role operates on ordinary consumer inventory. It does not read OpenTofu state or outputs, manage provider integration, create guest users, own SSH configuration, or change Proxmox resources.
 
@@ -86,10 +92,11 @@ Its guest contract is capability-based: supported Python and Ansible requirement
 
 The expected composition is:
 
-1. The consumer applies the OpenTofu module with static addressing and guest-agent integration disabled.
+1. The consumer applies the OpenTofu module with static addressing and the guest-agent channel present.
 2. The consumer composes inventory from independent values or the module's required non-sensitive `connection` output.
-3. The consumer runs the Ansible role to install and enable the guest agent.
-4. The consumer may enable provider-side guest-agent integration in a later OpenTofu reconciliation.
+3. The consumer runs the Ansible role to install the guest agent and bring its service up.
+
+No later reconciliation is required for the guest agent: the channel it needs was there from creation, and the provider never waited for it.
 
 The consumer owns this ordering and all credentials, inventory, provider and backend configuration, templates, topology, sizing, private keys, and orchestration. Task does not wire the components together automatically.
 
@@ -99,7 +106,7 @@ Credential-free contract validation must prove at minimum:
 
 - required module inputs and locally decidable input validation;
 - full-clone configuration and declared static addressing behavior;
-- provider-side guest-agent integration disabled by default;
+- the guest-agent channel attached at creation, and provider IP waiting disabled;
 - `stop_on_destroy` defaulting to `true` and an explicit `false` override reaching the provider resource;
 - the required `connection` output and its declared `host`, `user`, and `port` derivation;
 - Ansible syntax and lint correctness;
