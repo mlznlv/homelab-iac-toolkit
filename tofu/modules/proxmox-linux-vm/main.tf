@@ -21,13 +21,21 @@ resource "proxmox_virtual_environment_vm" "this" {
     full         = true
   }
 
-  # Provider-side guest-agent integration is off unless the consumer turns it
-  # on, and creation never waits for an agent-reported address: addressing is
-  # the declared static one below. Enabling this is only safe once the guest
-  # actually runs qemu-guest-agent, which Ansible owns in the accepted first
-  # slice.
+  # The channel is attached at creation, because Proxmox only adds the
+  # org.qemu.guest_agent.0 device when this is enabled, and a guest whose
+  # qemu-guest-agent service is bound to that device cannot start it before the
+  # device exists. Installing the agent itself belongs to Ansible.
+  #
+  # Waiting is disabled unconditionally rather than exposed: an attached
+  # channel with no agent behind it is inert, but a provider that waits for one
+  # would block every apply and refresh until its timeout expired. Addressing
+  # is the declared static configuration, never an agent-reported address.
   agent {
     enabled = var.guest_agent_enabled
+
+    wait_for_ip {
+      disabled = true
+    }
   }
 
   # Destroy stops the VM by default rather than asking the guest to shut down,

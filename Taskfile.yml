@@ -53,7 +53,7 @@ tasks:
     silent: true
 
   validate:
-    desc: Run every local validation check. Non-mutating; stops at the first failure.
+    desc: Run every local validation check. Leaves tracked content unchanged; stops at the first failure.
     cmds:
       # Ordered cheapest and most local first, so the two checks that need
       # network access run last.

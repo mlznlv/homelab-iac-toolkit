@@ -39,16 +39,23 @@ run "destroy_can_be_asked_to_shut_the_guest_down_instead" {
   }
 }
 
-run "guest_agent_integration_can_be_enabled" {
+run "the_guest_agent_channel_can_be_left_off" {
   command = plan
 
   variables {
-    guest_agent_enabled = true
+    guest_agent_enabled = false
   }
 
   assert {
-    condition     = proxmox_virtual_environment_vm.this.agent[0].enabled == true
-    error_message = "An explicit guest_agent_enabled = true must reach the provider resource."
+    condition     = proxmox_virtual_environment_vm.this.agent[0].enabled == false
+    error_message = "An explicit guest_agent_enabled = false must reach the provider resource."
+  }
+
+  # Waiting is not an input, so turning the channel off must not turn waiting
+  # back on: a VM with no channel is exactly where a wait could never finish.
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.agent[0].wait_for_ip[0].disabled == true
+    error_message = "Waiting for an agent-reported address must stay disabled when the channel is off."
   }
 }
 

@@ -109,12 +109,17 @@ run "static_addressing_and_bootstrap_access" {
   }
 }
 
-run "guest_agent_integration_is_disabled_by_default" {
+run "the_guest_agent_channel_is_attached_by_default" {
   command = plan
 
   assert {
-    condition     = proxmox_virtual_environment_vm.this.agent[0].enabled == false
-    error_message = "Provider-side guest-agent integration must be off unless the consumer enables it."
+    condition     = proxmox_virtual_environment_vm.this.agent[0].enabled == true
+    error_message = "The guest-agent channel must be attached at creation, so the guest's service has the device it binds to."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.agent[0].wait_for_ip[0].disabled == true
+    error_message = "The provider must never wait for an agent-reported address, whatever the channel setting is."
   }
 }
 

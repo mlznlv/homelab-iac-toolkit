@@ -147,9 +147,9 @@ variable "vm_id" {
 }
 
 variable "guest_agent_enabled" {
-  description = "Whether to enable provider-side guest-agent integration. Enable it only once qemu-guest-agent is installed, enabled, and running in the guest; when it is enabled without a running agent, Proxmox operations that wait for the agent time out."
+  description = "Whether to attach the guest-agent channel to the VM. The default attaches it, so the guest's qemu-guest-agent service has the device it binds to and can be started as soon as the package is installed. Setting this to false produces a VM in which the guest agent cannot run, and attaching the channel afterwards requires stopping and starting the VM, because Proxmox does not hot-plug the change."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "stop_on_destroy" {

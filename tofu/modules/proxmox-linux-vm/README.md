@@ -42,7 +42,7 @@ module "fictional_vm" {
   dns_servers       = ["192.0.2.53"]
 
   username        = "fictional"
-  ssh_public_keys = [file("~/.ssh/id_ed25519.pub")]
+  ssh_public_keys = [trimspace(file(pathexpand("~/.ssh/id_ed25519.pub")))]
 }
 ```
 
@@ -72,7 +72,7 @@ Optional:
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
 | `vm_id` | `number` | `null` | VM identifier. Proxmox assigns the next free one when this is null. |
-| `guest_agent_enabled` | `bool` | `false` | Whether to enable provider-side guest-agent integration. |
+| `guest_agent_enabled` | `bool` | `true` | Whether to attach the guest-agent channel. Off produces a VM where the agent cannot run. |
 | `stop_on_destroy` | `bool` | `true` | Whether destroy stops the VM instead of asking the guest to shut down. |
 | `ssh_port` | `number` | `22` | Port published in the `connection` output. Metadata only. |
 
@@ -96,15 +96,29 @@ All three are non-sensitive; the module never publishes a private key or a passw
 
 **`true` (default)** — destroy stops the VM, the way pulling power does. It does not depend on ACPI or on a guest agent, so it completes predictably, and it can interrupt a running workload and lose whatever the guest had not written to disk.
 
-**`false`** — destroy asks the guest to shut down first, which is gentler when it works. It depends on the guest honouring ACPI, or on a guest agent that is disabled here by default. When shutdown does not happen, destroy blocks or times out.
+**`false`** — destroy asks the guest to shut down first, which is gentler when it works. When shutdown does not happen, destroy blocks or times out.
 
-The default favours a destroy that finishes over a guest that shuts down cleanly, because guest-agent integration is off by default. Set it to `false` when your guests shut down reliably and you would rather wait than lose unwritten data. Either way, destroy is destructive and OpenTofu shows you the plan first.
+Who performs that shutdown depends on when you destroy. Before the agent is installed, Proxmox probes it, gets nothing, and falls back to ACPI. Once the agent is running, Proxmox asks the agent — the graceful shutdown this input is really after. The default stays `true` precisely because a destroy should not depend on which side of that line it lands on.
 
-## Guest-agent integration
+Set it to `false` when your guests shut down reliably and you would rather wait than lose unwritten data. Either way, destroy is destructive and OpenTofu shows you the plan first.
 
-`guest_agent_enabled` is `false` by default, and creation never waits for an agent-reported address — the address is the static one you declared.
+## The guest agent
 
-Enable it only after `qemu-guest-agent` is installed, enabled, and running in the guest, which is the [Ansible guest-agent capability](../../../docs/architecture.md#ansible-guest-agent-capability)'s job in the accepted first slice. Enabling it against a guest without a running agent leaves Proxmox operations that wait for the agent to time out. The expected order — create with it off, configure the guest, then turn it on in a later apply — is described in [Architecture](../../../docs/architecture.md#consumer-controlled-flow).
+The VM is created with the guest-agent channel attached, and the module never waits for an agent to answer.
+
+Both halves matter, and they are separate things. Proxmox only adds the `org.qemu.guest_agent.0` device when the agent setting is enabled, and a Debian guest's `qemu-guest-agent.service` is bound to that device — so a VM created without the channel is one where the service can never start, whatever you install inside it. Waiting is the other half: a provider that waits for an agent-reported address would block every apply and refresh until it timed out. This module disables that wait unconditionally, which is why attaching the channel early costs nothing at apply time. Addressing is always the static configuration you declared.
+
+So the composition is one apply, then guest configuration: create the VM, build your inventory, install the agent with the [Ansible guest-agent capability](../../../docs/architecture.md#ansible-guest-agent-capability). There is no second apply and no power cycle, which [ADR 0006](../../../docs/decisions/0006-guest-agent-channel-at-creation.md) records in full.
+
+**Between creating the VM and installing the agent**, Proxmox believes the guest has an agent that is not answering yet. Each affected operation degrades differently, and none of them hangs:
+
+| Operation | Behaviour in that window |
+| --- | --- |
+| Shutdown, reboot | Proxmox probes the agent for three seconds, warns, and falls back to ACPI. |
+| Backup | The guest filesystem freeze is skipped and logged. The backup is crash-consistent rather than filesystem-consistent — the one real cost, and a reason to close the window before relying on backups. |
+| Agent queries, agent-reported addresses | Reported unavailable. |
+
+Setting `guest_agent_enabled = false` is supported and means something specific: a VM in which the guest agent cannot run at all. Attaching the channel later requires stopping and starting the VM, because Proxmox does not hot-plug that change.
 
 ## Limitations
 
@@ -121,7 +135,7 @@ This module is one VM, cloned once, addressed statically. It does not do:
 
 Formatting, `tofu validate`, and a set of contract tests under [`tests/`](tests) that run against a **mocked** provider: no Proxmox endpoint, no credentials, nothing created. Run them with `task validate:tofu`, or directly as [Local validation](../../../docs/validation.md) describes.
 
-They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, guest-agent integration off unless asked for, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation — and that bad input fails at plan time.
+They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, the guest-agent channel attached by default and absent when it is turned off, waiting for an agent-reported address disabled in both cases, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation — and that bad input fails at plan time.
 
 They prove nothing about a real Proxmox VE. No clone, boot, cloud-init run, SSH connection, shutdown, stop, destroy, or guest agent has been exercised. [Compatibility](../../../docs/compatibility.md) records what this evidence does and does not cover.
 
