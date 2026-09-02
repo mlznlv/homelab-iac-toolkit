@@ -52,14 +52,15 @@ other tool is pinned to an exact release.
 | jq | `.tool-versions` | JSON handling in the publication-safety checks and the optional write-time hook | [jqlang/jq](https://github.com/jqlang/jq) |
 | uv | `.tool-versions` | Regenerating the Python dependency lock | [astral-sh/uv](https://github.com/astral-sh/uv) |
 | ansible-core | `requirements-dev.txt` | Guest configuration management | [ansible-core](https://pypi.org/project/ansible-core/) |
+| ansible-lint | `requirements-dev.txt` | Linting this repository's Ansible content | [ansible-lint](https://pypi.org/project/ansible-lint/) |
 | check-jsonschema | `requirements-dev.txt` | GitHub metadata schema validation | [check-jsonschema](https://pypi.org/project/check-jsonschema/) |
 | yamllint | `requirements-dev.txt` | YAML linting | [yamllint](https://pypi.org/project/yamllint/) |
 
 OpenTofu, Ansible, Task, SOPS, and age are declared because they are the project
-technologies a contributor needs available. The `proxmox-linux-vm` module is the
-first reusable content that uses one of them; Ansible content, and the workflow
-definitions that would run an infrastructure change, come with the milestones
-that introduce them.
+technologies a contributor needs available. The `proxmox-linux-vm` module and
+the `qemu_guest_agent` role are the first reusable content that uses them; the
+workflow definitions that would run an infrastructure change come with the
+milestone that introduces them.
 
 ## Determining a supported version
 
@@ -118,6 +119,7 @@ result with the commands below whichever way the tools were installed.
 | jq | `jq --version` |
 | uv | `uv --version` |
 | ansible-core | `ansible --version` |
+| ansible-lint | `ansible-lint --version` |
 | check-jsonschema | `check-jsonschema --version` |
 | yamllint | `yamllint --version` |
 

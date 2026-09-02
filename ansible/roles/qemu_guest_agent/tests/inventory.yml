@@ -1,0 +1,8 @@
+---
+# A fictional inventory, so the play beside it can be parsed the way a
+# consumer's play is. No host here exists: example.invalid is reserved by
+# RFC 2606 and resolves nowhere. Nothing in this repository connects to it.
+
+fictional_guests:
+  hosts:
+    guest.example.invalid:

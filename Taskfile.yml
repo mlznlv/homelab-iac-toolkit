@@ -67,6 +67,7 @@ tasks:
       - task: validate:public-safety
       - task: validate:safety-patterns
       - task: validate:secrets
+      - task: validate:ansible
       - task: validate:tofu
       - task: validate:links
 
@@ -140,6 +141,22 @@ tasks:
     desc: 'Security: scan repository history for secrets.'
     cmds:
       - gitleaks git --redact --verbose .
+
+  validate:ansible:
+    desc: 'Components: check the Ansible role, its fixture play, and its declared contract.'
+    preconditions:
+      - sh: '{{.PYTHON_TOOL_PREFIX}}ansible-lint --version >/dev/null 2>&1'
+        msg: 'ansible-lint runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
+    cmds:
+      # The fixture play lives inside the role it uses, so neither Ansible nor
+      # ansible-lint resolves that role by its own defaults. The roles path is
+      # given on each command rather than in an `env:` block, so that what Task
+      # prints is the whole invocation.
+      - ANSIBLE_ROLES_PATH=ansible/roles {{.PYTHON_TOOL_PREFIX}}ansible-playbook --syntax-check --inventory ansible/roles/qemu_guest_agent/tests/inventory.yml ansible/roles/qemu_guest_agent/tests/role.yml
+      # --offline keeps the check from reaching for collections; the role needs
+      # none, so nothing has to be fetched for it to be linted.
+      - ANSIBLE_ROLES_PATH=ansible/roles {{.PYTHON_TOOL_PREFIX}}ansible-lint --offline ansible/roles/qemu_guest_agent
+      - '{{.PYTHON_TOOL_PREFIX}}python3 ansible/roles/qemu_guest_agent/tests/check-role-contract.py'
 
   validate:tofu:
     desc: 'Components: check the OpenTofu module and run its contract tests. Needs public network access.'

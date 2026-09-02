@@ -1,0 +1,13 @@
+---
+# The smallest play that uses the role, kept so that `ansible-playbook
+# --syntax-check` parses the role the way a consumer's play would. It is never
+# run against a host.
+#
+# `become` is set here rather than in the role because privilege configuration
+# is the consumer's: this is the fixture standing in for that decision.
+
+- name: Install the QEMU guest agent and bring its service up
+  hosts: fictional_guests
+  become: true
+  roles:
+    - role: qemu_guest_agent

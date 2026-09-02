@@ -93,9 +93,12 @@ jobs:
 
       - name: Install the declared toolchain
         uses: ./.github/actions/install-toolchain
+        with:
+          python-packages: 'true'
 
-      # This job installs the provider the module declares, which is the only
-      # network access it needs. It contacts no Proxmox endpoint and holds no
-      # credential: the module's tests mock the provider.
-      - name: Check the OpenTofu module
-        run: task validate:tofu
+      # This job installs the provider the OpenTofu module declares, which is
+      # the only network access it needs. It contacts no Proxmox endpoint and
+      # no guest, and holds no credential: the module's tests mock the
+      # provider, and the role's checks read what it declares.
+      - name: Check the OpenTofu module and the Ansible role
+        run: task validate:ansible validate:tofu
