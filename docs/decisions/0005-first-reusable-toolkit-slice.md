@@ -2,7 +2,9 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0006](0006-guest-agent-channel-at-creation.md), which corrects the
+guest-agent bootstrap order. The selection of the coordinated first slice, and every
+other part of this decision, is carried forward there.
 
 ## Context
 

@@ -25,7 +25,7 @@ The project is in its bootstrap, pre-release stage. The roadmap records the curr
 
 What exists today:
 
-- **Project documentation:** the README and its documentation index, the roadmap, architecture, repository design, the ADR index and ADRs 0001–0004, the supported-tool-version and local-validation documentation, [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md).
+- **Project documentation:** the README and its documentation index, the roadmap, architecture, repository design, the ADR index and ADRs 0001–0006, the supported-tool-version and local-validation documentation, [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md).
 - **Contribution governance:** the Issue templates and [`pull_request_template.md`](.github/pull_request_template.md) described below, plus [`dependabot.yml`](.github/dependabot.yml).
 - **Declared tool versions:** [`.tool-versions`](.tool-versions) for language runtimes and standalone command-line tools, and [`requirements-dev.txt`](requirements-dev.txt) for Python packages. These declarations are authoritative for supported versions; [`docs/toolchain.md`](docs/toolchain.md) explains how to read, obtain, check and change them. [`requirements-dev.lock`](requirements-dev.lock) is generated from the Python declaration and pins the whole closure with hashes; it is what every environment installs, and it is regenerated rather than edited.
 - **Validation configuration:** [`.markdownlint-cli2.yaml`](.markdownlint-cli2.yaml), [`.yamllint`](.yamllint) and [`.editorconfig`](.editorconfig).
