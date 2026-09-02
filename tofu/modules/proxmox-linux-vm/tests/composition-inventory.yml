@@ -1,0 +1,20 @@
+---
+# An ordinary Ansible inventory, of the kind a consumer writes by hand.
+#
+# Every value in it is one a consumer already declared to the OpenTofu module,
+# republished by the module's `connection` output: the address without its
+# prefix, the bootstrap username, and the connection port. The test beside this
+# file asserts that the output composes into exactly this document, and the
+# repository's composition check asserts that Ansible reads it back unchanged.
+#
+# Nothing generates this file, nothing reads OpenTofu state to produce it, and
+# no host here exists: example.invalid is reserved by RFC 2606 and the address
+# by RFC 5737. It is a contract fixture, not an example to copy into a
+# deployment.
+
+fictional_guests:
+  hosts:
+    fictional-vm:
+      ansible_host: 192.0.2.10
+      ansible_user: fictional
+      ansible_port: 22

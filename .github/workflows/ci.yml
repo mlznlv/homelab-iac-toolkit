@@ -100,5 +100,5 @@ jobs:
       # the only network access it needs. It contacts no Proxmox endpoint and
       # no guest, and holds no credential: the module's tests mock the
       # provider, and the role's checks read what it declares.
-      - name: Check the OpenTofu module and the Ansible role
-        run: task validate:ansible validate:tofu
+      - name: Check the components and their composition
+        run: task validate:ansible validate:tofu validate:composition

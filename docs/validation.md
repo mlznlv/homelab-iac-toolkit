@@ -257,6 +257,24 @@ tofu -chdir=tofu/modules/proxmox-linux-vm test
 
 Task entry point: `task validate:tofu`.
 
+Check that the module's `connection` output composes into ordinary Ansible
+inventory. Ansible reads the committed fixture back and the three published
+values must survive unchanged; the other half of this evidence — that the
+output composes into exactly that document — is asserted by the module's
+`tests/composition.tftest.hcl`, which the check above runs.
+
+```sh
+ansible-inventory --inventory tofu/modules/proxmox-linux-vm/tests/composition-inventory.yml --list \
+  | jq -e '(._meta.hostvars["fictional-vm"] == {ansible_host: "192.0.2.10", ansible_user: "fictional", ansible_port: 22})
+      and (.fictional_guests.hosts == ["fictional-vm"])'
+```
+
+Nothing here reads OpenTofu state, generates inventory, contacts Proxmox, or
+runs the role. It is contract evidence that the composition a consumer performs
+by hand is possible, not evidence that anyone has performed it.
+
+Task entry point: `task validate:composition`.
+
 ## Task entry points
 
 [`Taskfile.yml`](../Taskfile.yml) wraps the commands above and nothing else. It
@@ -295,7 +313,8 @@ need network access until last:
 | 10 | `validate:secrets` | gitleaks |
 | 11 | `validate:ansible` | `ansible-playbook --syntax-check`, ansible-lint, the role contract check |
 | 12 | `validate:tofu` | `tofu fmt`, `tofu init`, `tofu validate`, `tofu test` |
-| 13 | `validate:links` | lychee |
+| 13 | `validate:composition` | `ansible-inventory`, `jq` |
+| 14 | `validate:links` | lychee |
 
 Task is a convenience. Every check remains runnable as the direct command shown
 above, which is what to use when Task is unavailable or when a failure needs to

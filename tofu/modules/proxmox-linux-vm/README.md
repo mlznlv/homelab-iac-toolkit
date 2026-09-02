@@ -88,7 +88,7 @@ Values that can be judged without contacting Proxmox are checked when you plan, 
 
 All three are non-sensitive; the module never publishes a private key or a password, and never accepts one.
 
-`connection` exists so you can build your own inventory out of values you already declared. Nothing in this toolkit reads it: the Ansible side of the accepted first slice takes ordinary inventory and knows nothing about OpenTofu.
+`connection` exists so you can build your own inventory out of values you already declared. Nothing in this toolkit consumes it at run time: the Ansible side of the accepted first slice takes ordinary inventory and knows nothing about OpenTofu. A contract fixture, [`tests/composition-inventory.yml`](tests/composition-inventory.yml), shows what that composition looks like and is asserted against this output — which is a demonstration that the mapping holds, not a dependency between the two components.
 
 ## Destroying the VM
 
