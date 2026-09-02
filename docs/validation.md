@@ -191,6 +191,43 @@ Task entry point: `task validate:secrets`.
 
 ### Components
 
+Parse a minimal fictional play that uses the Ansible role, the way a consumer's
+play would use it. The fixture play lives inside the role, so the roles path is
+given explicitly; nothing connects to the inventory's host, which is reserved
+by RFC 2606 and resolves nowhere.
+
+```sh
+ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook --syntax-check \
+  --inventory ansible/roles/qemu_guest_agent/tests/inventory.yml \
+  ansible/roles/qemu_guest_agent/tests/role.yml
+```
+
+Lint the role and that fixture. `--offline` keeps the check from reaching for
+collections, which the role does not need.
+
+```sh
+ANSIBLE_ROLES_PATH=ansible/roles ansible-lint --offline ansible/roles/qemu_guest_agent
+```
+
+ansible-lint warns that this repository's `.yamllint` does not match the
+settings it would choose. That is expected and does not affect the result: YAML
+in this repository is linted by the check above, with the repository's own
+configuration.
+
+Check that the role still declares the package and service contract it
+documents, and the boundaries it keeps. It reads every task and handler file
+the role can execute and walks tasks nested in `block`, `rescue` and `always`.
+Anything that would run content it has not read fails it: an include resolving
+outside the role, a module named indirectly, another role pulled in, or a role
+dependency in `meta`. It contacts no guest, needs no credential, and runs
+nothing.
+
+```sh
+python3 ansible/roles/qemu_guest_agent/tests/check-role-contract.py
+```
+
+Task entry point for the three above: `task validate:ansible`.
+
 Check the formatting of every OpenTofu file. `tofu fmt` understands the test
 files too, so they are covered by the same command.
 
@@ -256,8 +293,9 @@ need network access until last:
 | 8 | `validate:public-safety` | `scripts/check-publication-safety.sh` |
 | 9 | `validate:safety-patterns` | `scripts/check-publication-safety-patterns.sh` |
 | 10 | `validate:secrets` | gitleaks |
-| 11 | `validate:tofu` | `tofu fmt`, `tofu init`, `tofu validate`, `tofu test` |
-| 12 | `validate:links` | lychee |
+| 11 | `validate:ansible` | `ansible-playbook --syntax-check`, ansible-lint, the role contract check |
+| 12 | `validate:tofu` | `tofu fmt`, `tofu init`, `tofu validate`, `tofu test` |
+| 13 | `validate:links` | lychee |
 
 Task is a convenience. Every check remains runnable as the direct command shown
 above, which is what to use when Task is unavailable or when a failure needs to

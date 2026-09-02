@@ -14,9 +14,11 @@
 # After changing a version here, regenerate the lock with the command in its
 # header. scripts/check-python-lock.sh asserts the two still agree.
 #
-# ansible-core provides the Ansible engine only. Collection dependencies are
-# declared by the milestone that introduces Ansible content.
+# ansible-core provides the Ansible engine only, and ansible-lint checks the
+# Ansible content in this repository. Collection dependencies are declared by
+# the milestone that introduces content needing them.
 
 ansible-core==2.21.3
+ansible-lint==26.8.0
 check-jsonschema==0.36.1
-yamllint==1.37.1
+yamllint==1.38.0

@@ -1,0 +1,21 @@
+---
+# The role owns exactly two pieces of guest state: the QEMU guest agent package
+# is installed, and its service is running — and enabled for boot where the
+# target's packaging supports enabling it, which on a device-activated static
+# unit it does not. It creates no users, writes no SSH configuration, and
+# touches no Proxmox resource.
+#
+# Privilege escalation is deliberately not declared here. Both tasks need root,
+# and how that is obtained — `become`, a privileged connection user, a sudo
+# policy — belongs to the consumer's play and inventory.
+
+- name: Install the QEMU guest agent package
+  ansible.builtin.package:
+    name: qemu-guest-agent
+    state: present
+
+- name: Start the QEMU guest agent service, enabling it where the packaging allows
+  ansible.builtin.systemd_service:
+    name: qemu-guest-agent
+    enabled: true
+    state: started
