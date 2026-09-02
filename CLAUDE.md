@@ -25,6 +25,7 @@ The project is in its bootstrap, pre-release stage. The roadmap records the curr
 
 What exists today:
 
+- **First reusable component:** [`tofu/modules/proxmox-linux-vm/`](tofu/modules/proxmox-linux-vm), the OpenTofu module accepted in [ADR 0006](docs/decisions/0006-guest-agent-channel-at-creation.md), with its own README and contract tests. The tests mock the provider, so they need no Proxmox endpoint and no credentials, and they are evidence about the module's configuration rather than about a live Proxmox VE. `task validate:tofu` runs them.
 - **Project documentation:** the README and its documentation index, the roadmap, architecture, repository design, the ADR index and ADRs 0001–0006, the supported-tool-version and local-validation documentation, [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md).
 - **Contribution governance:** the Issue templates and [`pull_request_template.md`](.github/pull_request_template.md) described below, plus [`dependabot.yml`](.github/dependabot.yml).
 - **Declared tool versions:** [`.tool-versions`](.tool-versions) for language runtimes and standalone command-line tools, and [`requirements-dev.txt`](requirements-dev.txt) for Python packages. These declarations are authoritative for supported versions; [`docs/toolchain.md`](docs/toolchain.md) explains how to read, obtain, check and change them. [`requirements-dev.lock`](requirements-dev.lock) is generated from the Python declaration and pins the whole closure with hashes; it is what every environment installs, and it is regenerated rather than edited.
@@ -39,8 +40,8 @@ What exists today:
 
 What does not exist yet, and must not be written about as though it did:
 
-- **No toolkit source.** There is no `tofu/`, `ansible/` or `examples/` content. Their approved placement is in the repository design; the components themselves are later milestone work.
-- **No build system or test suite.** The commands that exist validate the repository's own content; there is nothing to build or unit-test yet.
+- **No Ansible or example content.** There is no `ansible/` or `examples/` content. Their approved placement is in the repository design; the components themselves are outstanding work.
+- **No build system, and no live-infrastructure test path.** Nothing here is built or packaged. The only component tests are the credential-free contract tests described above; no check has ever run against a Proxmox VE, and none may claim to.
 
 Do not document a command, path or setup procedure here or anywhere else in this repository without running it first.
 

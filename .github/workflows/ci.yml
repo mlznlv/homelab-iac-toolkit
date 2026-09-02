@@ -81,3 +81,21 @@ jobs:
         run: |
           task validate:workflow-audit validate:public-safety \
             validate:safety-patterns validate:secrets
+
+  components:
+    name: Components
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install the declared toolchain
+        uses: ./.github/actions/install-toolchain
+
+      # This job installs the provider the module declares, which is the only
+      # network access it needs. It contacts no Proxmox endpoint and holds no
+      # credential: the module's tests mock the provider.
+      - name: Check the OpenTofu module
+        run: task validate:tofu

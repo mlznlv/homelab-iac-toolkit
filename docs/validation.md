@@ -11,13 +11,19 @@ not restated here.
 
 ## What validation does and does not do
 
-Validation is deterministic and non-mutating. It reads this repository's own
-content, writes nothing, and needs no Proxmox credentials, secret decryption,
+Validation is deterministic and leaves tracked content alone. It reads this
+repository's own files and needs no Proxmox credentials, secret decryption,
 private inventory, or access to a private deployment repository. No check
-performs an infrastructure plan, apply, or destroy.
+contacts Proxmox, and none applies or destroys anything.
 
-The link check is the only check that uses the network, and only to resolve the
-public URLs found in this repository's Markdown.
+The component check is the one check that writes anything at all: `tofu init`
+installs the declared provider into a `.terraform/` directory inside the module,
+which git ignores, and the module's contract tests plan against a mocked
+provider, which creates nothing.
+
+Two checks use the network. The link check resolves the public URLs found in
+this repository's Markdown, and the component check downloads the provider the
+module declares.
 
 ## Prerequisites
 
@@ -61,7 +67,7 @@ git and is never committed.
 
 ## Checks
 
-The four groups below correspond to the four continuous-integration jobs.
+The five groups below correspond to the five continuous-integration jobs.
 
 ### Repository hygiene
 
@@ -183,6 +189,37 @@ gitleaks git --redact --verbose .
 
 Task entry point: `task validate:secrets`.
 
+### Components
+
+Check the formatting of every OpenTofu file. `tofu fmt` understands the test
+files too, so they are covered by the same command.
+
+```sh
+tofu fmt -check -recursive tofu/
+```
+
+Install the provider the module declares and validate the module statically.
+The lock file is read only, so a provider that no longer matches the committed
+`.terraform.lock.hcl` fails the check instead of being replaced silently. There
+is no backend to configure: the module declares none, because a consumer owns
+that. This is the step that needs network access.
+
+```sh
+tofu -chdir=tofu/modules/proxmox-linux-vm init -input=false -backend=false -lockfile=readonly
+tofu -chdir=tofu/modules/proxmox-linux-vm validate
+```
+
+Run the module's contract tests. They mock the provider, so they contact no
+Proxmox endpoint, need no credentials, and create nothing. What they prove, and
+what they deliberately do not, is described in the module's
+[README](../tofu/modules/proxmox-linux-vm/README.md).
+
+```sh
+tofu -chdir=tofu/modules/proxmox-linux-vm test
+```
+
+Task entry point: `task validate:tofu`.
+
 ## Task entry points
 
 [`Taskfile.yml`](../Taskfile.yml) wraps the commands above and nothing else. It
@@ -204,21 +241,23 @@ task validate
 
 `task validate` runs the focused checks in sequence and stops at the first
 failure, so its exit status is non-zero whenever any constituent check fails.
-The order is cheapest and most local first, which leaves the slowest check and
-the only one needing network access until last:
+The order is cheapest and most local first, which leaves the two checks that
+need network access until last:
 
 | Order | Task | Wraps |
 | --- | --- | --- |
 | 1 | `validate:whitespace` | `git diff --check` |
-| 2 | `validate:markdown` | markdownlint-cli2 |
-| 3 | `validate:yaml` | yamllint |
-| 4 | `validate:schemas` | check-jsonschema |
-| 5 | `validate:workflows` | actionlint |
-| 6 | `validate:workflow-audit` | zizmor |
-| 7 | `validate:public-safety` | `scripts/check-publication-safety.sh` |
-| 8 | `validate:safety-patterns` | `scripts/check-publication-safety-patterns.sh` |
-| 9 | `validate:secrets` | gitleaks |
-| 10 | `validate:links` | lychee |
+| 2 | `validate:python-lock` | `scripts/check-python-lock.sh` |
+| 3 | `validate:markdown` | markdownlint-cli2 |
+| 4 | `validate:yaml` | yamllint |
+| 5 | `validate:schemas` | check-jsonschema |
+| 6 | `validate:workflows` | actionlint |
+| 7 | `validate:workflow-audit` | zizmor |
+| 8 | `validate:public-safety` | `scripts/check-publication-safety.sh` |
+| 9 | `validate:safety-patterns` | `scripts/check-publication-safety-patterns.sh` |
+| 10 | `validate:secrets` | gitleaks |
+| 11 | `validate:tofu` | `tofu fmt`, `tofu init`, `tofu validate`, `tofu test` |
+| 12 | `validate:links` | lychee |
 
 Task is a convenience. Every check remains runnable as the direct command shown
 above, which is what to use when Task is unavailable or when a failure needs to
@@ -251,5 +290,5 @@ unchanged.
 The CI workflow runs these checks by invoking the same Task entry points, so
 the check set, tool versions, repository-owned configuration and pass or fail
 semantics are shared rather than restated. Every check on this page has a CI
-counterpart, and the four CI jobs together invoke exactly the checks
+counterpart, and the five CI jobs together invoke exactly the checks
 `task validate` invokes.

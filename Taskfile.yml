@@ -55,8 +55,8 @@ tasks:
   validate:
     desc: Run every local validation check. Non-mutating; stops at the first failure.
     cmds:
-      # Ordered cheapest and most local first, so the slowest check and the only
-      # one that needs network access run last.
+      # Ordered cheapest and most local first, so the two checks that need
+      # network access run last.
       - task: validate:whitespace
       - task: validate:python-lock
       - task: validate:markdown
@@ -67,6 +67,7 @@ tasks:
       - task: validate:public-safety
       - task: validate:safety-patterns
       - task: validate:secrets
+      - task: validate:tofu
       - task: validate:links
 
   validate:whitespace:
@@ -139,3 +140,18 @@ tasks:
     desc: 'Security: scan repository history for secrets.'
     cmds:
       - gitleaks git --redact --verbose .
+
+  validate:tofu:
+    desc: 'Components: check the OpenTofu module and run its contract tests. Needs public network access.'
+    cmds:
+      # Formatting covers the test files too, which tofu fmt understands.
+      - tofu fmt -check -recursive tofu/
+      # init installs the provider the module declares. The lock file is read
+      # only, so a provider that no longer matches the committed lock fails
+      # here instead of being silently replaced. There is no backend to
+      # configure: the module declares none, and consumers own their own.
+      - tofu -chdir=tofu/modules/proxmox-linux-vm init -input=false -backend=false -lockfile=readonly
+      - tofu -chdir=tofu/modules/proxmox-linux-vm validate
+      # The tests mock the provider, so they contact no Proxmox endpoint, need
+      # no credentials, and create nothing.
+      - tofu -chdir=tofu/modules/proxmox-linux-vm test
