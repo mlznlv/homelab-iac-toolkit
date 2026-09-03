@@ -2,13 +2,13 @@
 
 ## Current state
 
-- **Current phase:** M3 — First reusable toolkit slice
-- **Milestone state:** M1 and M2 are complete; first-slice Architecture is accepted.
-- **Implementation state:** M3 implementation is the current execution focus.
-- **Current blocker:** None at milestone level.
-- **Next action:** Implement and validate the accepted first slice through focused Developer Issues.
+- **Current phase:** M3 complete; awaiting M4 entry
+- **Milestone state:** M1, M2 and M3 are complete.
+- **Implementation state:** No M4 Developer work item is Ready.
+- **Current blocker:** M4 entry requires an accepted initial consumer contract.
+- **Next action:** Architecture defines and accepts the initial consumer contract required by M4.
 
-The foundational Architecture and reproducible development foundation are complete. ADR 0006 defines the accepted first reusable slice, superseding ADR 0005: a coordinated OpenTofu VM capability and independently usable Ansible guest-agent capability, with the guest-agent channel present from creation. Implementation and credential-free contract validation now proceed through focused GitHub Issues.
+M3 is complete: the public OpenTofu VM module and Ansible guest-agent role are implemented, independently consumable, documented and covered by credential-free component and composition validation. Their public interfaces, evidence limits and lifecycle-sensitive behavior are documented. M4 implementation remains blocked until its Architecture dependencies are accepted.
 
 ## Milestone sequence
 
