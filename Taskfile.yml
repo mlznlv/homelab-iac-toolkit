@@ -69,6 +69,7 @@ tasks:
       - task: validate:secrets
       - task: validate:ansible
       - task: validate:tofu
+      - task: validate:composition
       - task: validate:links
 
   validate:whitespace:
@@ -157,6 +158,26 @@ tasks:
       # none, so nothing has to be fetched for it to be linted.
       - ANSIBLE_ROLES_PATH=ansible/roles {{.PYTHON_TOOL_PREFIX}}ansible-lint --offline ansible/roles/qemu_guest_agent
       - '{{.PYTHON_TOOL_PREFIX}}python3 ansible/roles/qemu_guest_agent/tests/check-role-contract.py'
+
+  validate:composition:
+    desc: 'Components: check that the connection output composes into ordinary Ansible inventory.'
+    preconditions:
+      - sh: '{{.PYTHON_TOOL_PREFIX}}ansible-inventory --version >/dev/null 2>&1'
+        msg: 'ansible-inventory runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
+    cmds:
+      # Ansible reads the committed fixture back: the three values the module
+      # publishes, unchanged, in an inventory of the kind a consumer writes by
+      # hand. The other half of this evidence — that the connection output
+      # composes into exactly that document — is asserted by
+      # tests/composition.tftest.hcl, which validate:tofu runs.
+      #
+      # Nothing here reads OpenTofu state, generates inventory, or runs the
+      # role: the composition stays the consumer's to perform.
+      - >-
+        {{.PYTHON_TOOL_PREFIX}}ansible-inventory
+        --inventory tofu/modules/proxmox-linux-vm/tests/composition-inventory.yml --list
+        | jq -e '(._meta.hostvars["fictional-vm"] == {ansible_host: "192.0.2.10", ansible_user: "fictional", ansible_port: 22})
+        and (.fictional_guests.hosts == ["fictional-vm"])'
 
   validate:tofu:
     desc: 'Components: check the OpenTofu module and run its contract tests. Needs public network access.'

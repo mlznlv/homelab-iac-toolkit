@@ -2,7 +2,7 @@
 # consumer needs to reach the guest, and never key material or a password.
 
 output "connection" {
-  description = "Where the bootstrap account can be reached: the declared IPv4 address without its prefix, the bootstrap username, and the ssh_port metadata value. It is a convenience for composing consumer-owned inventory, not a required integration: nothing in this toolkit consumes it."
+  description = "Where the bootstrap account can be reached: the declared IPv4 address without its prefix, the bootstrap username, and the ssh_port metadata value. It is a convenience for composing consumer-owned inventory, not a required integration: nothing in this toolkit consumes it at run time."
 
   value = {
     host = split("/", var.ipv4_address_cidr)[0]
