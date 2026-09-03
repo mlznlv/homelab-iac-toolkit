@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the cross-cutting architecture for reproducible development, validation, and the first reusable toolkit slice. Component design beyond that slice, consumer guidance, and release design remain deferred to the milestones that require them.
+This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, and its initial separate-repository consumer contract. Component design and consumer workflows beyond that contract, live infrastructure testing, and release design remain deferred to the milestones that require them.
 
 ## Repository boundary
 
@@ -124,7 +124,61 @@ Locally decidable invalid inputs fail early and clearly. Runtime prerequisites r
 
 ### Deferred from the first slice
 
-The first slice does not design or implement template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, cross-component consumer examples, or release behavior.
+The first slice does not design or implement template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, or release behavior. Its initial cross-component consumer contract is defined separately below for M4; implementing the example remains focused M4 work.
+
+## Initial separate-repository consumer contract
+
+The canonical coordinated M4 workflow consumes the OpenTofu module and Ansible role through one consumer-owned toolkit checkout at one immutable full commit SHA, as accepted in [ADR 0007](decisions/0007-single-revision-consumer-contract.md). The consumer's source-controlled material must identify that revision exactly.
+
+The checkout mechanism and placement are consumer choices. A Git submodule pinned to the full SHA, vendored content with source and revision provenance recorded in source control, or another consumer-owned fetch mechanism whose source-controlled declaration reproduces the same full SHA can satisfy the contract. A path such as `vendor/homelab-iac-toolkit/` is a documentation convention, not a toolkit interface.
+
+Both components resolve from that same checkout:
+
+- OpenTofu uses a local source path to `tofu/modules/proxmox-linux-vm/`; and
+- Ansible uses an ordinary `roles_path` containing the checkout's `ansible/roles/` directory.
+
+Independent remote Git references can remain valid for component-only consumption, but they are not the canonical coordinated workflow because separate references can drift. OpenTofu, Ansible, and Task do not acquire, update, synchronize, or select the toolkit revision. The consumer owns acquisition, placement, updates, and any credentials needed to obtain the checkout.
+
+### Canonical consumer flow
+
+One minimal public example represents the structure of a separate consumer repository. It demonstrates this sequence:
+
+1. Establish the consumer-owned toolkit checkout at the source-controlled full commit SHA.
+2. Reference the OpenTofu module through a local path in that checkout.
+3. Review the declared configuration, run `tofu plan`, review the plan, and run an explicit `tofu apply` only after that human review.
+4. Compose ordinary Ansible inventory under consumer control by explicitly mapping the module's required non-sensitive `connection` descriptor into `ansible_host`, `ansible_user`, and `ansible_port`.
+5. Run an ordinary Ansible play that invokes the `qemu_guest_agent` role from the same checkout.
+
+The example demonstrates that mapping with fictional values, while the consumer performs it manually from reviewed output or equivalent consumer-owned configuration. The example does not read OpenTofu state, generate inventory, wire outputs automatically, or add Task orchestration. It must not suggest that copying the example makes an unattended apply safe.
+
+The example is copyable and syntactically valid but deliberately not deployment-ready. It uses fictional or standards-reserved values when concrete values aid parsing or understanding. Where no public value can be both safe and meaningful, it exposes an explicit input boundary or documents what the consumer must supply; syntactically invalid placeholder tokens must not stand in for consumer ownership.
+
+### Configuration and secrets boundary
+
+Consumers own all concrete OpenTofu inputs, provider and backend configuration, state custody, Ansible inventory and authentication, and environment-specific values. Provider credentials and endpoints must not pass through the reusable module or appear in the public example. Consumers supply them at runtime using a provider-supported, consumer-controlled mechanism; exact provider environment-variable names and authentication choices are provider documentation rather than toolkit interfaces.
+
+SSH private keys and other Ansible authentication material remain outside the public example and public inventory. The toolkit adds no secret loader, credential broker, decryption orchestration, or custom authentication abstraction.
+
+The canonical example declares no backend. Its documentation must state that this omission is not a recommendation to use local state for a real deployment. A consumer must choose its backend and state-custody policy before real use.
+
+SOPS and age remain the canonical interface when a toolkit-supported workflow requires encrypted secrets committed to source control. They are explicitly deferred from the initial M4 workflow because that flow requires no version-controlled encrypted secret document. Runtime-only credentials may remain outside Git and use native consumer-controlled mechanisms. Real encrypted secret material, recipients, and decryption identities remain consumer-owned and belong in the private deployment repository, never in the public toolkit.
+
+### Validation and live-testing boundary
+
+Normal public validation remains credential-free and must prove at minimum that:
+
+- the example is syntactically valid and passes applicable static validation;
+- its local module source and Ansible `roles_path` resolve through the same represented toolkit checkout;
+- its fictional configuration conforms to the accepted public interfaces;
+- the `connection` descriptor maps explicitly into ordinary Ansible inventory;
+- it introduces no state reading, generated inventory, secret handling, backend access, automatic acquisition, or deployment orchestration; and
+- existing repository validation and publication-safety checks continue to pass.
+
+Validation may construct or use a credential-free repository fixture representing the shared pinned checkout. It does not have to reproduce a consumer's acquisition mechanism, and it must not introduce a second canonical consumption model for CI convenience. Submodule initialization, vendoring automation, or consumer-specific fetch tooling belongs in normal public CI only if a later accepted example owns that mechanism.
+
+Public validation does not establish successful Proxmox provisioning, cloud-init behavior, SSH connectivity, Ansible convergence or idempotency, `qemu-guest-agent` runtime behavior, shutdown, reboot, backup, stop or destroy behavior, or compatibility with a live consumer environment. Consumer-run infrastructure tests remain outside the toolkit's normal evidence contract.
+
+Toolkit-owned live testing is deferred. Any future live test must be isolated from normal public CI, explicitly opt-in, and Architecture-reviewed with credential custody, trusted triggers, infrastructure ownership, cleanup, failure handling, and cost responsibility defined before implementation. A new ADR is required only when the design changes a durable security, lifecycle-ownership, compatibility, or validation boundary.
 
 ## Constraints for future components
 
@@ -138,4 +192,4 @@ Future components must:
 - remain usable by unrelated consumers;
 - add abstractions only for demonstrated reusable needs.
 
-Provider, module, role, platform, and validation decisions beyond the first slice remain deferred. Consumer examples, live testing, broader compatibility commitments, and release design also remain deferred.
+Provider, module, role, platform, and validation decisions beyond the first slice remain deferred. Consumer workflows beyond the initial contract, live testing, broader compatibility commitments, and release design also remain deferred.
