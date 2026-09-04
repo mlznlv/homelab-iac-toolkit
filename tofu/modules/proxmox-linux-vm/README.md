@@ -48,6 +48,8 @@ module "fictional_vm" {
 
 Every value above is fictional or reserved for documentation: the addresses come from [RFC 5737](https://www.rfc-editor.org/info/rfc5737/) and name nothing real. Pin `ref` to a commit or tag; this project has not published a release yet.
 
+That remote source is component-only consumption, and stays supported. Using this module *together with* the `qemu_guest_agent` role has a canonical form instead: one consumer-owned toolkit checkout pinned at a single full commit SHA, with a local `source` path into it and Ansible's `roles_path` reaching the same checkout, so one revision determines both components. [ADR 0007](../../../docs/decisions/0007-single-revision-consumer-contract.md) records why, and [Architecture](../../../docs/architecture.md#initial-separate-repository-consumer-contract) describes the flow.
+
 ## Inputs
 
 Required:

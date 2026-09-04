@@ -18,7 +18,7 @@
 | Root tool configuration and version declarations | Conventional, discoverable repository-wide tooling configuration |
 | `tofu/` | Reusable OpenTofu modules and their component-local documentation and tests |
 | `ansible/` | Reusable Ansible roles and their component-local documentation and tests |
-| `examples/` | Cross-component consumer examples, beginning with the separate-repository M4 skeleton |
+| `examples/` | Cross-component consumer examples, beginning with the separate-repository M4 skeleton when implemented |
 | `.claude/` | Optional Claude Code assistance and defense-in-depth controls |
 
 Areas described for deferred use need not be created until they contain approved content.
