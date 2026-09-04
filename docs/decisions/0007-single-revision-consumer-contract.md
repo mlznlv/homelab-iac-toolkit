@@ -22,8 +22,6 @@ The checkout mechanism and location are not toolkit interfaces. A Git submodule 
 
 The toolkit, OpenTofu module, Ansible role, and Task workflow do not acquire, update, synchronize, or choose the checkout. The consumer owns those operations and any credentials they require.
 
-Two deferrals follow from this decision and are recorded with it. SOPS and age are not required by the initial M4 workflow, because that workflow commits no encrypted secret document to source control; they remain the canonical interface for the workflow that does. Toolkit-owned live testing is deferred, and introducing it requires an accepted ADR. Both are governed in detail by the [initial separate-repository consumer contract](../architecture.md#initial-separate-repository-consumer-contract).
-
 The canonical M4 public example demonstrates this shared-checkout model through local component references. A vendor-style directory may be used as a convention, but its name is not part of the public interface. Independent remote Git pins may remain component-level alternatives, but they are not the canonical coordinated workflow.
 
 ## Consequences
