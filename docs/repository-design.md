@@ -18,7 +18,7 @@
 | Root tool configuration and version declarations | Conventional, discoverable repository-wide tooling configuration |
 | `tofu/` | Reusable OpenTofu modules and their component-local documentation and tests |
 | `ansible/` | Reusable Ansible roles and their component-local documentation and tests |
-| `examples/` | Future cross-component consumer examples |
+| `examples/` | Cross-component consumer examples, beginning with the separate-repository M4 skeleton when implemented |
 | `.claude/` | Optional Claude Code assistance and defense-in-depth controls |
 
 Areas described for deferred use need not be created until they contain approved content.
@@ -51,6 +51,19 @@ Examples are introduced only with supported behavior:
 - all examples use fictional or standards-reserved values;
 - examples must not depend on unpublished files or private repositories.
 
+The initial M4 example occupies one descriptive subdirectory under `examples/` and visibly represents a separate consumer repository. Its directory name and internal layout are documentation conventions rather than public toolkit interfaces. It contains only what is needed to demonstrate the accepted consumer contract:
+
+- root OpenTofu configuration that refers locally to `tofu/modules/proxmox-linux-vm/` within one consumer-owned toolkit checkout;
+- fictional, non-sensitive configuration or explicit input boundaries needed to demonstrate the module contract;
+- ordinary Ansible configuration and inventory that demonstrates the explicit manual mapping from the module's `connection` descriptor and whose `roles_path` reaches `ansible/roles/` in that same checkout;
+- one play that invokes `qemu_guest_agent`;
+- a concise Getting Started sequence covering plan, human review, explicit apply, manual inventory composition, and the Ansible play; and
+- credential-free validation material needed to keep the example structurally consistent and publication-safe.
+
+The example must be copyable and statically valid, but not deployment-ready. It must not use invalid HCL or YAML placeholder tokens to communicate consumer ownership. It declares no backend and contains no provider endpoint, credential, secret, private inventory, real infrastructure value, or private-repository assumption.
+
+The example does not contain toolkit-acquisition or update automation, generated inventory, automatic OpenTofu-output wiring, state-reading automation, Taskfile orchestration, secret loading or decryption, or unattended apply behavior. Validation may represent the shared checkout with a credential-free fixture; the example does not own a submodule, vendoring, or other acquisition mechanism merely to support CI.
+
 ## Repository tooling
 
 The Dev Container defines the canonical development environment, not the authoritative tool-version policy. Source-controlled version declarations and dependency locks are authoritative and must be consumable by the container, native development path, and CI as applicable.
@@ -61,7 +74,7 @@ Tool-specific configuration such as `.claude/` is optional and non-authoritative
 
 ## Structure still not permitted
 
-The first slice must not create:
+The first slice and initial consumer workflow must not create:
 
 - speculative additional module, role, service, platform, or environment hierarchies;
 - private inventories or deployment roots;
@@ -70,6 +83,8 @@ The first slice must not create:
 - real secrets, age identities, or private keys in public source or artifacts;
 - mandatory dotfiles integration;
 - live-test infrastructure;
+- toolkit-owned acquisition or synchronization of a consumer checkout;
+- generated inventory, cross-component state reading, or automatic Task wiring;
 - release or registry structure;
 - additional virtualization-platform abstractions.
 

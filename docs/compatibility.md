@@ -29,6 +29,14 @@ On those targets the guest-agent unit is device-activated: it is bound to the gu
 
 The consumer-supplied source template must support the cloud-init bootstrap inputs used by the OpenTofu module: static IPv4 addressing, gateway, DNS servers, username, and SSH public keys. The template need not contain `qemu-guest-agent`: the module attaches the channel at creation and waits for no agent, so the package arrives afterwards with the Ansible role.
 
+## Consumer revision and example compatibility
+
+The initial coordinated consumer contract is revision-based: a consumer records one immutable full toolkit commit SHA in source control, establishes one checkout at that revision, and consumes both the OpenTofu module and Ansible role from it. This makes the selected source revision reproducible without choosing the consumer's acquisition mechanism or checkout location.
+
+The repository remains pre-release. A full commit SHA identifies exact source; it does not create a semantic-versioning, upgrade, migration, stability, or release-support guarantee. Those policies remain M5 decisions.
+
+The approved M4 separate-repository example inherits the PVE target and guest capability contract on this page. It does not add a supported PVE version, provider line, guest distribution, or validated reference platform. Its public validation is structural and credential-free, so a passing example does not add live compatibility evidence.
+
 ## Current evidence level
 
 The first slice requires public, credential-free static and contract validation for:
@@ -44,7 +52,9 @@ This evidence does not demonstrate:
 - successful plan, apply, clone, start, reconciliation, or destroy behavior, including graceful shutdown or reliable forced stop;
 - successful cloud-init execution, SSH connectivity, or privilege escalation;
 - Ansible convergence or idempotency on Debian Stable, Kali Rolling, or another real guest;
-- that a guest agent starts once the channel is present, or that Proxmox subsequently reports one; or
-- that adding or removing the channel behaves as described on a running VM.
+- that a guest agent starts once the channel is present, or that Proxmox subsequently reports one;
+- that adding or removing the channel behaves as described on a running VM;
+- a consumer's checkout-acquisition mechanism; or
+- compatibility with a live consumer environment.
 
 Static or mocked evidence must not be described as live infrastructure or guest compatibility evidence. A distribution becomes a validated reference platform only after public validation exercises it to the level claimed and this contract records that evidence.
