@@ -1,6 +1,8 @@
 # A separate consumer repository
 
-This directory is shaped like the repository you would keep for your own homelab: it is not part of the toolkit's source, and nothing in the toolkit reads it. It exists to show one thing — how a repository that is not this one uses both halves of the toolkit together, from a single checkout pinned at a single commit.
+This directory is shaped like the repository you would keep for your own homelab. It exists to show one thing — how a repository that is not this one uses both halves of the toolkit together, from a single checkout pinned at a single commit.
+
+It represents such a repository rather than being one. It is tracked here like any other file, and this repository's own checks read it on every change to confirm it still demonstrates what it documents. What does not read it is the toolkit's reusable source: neither the OpenTofu module nor the Ansible role knows this directory exists, and nothing you consume depends on it.
 
 The two halves are the [`proxmox-linux-vm`](../../tofu/modules/proxmox-linux-vm) OpenTofu module and the [`qemu_guest_agent`](../../ansible/roles/qemu_guest_agent) Ansible role. They have no runtime dependency on each other, and neither knows the other exists. What ties them together here is that both are resolved out of the same directory, at the same revision, which [ADR 0007](../../docs/decisions/0007-single-revision-consumer-contract.md) records as the reason this example is shaped the way it is.
 

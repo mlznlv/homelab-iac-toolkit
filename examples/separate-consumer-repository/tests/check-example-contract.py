@@ -86,6 +86,9 @@ FORBIDDEN_NAMES = {
     "requirements.yaml": "Galaxy acquisition, which is a second way to obtain the role",
 }
 
+# Suffixes that make a file a script whether or not it is marked executable.
+SCRIPT_SUFFIXES = {".sh", ".bash", ".zsh", ".ksh", ".py", ".rb", ".pl", ".ps1"}
+
 # Suffixes that would mean state, a plan, or key material had been committed.
 FORBIDDEN_SUFFIXES = {
     ".tfstate": "OpenTofu state",
@@ -114,16 +117,21 @@ DOCUMENTATION_NETWORKS = [
 
 IPV4 = re.compile(r"(?<![\w.])(\d{1,3}(?:\.\d{1,3}){3})(?![\w.])")
 
-# Hosts the example may name. The documentation domains come from RFC 2606 and
-# resolve nowhere; github.com appears because the example has to say where the
-# toolkit is obtained from, and the documentation sites because it cites them.
-# Anything else is a real place, and a public example has no business naming
-# one - least of all a Proxmox endpoint.
-ALLOWED_HOST_SUFFIXES = (
-    ".invalid",
-    ".example",
-    ".test",
-    ".localhost",
+# Top-level domains reserved so that nothing under them resolves. A name ending
+# in one of these is safe whatever precedes it, so a suffix test is the right
+# test here.
+RESERVED_TLDS = (".invalid", ".example", ".test", ".localhost")
+
+# Named domains the example may reach: the documentation domains from RFC 2606,
+# github.com because the example has to say where the toolkit is obtained from,
+# and the sites it cites. Anything else is a real place, and a public example
+# has no business naming one - least of all a Proxmox endpoint.
+#
+# These are matched by domain label rather than by string suffix, because a
+# suffix test answers the wrong question: "evilgithub.com" ends with
+# "github.com" and is a different place owned by somebody else. Only the domain
+# itself and names beneath it qualify.
+ALLOWED_DOMAINS = (
     "example.com",
     "example.net",
     "example.org",
@@ -237,6 +245,21 @@ def roles_path():
     return parser.get("defaults", "roles_path", fallback=None)
 
 
+def is_allowed_host(host):
+    """Whether a host name is one the example is permitted to reach.
+
+    The comparison is by domain label. `endswith("github.com")` would also
+    accept `evilgithub.com`, which is somebody else's domain entirely, so a
+    named domain matches only itself and names strictly beneath it.
+    """
+    host = host.strip().lower().rstrip(".")
+    if not host:
+        return False
+    if host.endswith(RESERVED_TLDS):
+        return True
+    return any(host == domain or host.endswith(f".{domain}") for domain in ALLOWED_DOMAINS)
+
+
 def is_documentation_address(text):
     """Whether a dotted-quad is inside one of the RFC 5737 ranges.
 
@@ -267,7 +290,7 @@ def is_fictional_host(value):
     value = str(value)
     if re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){3}", value):
         return is_documentation_address(value)
-    if value.endswith(ALLOWED_HOST_SUFFIXES):
+    if is_allowed_host(value):
         return True
     return "." not in value
 
@@ -429,14 +452,20 @@ def main():
     )
     check("no state, plan, or key material is committed with the example", not suffixed, suffixed)
 
-    # Anything executable outside tests/ would be a mechanism the example runs,
-    # and the contract leaves every runnable step to the consumer.
-    executable = sorted(
+    # Anything runnable outside tests/ would be a mechanism the example
+    # performs, and the contract leaves every runnable step to the consumer.
+    #
+    # The permission bit alone is not the test. `sh fetch.sh` runs a file that
+    # was never marked executable, and a mode is easy to lose in a copy or a
+    # checkout, so a script is recognised by what it is as well as by how it is
+    # marked.
+    runnable = sorted(
         str(path.relative_to(EXAMPLE))
         for path in example_files()
-        if path.stat().st_mode & 0o111 and path.parent != EXAMPLE / "tests"
+        if (EXAMPLE / "tests") not in path.parents
+        and (path.suffix in SCRIPT_SUFFIXES or path.stat().st_mode & 0o111)
     )
-    check("nothing outside tests/ is executable, so the example runs nothing itself", not executable, executable)
+    check("nothing outside tests/ is runnable, so the example performs nothing itself", not runnable, runnable)
 
     found_content = sorted(
         f"{path.relative_to(EXAMPLE)}: {reason}"
@@ -479,7 +508,7 @@ def main():
         for pattern in (URL_HOST, AT_HOST)
         for match in pattern.findall(path.read_text())
         for host in [match.rstrip(".,;:!?)>]\"'")]
-        if not host.endswith(ALLOWED_HOST_SUFFIXES)
+        if not is_allowed_host(host)
     )
     check("every host named in a URL or address is documentation-reserved or a source the example cites", not bad_hosts, bad_hosts)
 
