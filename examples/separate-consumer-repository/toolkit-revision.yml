@@ -1,0 +1,25 @@
+---
+# The toolkit revision this repository consumes, recorded in source control.
+#
+# One commit, named in full, determines both halves of the toolkit used here:
+# the OpenTofu module ../tofu/main.tf resolves and the Ansible role
+# ../ansible/ansible.cfg puts on its roles_path. Recording it here is what
+# makes the pairing reproducible, because a checkout at this commit is the only
+# thing both paths can be pointing at.
+#
+# Nothing acquires, updates, verifies, or synchronizes the checkout. The
+# toolkit does not, OpenTofu does not, Ansible does not, and no tool in this
+# example does. Establishing `checkout_path` at `revision` is yours, and the
+# mechanism is yours too: a Git submodule pinned to this commit, a vendored
+# copy whose provenance you record, or any other fetch you control. This file
+# is a declaration of what you pinned, not an input to a tool that pins it.
+#
+# `revision` below is synthetic. It is a well-formed 40-character commit
+# identifier so the shape is unmistakable, and it names no commit in this or
+# any other repository. Replace it with the full SHA you actually checked out;
+# an abbreviated SHA, a branch name, or a tag will not do, because none of them
+# is immutable.
+
+repository: https://github.com/mlznlv/homelab-iac-toolkit.git
+revision: 0123456789abcdef0123456789abcdef01234567
+checkout_path: vendor/homelab-iac-toolkit

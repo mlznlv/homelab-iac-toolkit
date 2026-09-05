@@ -16,14 +16,16 @@ repository's own files and needs no Proxmox credentials, secret decryption,
 private inventory, or access to a private deployment repository. No check
 contacts Proxmox, and none applies or destroys anything.
 
-The component check is the one check that writes anything at all: `tofu init`
-installs the declared provider into a `.terraform/` directory inside the module,
-which git ignores, and the module's contract tests plan against a mocked
-provider, which creates nothing.
+The component checks are the only ones that write anything at all, and neither
+writes into tracked content. `tofu init` installs the declared provider into a
+`.terraform/` directory inside the module, which git ignores, and the module's
+contract tests plan against a mocked provider, which creates nothing. The
+consumer-example check builds its stand-in toolkit checkout in a temporary
+directory and removes it when it finishes.
 
-Two checks use the network. The link check resolves the public URLs found in
-this repository's Markdown, and the component check downloads the provider the
-module declares.
+Three checks use the network. The link check resolves the public URLs found in
+this repository's Markdown, and the component and consumer-example checks
+download the provider they declare.
 
 ## Prerequisites
 
@@ -275,6 +277,51 @@ by hand is possible, not evidence that anyone has performed it.
 
 Task entry point: `task validate:composition`.
 
+Check the formatting of the consumer example's OpenTofu files.
+
+```sh
+tofu fmt -check -recursive examples/
+```
+
+Run the example's own tools against a stand-in toolkit checkout. The example
+points both components at `vendor/homelab-iac-toolkit/`, a checkout a consumer
+establishes and this repository deliberately does not contain, so the script
+copies the example into a temporary directory, links this repository in at that
+path, and runs the commands there. It prints each one before running it and
+writes nothing into the working tree. This step needs network access, for the
+provider install.
+
+```sh
+./examples/separate-consumer-repository/tests/check-example.sh
+```
+
+It takes its Ansible commands from `PATH`, so activate the virtual environment
+first as above. To point it at one without activating, set
+`PYTHON_TOOL_PREFIX=.venv/bin/`, which is what the Task entry point does.
+
+The commands it runs inside that fixture are `tofu init -lockfile=readonly`,
+`tofu validate` and `tofu test` in the example's OpenTofu root, then
+`ansible-playbook --syntax-check`, `ansible-lint --offline` and
+`ansible-inventory --list` in its Ansible directory. Together they establish
+that the example parses, that its module call type-checks against the module's
+real interface, that its committed inventory is the `connection` output mapped
+by hand, and that its play resolves the role from the same checkout. The
+provider is mocked or unconfigured throughout: no credential is read, and no
+Proxmox endpoint or guest is contacted.
+
+Check the structural claims those tools cannot make: that the pinned revision
+is one immutable full commit SHA, that the OpenTofu module source and the
+Ansible `roles_path` resolve into the same represented checkout, that the
+inventory maps all three connection fields, and that the example carries no
+acquisition, orchestration, state-reading, inventory-generation, or
+secret-handling mechanism and no real address or host.
+
+```sh
+python3 examples/separate-consumer-repository/tests/check-example-contract.py
+```
+
+Task entry point for the three above: `task validate:example`.
+
 ## Task entry points
 
 [`Taskfile.yml`](../Taskfile.yml) wraps the commands above and nothing else. It
@@ -314,7 +361,8 @@ need network access until last:
 | 11 | `validate:ansible` | `ansible-playbook --syntax-check`, ansible-lint, the role contract check |
 | 12 | `validate:tofu` | `tofu fmt`, `tofu init`, `tofu validate`, `tofu test` |
 | 13 | `validate:composition` | `ansible-inventory`, `jq` |
-| 14 | `validate:links` | lychee |
+| 14 | `validate:example` | `tofu fmt`, the example's fixture check, the example contract check |
+| 15 | `validate:links` | lychee |
 
 Task is a convenience. Every check remains runnable as the direct command shown
 above, which is what to use when Task is unavailable or when a failure needs to

@@ -70,6 +70,7 @@ tasks:
       - task: validate:ansible
       - task: validate:tofu
       - task: validate:composition
+      - task: validate:example
       - task: validate:links
 
   validate:whitespace:
@@ -193,3 +194,20 @@ tasks:
       # The tests mock the provider, so they contact no Proxmox endpoint, need
       # no credentials, and create nothing.
       - tofu -chdir=tofu/modules/proxmox-linux-vm test
+
+  validate:example:
+    desc: 'Components: check the separate-repository consumer example. Needs public network access.'
+    preconditions:
+      - sh: '{{.PYTHON_TOOL_PREFIX}}ansible-lint --version >/dev/null 2>&1'
+        msg: 'ansible-lint runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
+    cmds:
+      - tofu fmt -check -recursive examples/
+      # The example points both components at a toolkit checkout it does not
+      # contain, because acquiring one is the consumer's job. The script builds
+      # that checkout as a temporary fixture, runs the example's own tools
+      # inside it, and prints every command it runs. It writes nothing here.
+      - PYTHON_TOOL_PREFIX={{.PYTHON_TOOL_PREFIX}} ./examples/separate-consumer-repository/tests/check-example.sh
+      # The structural half, which the tools above cannot assert: one full
+      # commit SHA, both components resolving from one checkout, and no
+      # acquisition, orchestration, state, or secret mechanism in the example.
+      - '{{.PYTHON_TOOL_PREFIX}}python3 examples/separate-consumer-repository/tests/check-example-contract.py'

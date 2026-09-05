@@ -1,0 +1,26 @@
+---
+# Ordinary Ansible inventory, written by hand.
+#
+# These three values are the module's `connection` output, mapped one for one
+# into the three variables Ansible uses to reach a host:
+#
+#   connection.host -> ansible_host
+#   connection.user -> ansible_user
+#   connection.port -> ansible_port
+#
+# You perform that mapping yourself, by reading `tofu output connection` after
+# an apply you reviewed, or from the values you already declared in
+# ../tofu/main.tf. Nothing generates this file. No inventory plugin, script, or
+# state lookup stands behind it, and the role that runs against it does not
+# know OpenTofu exists.
+#
+# The values here match ../tofu/main.tf and are fictional: the address is
+# reserved by RFC 5737 and the host exists nowhere. Nothing in this repository
+# connects to it.
+
+fictional_guests:
+  hosts:
+    fictional-vm:
+      ansible_host: 192.0.2.10
+      ansible_user: fictional
+      ansible_port: 22

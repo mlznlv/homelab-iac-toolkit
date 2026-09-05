@@ -96,9 +96,11 @@ jobs:
         with:
           python-packages: 'true'
 
-      # This job installs the provider the OpenTofu module declares, which is
-      # the only network access it needs. It contacts no Proxmox endpoint and
-      # no guest, and holds no credential: the module's tests mock the
-      # provider, and the role's checks read what it declares.
-      - name: Check the components and their composition
-        run: task validate:ansible validate:tofu validate:composition
+      # This job installs the provider the OpenTofu module and the consumer
+      # example declare, which is the only network access it needs. It contacts
+      # no Proxmox endpoint and no guest, and holds no credential: both sets of
+      # OpenTofu tests mock the provider, the role's checks read what it
+      # declares, and the example is checked against a temporary stand-in
+      # checkout rather than an acquired one.
+      - name: Check the components, their composition, and the consumer example
+        run: task validate:ansible validate:tofu validate:composition validate:example
