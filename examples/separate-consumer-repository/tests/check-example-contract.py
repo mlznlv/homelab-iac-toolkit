@@ -86,8 +86,16 @@ FORBIDDEN_NAMES = {
     "requirements.yaml": "Galaxy acquisition, which is a second way to obtain the role",
 }
 
-# Suffixes that make a file a script whether or not it is marked executable.
-SCRIPT_SUFFIXES = {".sh", ".bash", ".zsh", ".ksh", ".py", ".rb", ".pl", ".ps1"}
+# What the example may be made of, outside its own tests directory.
+#
+# An allowlist, because the question "is this a script?" has no finite answer:
+# .sh, .fish, .nu, .lua, .ts, .ps1 and whatever arrives next all run something,
+# and a list of suffixes to forbid is only ever as good as the day it was
+# written. What an example of this contract legitimately contains is the short
+# list below - OpenTofu configuration, Ansible configuration, and prose - and
+# it changes only when the contract does. A file with no suffix at all, such as
+# a Makefile or a bare `run`, is not on it either.
+ALLOWED_CONTENT_SUFFIXES = {".cfg", ".hcl", ".md", ".tf", ".yaml", ".yml"}
 
 # Suffixes that would mean state, a plan, or key material had been committed.
 FORBIDDEN_SUFFIXES = {
@@ -149,6 +157,69 @@ ALLOWED_DOMAINS = (
 URL_HOST = re.compile(r"https?://([^/\s\"')]+)")
 AT_HOST = re.compile(r"@([a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\.[a-z]{2,})")
 
+# The tables below assert this check's own classifications, the way the role
+# contract check asserts its include rule. Each row is a defect this check once
+# had, or the weakening that would reintroduce one, so a rule cannot quietly
+# stop working: the fictional names exist nowhere and nothing is created.
+
+# Suffix matching would accept the first four: "evilgithub.com" ends with
+# "github.com" and belongs to somebody else entirely.
+HOST_CASES = (
+    ("evilgithub.com", False),
+    ("notexample.com", False),
+    ("fakerfc-editor.org", False),
+    ("evilopentofu.org", False),
+    ("github.com.fictional-attacker.net", False),
+    ("proxmox.fictional-estate.example.net.fictional-attacker.net", False),
+    ("fictional-proxmox.internal.fictional-corp", False),
+    ("github.com", True),
+    ("api.github.com", True),
+    ("search.opentofu.org", True),
+    ("example.com", True),
+    ("fictional-host.example.invalid", True),
+    ("fictional-host.test", True),
+)
+
+# The second row is the one that mattered: the pattern that finds addresses
+# accepts three digits per octet, so a typo reaches the parser and must answer
+# rather than raise.
+ADDRESS_CASES = (
+    ("192.0.2.10", True),
+    ("192.0.2.256", False),
+    ("999.0.2.10", False),
+    ("198.51.100.7", True),
+    ("203.0.113.7", True),
+    ("93.184.216.34", False),
+    ("10.0.0.1", False),
+)
+
+# A list of script suffixes to forbid would miss the first two. The allowlist
+# is what makes an unlisted runnable format fail rather than pass.
+CONTENT_CASES = (
+    ("fetch.fish", False),
+    ("wire-inventory.nu", False),
+    ("fetch.sh", False),
+    ("bootstrap.py", False),
+    ("Makefile", False),
+    ("run", False),
+    ("main.tf", True),
+    ("inventory.yml", True),
+    ("ansible.cfg", True),
+    ("README.md", True),
+    (".terraform.lock.hcl", True),
+)
+
+# Following this example's own README - establish the checkout, then init, plan
+# and apply - leaves these behind. Each must be ignored, because that is what
+# keeps it out of the tracked listing this check reads. Walking the directory
+# instead reported them as committed state and read the plan as text.
+IGNORED_WORKING_DATA = (
+    "tofu/terraform.tfstate",
+    "tofu/terraform.tfstate.backup",
+    "tofu/fictional-change.tfplan",
+    "tofu/.terraform/providers/fictional",
+)
+
 checks = 0
 failures = 0
 
@@ -189,6 +260,27 @@ def tracked(directory):
 def example_files():
     """Every file the example commits."""
     return tracked(EXAMPLE)
+
+
+def outside_tests():
+    """The example's own content, excluding this repository's checks of it."""
+    return [path for path in example_files() if (EXAMPLE / "tests") not in path.parents]
+
+
+def is_ignored(relative_path):
+    """Whether git ignores a path under the example.
+
+    Asked of git rather than restated here, so the answer is the one that
+    actually decides what reaches a commit. Nothing is created: check-ignore
+    matches the rules against a name, and these names exist nowhere.
+    """
+    return (
+        subprocess.run(
+            ["git", "-C", str(EXAMPLE), "check-ignore", "--quiet", "--", relative_path],
+            capture_output=True,
+        ).returncode
+        == 0
+    )
 
 
 def readable_files():
@@ -454,18 +546,24 @@ def main():
 
     # Anything runnable outside tests/ would be a mechanism the example
     # performs, and the contract leaves every runnable step to the consumer.
-    #
-    # The permission bit alone is not the test. `sh fetch.sh` runs a file that
-    # was never marked executable, and a mode is easy to lose in a copy or a
-    # checkout, so a script is recognised by what it is as well as by how it is
-    # marked.
-    runnable = sorted(
-        str(path.relative_to(EXAMPLE))
-        for path in example_files()
-        if (EXAMPLE / "tests") not in path.parents
-        and (path.suffix in SCRIPT_SUFFIXES or path.stat().st_mode & 0o111)
+    # Rather than guess which suffixes run, this asserts that the example is
+    # made only of what it is supposed to be made of.
+    unexpected = sorted(
+        f"{path.relative_to(EXAMPLE)} ({path.suffix or 'no suffix'})"
+        for path in outside_tests()
+        if path.suffix not in ALLOWED_CONTENT_SUFFIXES
     )
-    check("nothing outside tests/ is runnable, so the example performs nothing itself", not runnable, runnable)
+    check(
+        "every file outside tests/ is OpenTofu configuration, Ansible configuration, or prose",
+        not unexpected,
+        unexpected,
+    )
+
+    # The permission bit is a second signal rather than the first: `sh
+    # fetch.sh` runs a file that was never marked executable, which is why the
+    # check above does not rest on this one.
+    executable = sorted(str(path.relative_to(EXAMPLE)) for path in outside_tests() if path.stat().st_mode & 0o111)
+    check("nothing outside tests/ is marked executable", not executable, executable)
 
     found_content = sorted(
         f"{path.relative_to(EXAMPLE)}: {reason}"
@@ -521,6 +619,29 @@ def main():
         if not is_fictional_host(value)
     )
     check("every inventory host name and address is fictional or standards-reserved", not reachable, reachable)
+
+    print()
+    print("How this check classifies the values it is given:")
+    for host, expected in HOST_CASES:
+        check(
+            f"{host} is {'a host the example may name' if expected else 'somewhere else'}",
+            is_allowed_host(host) == expected,
+        )
+    for address, expected in ADDRESS_CASES:
+        check(
+            f"{address} is {'reserved for documentation' if expected else 'not reserved, or not an address'}",
+            is_documentation_address(address) == expected,
+        )
+    for name, expected in CONTENT_CASES:
+        check(
+            f"{name} is {'content the example may contain' if expected else 'not content, so it fails outside tests/'}",
+            (pathlib.PurePosixPath(name).suffix in ALLOWED_CONTENT_SUFFIXES) == expected,
+        )
+
+    print()
+    print("Working data the example's own README produces stays out of the tracked listing:")
+    for relative_path in IGNORED_WORKING_DATA:
+        check(f"{relative_path} is ignored, so it is never a committed file", is_ignored(relative_path))
 
     print()
     if failures:
