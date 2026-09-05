@@ -55,7 +55,7 @@ tasks:
   validate:
     desc: Run every local validation check. Leaves tracked content unchanged; stops at the first failure.
     cmds:
-      # Ordered cheapest and most local first, so the two checks that need
+      # Ordered cheapest and most local first, so the three checks that need
       # network access run last.
       - task: validate:whitespace
       - task: validate:python-lock

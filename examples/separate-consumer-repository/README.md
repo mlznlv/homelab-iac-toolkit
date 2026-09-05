@@ -14,14 +14,16 @@ tofu/
   versions.tf                   the provider, configured by you, and no backend
   main.tf                       the module, from a local path in the checkout
   outputs.tf                    the connection values you read after an apply
+  tests/                        one test asserting the inventory still matches
 ansible/
   ansible.cfg                   roles_path, reaching the same checkout
   inventory.yml                 the connection values, mapped in by hand
   guest-agent.yml               the play that runs the role
+tests/                          this toolkit's own checks of this example
 vendor/homelab-iac-toolkit/     the checkout — you create this; see step 1
 ```
 
-`tests/` is this toolkit's check of the example, not part of it. Do not copy it.
+The two test directories are not the same thing. `tofu/tests/` asserts that `ansible/inventory.yml` is still the module's `connection` output mapped unchanged, which is a useful thing to keep once the values are yours: it catches an address edited in one file and not the other. The top-level `tests/` checks that this example still demonstrates the contract it documents, which is this repository's concern rather than yours — leave it behind.
 
 The one thing both `tofu/main.tf` and `ansible/ansible.cfg` have in common is `vendor/homelab-iac-toolkit/`. That is the contract: one directory, one commit, both components. Point them at two different checkouts and they can drift onto two different revisions of the toolkit without anything complaining.
 

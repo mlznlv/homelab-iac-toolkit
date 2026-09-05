@@ -41,6 +41,7 @@ import configparser
 import ipaddress
 import pathlib
 import re
+import subprocess
 import sys
 
 import yaml
@@ -155,14 +156,31 @@ def check(description, ok, detail=None):
             print(f"     {line}")
 
 
+def tracked(directory):
+    """The files git tracks under a directory, in sorted order.
+
+    Tracked rather than walked, for the reason docs/validation.md gives for
+    every other file-based check here: a continuous-integration checkout holds
+    exactly the tracked files, and a working tree holds more. That difference
+    is not theoretical for this example. Following its own README - establish
+    the checkout, then `tofu init`, `tofu plan`, `tofu apply` - leaves a
+    provider directory, a state file, and possibly a plan in `tofu/`. All three
+    are ignored by git and none of them is committed, but a check that walked
+    the directory would report them as committed state, read a binary plan as
+    text, and print the real addresses out of a real state file while failing.
+    """
+    listed = subprocess.run(
+        ["git", "-C", str(directory), "ls-files", "-z"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return sorted(directory / name for name in listed.split("\0") if name)
+
+
 def example_files():
-    """Every committed file in the example, skipping generated working data."""
-    for path in sorted(EXAMPLE.rglob("*")):
-        if not path.is_file():
-            continue
-        if ".terraform" in path.parts:
-            continue
-        yield path
+    """Every file the example commits."""
+    return tracked(EXAMPLE)
 
 
 def readable_files():
@@ -219,6 +237,21 @@ def roles_path():
     return parser.get("defaults", "roles_path", fallback=None)
 
 
+def is_documentation_address(text):
+    """Whether a dotted-quad is inside one of the RFC 5737 ranges.
+
+    A malformed quad answers no rather than raising. The pattern that finds
+    these accepts three digits per octet, so a typo such as 192.0.2.256 reaches
+    here; failing the check that asked the question is the useful outcome, and
+    an uncaught ValueError partway through the run is not.
+    """
+    try:
+        address = ipaddress.ip_address(text)
+    except ValueError:
+        return False
+    return any(address in network for network in DOCUMENTATION_NETWORKS)
+
+
 def is_fictional_host(value):
     """Whether a host a reader could try to reach names nothing real.
 
@@ -233,7 +266,7 @@ def is_fictional_host(value):
         return True
     value = str(value)
     if re.fullmatch(r"\d{1,3}(?:\.\d{1,3}){3}", value):
-        return any(ipaddress.ip_address(value) in network for network in DOCUMENTATION_NETWORKS)
+        return is_documentation_address(value)
     if value.endswith(ALLOWED_HOST_SUFFIXES):
         return True
     return "." not in value
@@ -257,7 +290,13 @@ def main():
 
     print()
     print("One example, laid out as a separate consumer repository would be:")
-    directories = sorted(p.name for p in EXAMPLES_ROOT.iterdir() if p.is_dir())
+    directories = sorted(
+        {
+            path.relative_to(EXAMPLES_ROOT).parts[0]
+            for path in tracked(EXAMPLES_ROOT)
+            if len(path.relative_to(EXAMPLES_ROOT).parts) > 1
+        }
+    )
     check(
         "examples/ holds exactly one example directory",
         directories == [EXAMPLE.name],
@@ -427,15 +466,19 @@ def main():
         f"{path.relative_to(EXAMPLE)}: {address}"
         for path in readable_files()
         for address in IPV4.findall(path.read_text())
-        if not any(ipaddress.ip_address(address) in network for network in DOCUMENTATION_NETWORKS)
+        if not is_documentation_address(address)
     )
     check("every IPv4 address is reserved for documentation by RFC 5737", not bad_addresses, bad_addresses)
 
+    # A URL ending a sentence carries the full stop into the capture, so the
+    # punctuation a host can be followed by in prose is trimmed before the
+    # comparison. Otherwise the check reports "opentofu.org." as a real place.
     bad_hosts = sorted(
         f"{path.relative_to(EXAMPLE)}: {host}"
         for path in readable_files()
         for pattern in (URL_HOST, AT_HOST)
-        for host in pattern.findall(path.read_text())
+        for match in pattern.findall(path.read_text())
+        for host in [match.rstrip(".,;:!?)>]\"'")]
         if not host.endswith(ALLOWED_HOST_SUFFIXES)
     )
     check("every host named in a URL or address is documentation-reserved or a source the example cites", not bad_hosts, bad_hosts)

@@ -343,7 +343,7 @@ task validate
 
 `task validate` runs the focused checks in sequence and stops at the first
 failure, so its exit status is non-zero whenever any constituent check fails.
-The order is cheapest and most local first, which leaves the two checks that
+The order is cheapest and most local first, which leaves the three checks that
 need network access until last:
 
 | Order | Task | Wraps |
