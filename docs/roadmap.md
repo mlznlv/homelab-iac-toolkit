@@ -2,13 +2,13 @@
 
 ## Current state
 
-- **Current phase:** M3 complete; awaiting M4 entry
-- **Milestone state:** M1, M2 and M3 are complete.
-- **Implementation state:** No M4 Developer work item is Ready.
-- **Current blocker:** M4 entry requires an accepted initial consumer contract.
-- **Next action:** Architecture defines and accepts the initial consumer contract required by M4.
+- **Current phase:** M4 — Consumer-ready toolkit
+- **Milestone state:** M1, M2 and M3 are complete; the initial M4 consumer contract is accepted.
+- **Implementation state:** M4 implementation is the current execution focus. Developer work becomes Ready only through focused Issues derived from the accepted consumer contract.
+- **Current blocker:** None at milestone level; Issue-level dependencies determine implementation readiness.
+- **Next action:** Implement the accepted consumer workflow through focused Developer Issues.
 
-M3 is complete: the public OpenTofu VM module and Ansible guest-agent role are implemented, independently consumable, documented and covered by credential-free component and composition validation. Their public interfaces, evidence limits and lifecycle-sensitive behavior are documented. M4 implementation remains blocked until its Architecture dependencies are accepted.
+M3 is complete. ADR 0007 defines the accepted single-revision, separate-repository consumer contract for M4. Implementation now proceeds through focused Developer Issues while preserving the accepted component boundaries, credential-free public validation, and explicit live-compatibility non-claims.
 
 ## Milestone sequence
 
