@@ -414,10 +414,11 @@ def main():
     )
     provider_blocks = re.findall(r'provider\s+"proxmox"\s*\{([^}]*)\}', tofu)
     check("the OpenTofu root declares exactly one proxmox provider block", len(provider_blocks) == 1)
+    populated = [body.strip() for body in provider_blocks if body.strip()]
     check(
         "that provider block is empty, so no endpoint or credential is published",
-        len(provider_blocks) == 1 and not provider_blocks[0].strip(),
-        [f"body: {provider_blocks[0].strip()!r}" for _ in provider_blocks[:1]],
+        len(provider_blocks) == 1 and not populated,
+        populated,
     )
 
     print()
