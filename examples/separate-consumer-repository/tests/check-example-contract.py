@@ -86,6 +86,38 @@ FORBIDDEN_NAMES = {
     "requirements.yaml": "Galaxy acquisition, which is a second way to obtain the role",
 }
 
+# Exactly what the example consists of.
+#
+# A suffix allowlist says what kind of file may appear; it cannot say that a
+# second Ansible playbook has appeared beside the first. `ansible/acquire.yml`
+# holding a git clone is an ordinary .yml file in the ordinary place, and every
+# type-level rule here passes it. So the file set itself is pinned: adding
+# anything to this example, or removing anything from it, fails until somebody
+# changes this list on purpose, which is the point at which the addition gets
+# read.
+EXPECTED_FILES = {
+    "README.md",
+    "toolkit-revision.yml",
+    "ansible/ansible.cfg",
+    "ansible/guest-agent.yml",
+    "ansible/inventory.yml",
+    "tofu/.terraform.lock.hcl",
+    "tofu/main.tf",
+    "tofu/outputs.tf",
+    "tofu/versions.tf",
+    "tofu/tests/inventory-mapping.tftest.hcl",
+    "tests/check-example-contract.py",
+    "tests/check-example.sh",
+}
+
+# The keys a play in this example may carry. The contract gives it one job -
+# invoke the role - so it declares no tasks at all, in any of the sections a
+# play can run them from. A pre_task fetching a tarball is the acquisition this
+# example must not own, and it would otherwise sit inside the approved play
+# rather than in a new file.
+ALLOWED_PLAY_KEYS = {"name", "hosts", "become", "roles"}
+TASK_SECTIONS = ("tasks", "pre_tasks", "post_tasks", "handlers")
+
 # What the example may be made of, outside its own tests directory.
 #
 # An allowlist, because the question "is this a script?" has no finite answer:
@@ -207,6 +239,20 @@ CONTENT_CASES = (
     ("ansible.cfg", True),
     ("README.md", True),
     (".terraform.lock.hcl", True),
+)
+
+# A play carrying any of the first four runs something on its way to the role,
+# which is where an acquisition step hides once a second playbook is no longer
+# possible. The last three are the play this example actually declares.
+PLAY_KEY_CASES = (
+    ("tasks", False),
+    ("pre_tasks", False),
+    ("post_tasks", False),
+    ("handlers", False),
+    ("vars_files", False),
+    ("hosts", True),
+    ("become", True),
+    ("roles", True),
 )
 
 # Following this example's own README - establish the checkout, then init, plan
@@ -505,6 +551,36 @@ def main():
     ]
     check(f"one play invokes the {ROLE} role", roles_used == [ROLE], [f"found: {roles_used}"])
 
+    # Every play in the example, not only the expected one, and every section a
+    # play can run tasks from. Invoking the role is the whole of what the
+    # example's Ansible side does; anything it ran on the way there would be a
+    # step the contract leaves to the consumer.
+    plays = [
+        (path.relative_to(EXAMPLE), document)
+        for path in outside_tests()
+        if path.suffix in (".yml", ".yaml")
+        for document in (yaml.safe_load(path.read_text()) or [])
+        if isinstance(document, list) or isinstance(document, dict)
+    ]
+    playbooks = [
+        (name, item)
+        for name, document in plays
+        for item in (document if isinstance(document, list) else [document])
+        if isinstance(item, dict) and ("hosts" in item or "roles" in item)
+    ]
+    check(
+        "the example declares exactly one play",
+        len(playbooks) == 1,
+        [f"{name}: {item.get('name', '<unnamed>')}" for name, item in playbooks],
+    )
+    running = sorted(
+        f"{name}: {item.get('name', '<unnamed>')} declares {key}"
+        for name, item in playbooks
+        for key in item
+        if key in TASK_SECTIONS or key not in ALLOWED_PLAY_KEYS
+    )
+    check("no play runs a task of its own, in any section a play can run one from", not running, running)
+
     inventory = yaml.safe_load(INVENTORY.read_text()) or {}
     hosts = {
         name: variables or {}
@@ -528,6 +604,20 @@ def main():
 
     print()
     print("The example owns no acquisition, orchestration, state, or secret mechanism:")
+    # The file set itself, before anything is said about what the files hold.
+    # Every rule below asks whether a file is the wrong kind or holds the wrong
+    # thing, and a second playbook beside the first is neither: acquire.yml is
+    # an ordinary .yml in the ordinary directory. Pinning the set is what makes
+    # its arrival a failure.
+    committed = {str(path.relative_to(EXAMPLE)) for path in example_files()}
+    added = sorted(committed - EXPECTED_FILES)
+    removed = sorted(EXPECTED_FILES - committed)
+    check(
+        "the example consists of exactly the files it is supposed to",
+        not added and not removed,
+        [f"added: {name}" for name in added] + [f"missing: {name}" for name in removed],
+    )
+
     present = sorted(
         f"{path.relative_to(EXAMPLE)} ({reason})"
         for path in example_files()
@@ -636,6 +726,13 @@ def main():
         check(
             f"{name} is {'content the example may contain' if expected else 'not content, so it fails outside tests/'}",
             (pathlib.PurePosixPath(name).suffix in ALLOWED_CONTENT_SUFFIXES) == expected,
+        )
+
+    for key, expected in PLAY_KEY_CASES:
+        permitted = key in ALLOWED_PLAY_KEYS and key not in TASK_SECTIONS
+        check(
+            f"a play declaring {key} is {'within the contract' if expected else 'running something of its own'}",
+            permitted == expected,
         )
 
     print()
