@@ -97,7 +97,7 @@ Error: Missing required argument
 The argument "node_name" is required, but no definition was found.
 ```
 
-The module defaults none of its **required** inputs — every environment-specific value is named explicitly, because no default could be right for your environment. It does default the four behavioural inputs (`vm_id`, `guest_agent_enabled`, `stop_on_destroy`, `ssh_port`), which describe how the module behaves rather than where it builds. [Its README](../tofu/modules/proxmox-linux-vm/README.md) lists both sets.
+The module defaults none of its **required** inputs — every value describing your environment is named explicitly, because no default could be right for it. Four optional inputs do have defaults: `guest_agent_enabled`, `stop_on_destroy` and `ssh_port` choose behaviour, and `vm_id` defaults to `null`, which leaves Proxmox to assign the next free identifier rather than choosing one for you. [Its README](../tofu/modules/proxmox-linux-vm/README.md) lists both sets.
 
 ### An input is rejected
 

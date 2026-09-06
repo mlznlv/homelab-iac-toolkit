@@ -80,7 +80,7 @@ Run it from that directory. Ansible resolves the relative paths inside `ansible.
 
 **There is no backend.** `tofu/versions.tf` declares none, so the choice stays yours. As committed this example has never been applied and holds no state — but applying it creates a real VM and real state, and with no backend that state lands in a local file with nothing protecting it. Choose a backend and a state-custody policy before you apply anything, including this. The omission is not a recommendation to use local state.
 
-**There are no secrets, and no mechanism for them.** Runtime credentials stay outside Git and reach the provider and Ansible through their own mechanisms. [Using the toolkit](../../docs/consuming-the-toolkit.md#secrets) records the boundary.
+**There are no secrets, and no mechanism for them.** Runtime credentials stay outside Git and reach the provider and Ansible through their own mechanisms. **A decryption identity is a private key: keep it out of Git** — yours as much as this one — on the machines that need it. [Using the toolkit](../../docs/consuming-the-toolkit.md#credentials-state-and-secrets) records the rest of the boundary.
 
 ## What is actually proven
 
