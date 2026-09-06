@@ -79,7 +79,7 @@ Run it from that directory. Ansible resolves the relative paths inside `ansible.
 
 ## Two things this example does not decide for you
 
-**There is no backend.** `tofu/versions.tf` declares none, because this example creates nothing and has no state worth protecting. That is not a recommendation to use local state for a real deployment. OpenTofu state records what was created and can hold sensitive values, so choose a backend and a state-custody policy before your first real apply.
+**There is no backend.** `tofu/versions.tf` declares none, so the choice stays yours. As committed this example has never been applied and holds no state — but applying it creates a real VM and real state, and with no backend that state lands in a local file with nothing protecting it. Choose a backend and a state-custody policy before you apply anything, including this. OpenTofu state records what was created and can hold sensitive values. The omission is not a recommendation to use local state.
 
 **There are no secrets, and no mechanism for them.** The initial workflow needs no encrypted document in source control, so the toolkit adds no secret loader, credential broker, or decryption step. Runtime credentials stay outside Git and reach the provider and Ansible through their own mechanisms. Real secret material, recipients, and decryption identities are yours and belong in your own private repository.
 
