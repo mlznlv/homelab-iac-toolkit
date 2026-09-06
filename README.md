@@ -29,7 +29,7 @@ The project currently focuses on:
 
 ## Repository model
 
-This public repository will contain reusable toolkit components, documentation, examples, and validation.
+This public repository contains reusable toolkit components, documentation, examples, and validation.
 
 A separate private deployment repository will contain concrete environment configuration. The public toolkit must remain usable without access to private deployment data.
 
@@ -43,6 +43,7 @@ The project is currently in its bootstrap, pre-release stage.
 
 | Document | What it covers |
 | --- | --- |
+| [Using the toolkit](docs/consuming-the-toolkit.md) | How another repository consumes both components, and what to check when something does not resolve |
 | [Contributing](CONTRIBUTING.md) | How to set up, validate a change, and get it reviewed |
 | [Security](SECURITY.md) | Security posture of this repository and how to report a problem |
 | [Development environment](docs/development-environment.md) | The canonical container, and what it deliberately omits |
