@@ -11,14 +11,14 @@
 | `docs/repository-design.md` | Repository structure and ownership |
 | `docs/compatibility.md` | Public compatibility targets, evidence levels, and non-claims |
 | `docs/decisions/` | Architecture Decision Records |
-| `.devcontainer/` | Canonical reproducible contributor environment when implemented |
+| `.devcontainer/` | Canonical reproducible contributor environment |
 | `.github/` | GitHub workflows, dependency automation, and contribution templates |
-| `Taskfile.yml` | Transparent developer workflow entry point when implemented |
+| `Taskfile.yml` | Transparent developer workflow entry point |
 | `scripts/` | Small portable repository helpers when direct commands are insufficient |
 | Root tool configuration and version declarations | Conventional, discoverable repository-wide tooling configuration |
 | `tofu/` | Reusable OpenTofu modules and their component-local documentation and tests |
 | `ansible/` | Reusable Ansible roles and their component-local documentation and tests |
-| `examples/` | Cross-component consumer examples, beginning with the separate-repository M4 skeleton when implemented |
+| `examples/` | Cross-component consumer examples |
 | `.claude/` | Optional Claude Code assistance and defense-in-depth controls |
 
 Areas described for deferred use need not be created until they contain approved content.

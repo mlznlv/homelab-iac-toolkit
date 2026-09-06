@@ -96,19 +96,15 @@ All three are non-sensitive; the module never publishes a private key or a passw
 
 **`true` (default)** — destroy stops the VM, the way pulling power does. It does not depend on ACPI or on a guest agent, so it completes predictably, and it can interrupt a running workload and lose whatever the guest had not written to disk.
 
-**`false`** — destroy asks the guest to shut down first, which is gentler when it works. When shutdown does not happen, destroy blocks or times out.
-
-Who performs that shutdown depends on when you destroy. Before the agent is installed, Proxmox probes it, gets nothing, and falls back to ACPI. Once the agent is running, Proxmox asks the agent — the graceful shutdown this input is really after. The default stays `true` precisely because a destroy should not depend on which side of that line it lands on.
+**`false`** — destroy asks the guest to shut down first, which is gentler when it works and blocks or times out when it does not. Who performs that shutdown depends on when you destroy: before the agent is installed Proxmox falls back to ACPI, and once it is running Proxmox asks the agent. The default stays `true` precisely because a destroy should not depend on which side of that line it lands on.
 
 Set it to `false` when your guests shut down reliably and you would rather wait than lose unwritten data. Either way, destroy is destructive and OpenTofu shows you the plan first.
 
 ## The guest agent
 
-The VM is created with the guest-agent channel attached, and the module never waits for an agent to answer.
+The VM is created with the guest-agent channel attached, and the module never waits for an agent to answer. Those are separate things and both matter: Proxmox adds the `org.qemu.guest_agent.0` device only when the agent setting is enabled, and a Debian guest's `qemu-guest-agent.service` is bound to that device, so a VM created without the channel is one where the service can never start. Meanwhile a provider that waited for an agent-reported address would block every apply and refresh until it timed out, so this module disables that wait unconditionally and addressing is always the static configuration you declared.
 
-Both halves matter, and they are separate things. Proxmox only adds the `org.qemu.guest_agent.0` device when the agent setting is enabled, and a Debian guest's `qemu-guest-agent.service` is bound to that device — so a VM created without the channel is one where the service can never start, whatever you install inside it. Waiting is the other half: a provider that waits for an agent-reported address would block every apply and refresh until it timed out. This module disables that wait unconditionally, which is why attaching the channel early costs nothing at apply time. Addressing is always the static configuration you declared.
-
-So the composition is one apply, then guest configuration: create the VM, build your inventory, install the agent with the [Ansible guest-agent capability](../../../docs/architecture.md#ansible-guest-agent-capability). There is no second apply and no power cycle, which [ADR 0006](../../../docs/decisions/0006-guest-agent-channel-at-creation.md) records in full.
+The composition is therefore one apply, then guest configuration: create the VM, build your inventory, install the agent with the [Ansible guest-agent capability](../../../docs/architecture.md#ansible-guest-agent-capability). No second apply, no power cycle. [ADR 0006](../../../docs/decisions/0006-guest-agent-channel-at-creation.md) records it in full.
 
 **Between creating the VM and installing the agent**, Proxmox believes the guest has an agent that is not answering yet. Each affected operation degrades differently, and none of them hangs:
 

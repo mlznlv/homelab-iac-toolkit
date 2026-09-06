@@ -6,11 +6,9 @@ That is the whole of it: two tasks, no variables, no handlers, no templates. Pro
 
 ## What you own
 
-The role takes ordinary inventory and nothing else. It never reads OpenTofu state or outputs, generates no inventory, and manages no Proxmox resource — you can use it against any host you can already reach, whether or not this toolkit created it.
+The role takes ordinary inventory and nothing else. It never reads OpenTofu state or outputs, generates no inventory, and manages no Proxmox resource — use it against any host you can already reach, whether or not this toolkit created it.
 
-It also deliberately does not set `become`. Both of its tasks need root, and how you get there — `become`, a privileged connection user, your own sudo policy — is your decision to make in your play or inventory, not one this role should take from you.
-
-You own the inventory, the credentials and private keys, the privilege configuration, and when the role runs.
+It deliberately does not set `become`. Both tasks need root, and how you get there is your decision to make in your play or inventory. You own the inventory, the credentials and private keys, the privilege configuration, and when the role runs.
 
 ## Requirements
 
@@ -31,7 +29,7 @@ The channel is the one prerequisite you cannot fix from inside the guest. The [`
 
 The service **is running**, and **enabled where the packaging supports enabling it**.
 
-The second half is not a hedge. On the expected-compatible targets named above, the unit is device-activated: bound to the guest-agent channel, started from a udev rule when that device appears, and shipping an empty `[Install]` section. `systemctl is-enabled` reports `static`, which Ansible reads as already enabled, so the role's enable step is a no-op there — correctly, because there is nothing to enable. Where packaging does ship an `[Install]` section, the same task enables the unit for boot.
+The second half is not a hedge. On the expected-compatible targets above the unit is device-activated and ships an empty `[Install]` section, so `systemctl is-enabled` reports `static`, Ansible reads that as already enabled, and the enable step is correctly a no-op — there is nothing to enable. Where packaging does ship an `[Install]` section, the same task enables the unit for boot.
 
 Anything stronger would be a claim about packaging this role does not control, on distributions it has never run against.
 

@@ -33,37 +33,25 @@ The toolkit owns the module and role interfaces and what they do internally. It 
 
 ## The workflow
 
-The [example's Getting Started](../examples/separate-consumer-repository#getting-started) has the sequence with real paths and commands. In outline: record the SHA, establish the checkout, review the configuration, plan, **read the plan**, apply explicitly, map the connection values into inventory by hand, then run the play.
+The [example's Getting Started](../examples/separate-consumer-repository#getting-started) has the sequence with real paths and commands: record the SHA, establish the checkout, review the configuration, plan, **read the plan**, apply explicitly, map the connection values into inventory by hand, then run the play.
 
-Two steps in that list are deliberate rather than unfinished.
+Two of those steps are deliberate rather than unfinished. **A person reviews the plan** — nothing here is built for an unattended apply, and copying the example does not make one safe. **The inventory is written by hand** — you copy the module's three `connection` values into `ansible_host`, `ansible_user` and `ansible_port` yourself. Nothing reads OpenTofu state, generates inventory, or wires the output through automatically, and the role does not know OpenTofu exists.
 
-**The plan is reviewed by a person.** Nothing here is built for an unattended apply, and copying the example does not make one safe.
+## Credentials, state, and secrets
 
-**The inventory is written by hand.** The module publishes a `connection` output — the declared address without its prefix, the bootstrap username, and the `ssh_port` metadata value — and you copy those three into `ansible_host`, `ansible_user` and `ansible_port` yourself. Nothing reads OpenTofu state, generates inventory, or wires the output through automatically. The role does not consume the output and does not know OpenTofu exists.
+**Provider endpoints and credentials** are supplied at run time through the provider's own mechanisms, which [the provider documents](https://search.opentofu.org/provider/bpg/proxmox/latest). They are not toolkit interfaces and do not belong in source control.
 
-## Provider endpoints and credentials
+**The example declares no backend.** As committed it has never been applied and holds no state — but **applying it creates a real VM and real state**, and with no backend declared that state is written to a local file with nothing protecting it. Choose a backend and a state-custody policy before you apply anything, including this example: OpenTofu state records what was created and can hold sensitive values. The omission keeps the example free of a choice that is yours; it is not a recommendation to use local state.
 
-Supply them at run time through the provider's own mechanisms, which [the provider documents](https://search.opentofu.org/provider/bpg/proxmox/latest). They are not toolkit interfaces, this repository does not name them, and they do not belong in source control.
-
-## Backend and state
-
-The example declares no backend. As committed it has never been applied and holds no state — but **applying it creates a real VM and real state**, and with no backend declared that state is written to a local file with nothing protecting it.
-
-**Choose a backend and a state-custody policy before you apply anything, including this example.** OpenTofu state records what was created and can hold sensitive values. The omission here keeps the example free of a choice that is yours; it is not a recommendation to use local state.
-
-## Secrets
-
-The initial workflow commits no encrypted document to source control, so it needs no secret loader, credential broker, or decryption step, and the toolkit adds none. SOPS and age remain the interface for a workflow that does require committed encrypted secrets; they are deferred rather than rejected, as [ADR 0007](decisions/0007-single-revision-consumer-contract.md) records.
-
-Runtime credentials stay outside Git and reach the provider and Ansible through their own mechanisms.
+**The initial workflow commits no encrypted document**, so it needs no secret loader, credential broker, or decryption step, and the toolkit adds none. SOPS and age remain the interface for a workflow that does require committed encrypted secrets, deferred rather than rejected, as [ADR 0007](decisions/0007-single-revision-consumer-contract.md) records. Runtime credentials stay outside Git.
 
 Encrypted material and the recipients it was encrypted to are consumer-owned and never appear in this public toolkit. **The decryption identity is different in kind: it is a private key, so keep it out of Git.** An age identity or SSH private key that would open your secrets should live on the machines that need it and be distributed the way you already distribute private keys — committing it, to any repository, defeats the encryption it unlocks.
 
 ## What the checks here prove
 
-This repository validates the components and the example on every change, without credentials and without reaching any Proxmox host or guest. It does use the public network: the checks download the provider the configuration declares, and resolve the links in this documentation. Those checks establish that the configuration parses, that the module call type-checks against the module's real interface, that both halves resolve from one represented checkout, that the committed inventory is the `connection` output mapped unchanged, and that the play resolves the role.
+This repository validates the components and the example on every change, without credentials and without reaching any Proxmox host or guest. It does use the public network: the checks download the provider the configuration declares, and resolve the links in this documentation. Those checks establish that the configuration parses, the module call type-checks against the module's real interface, both halves resolve from one represented checkout, the committed inventory is the `connection` output mapped unchanged, and the play resolves the role.
 
-They establish nothing about a running system. No check here has ever run against a Proxmox VE or a guest. [Compatibility](compatibility.md) records the platform targets, the evidence behind them, and the list of things this evidence explicitly does not demonstrate — provisioning, cloud-init, SSH connectivity, Ansible convergence or idempotency, and guest-agent runtime behaviour among them.
+They establish nothing about a running system, and no check here has ever run against a Proxmox VE or a guest. [Compatibility](compatibility.md#current-evidence-level) enumerates what this evidence does not demonstrate.
 
 A full commit SHA selects exact pre-release source. It creates no semantic-versioning, upgrade, migration, stability, or release-support guarantee; those remain M5 decisions.
 

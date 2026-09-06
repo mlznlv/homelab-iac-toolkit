@@ -26,10 +26,8 @@ inventory, and no dotfiles.
 ## Opening it
 
 An editor with Dev Containers support opens the definition directly; in Visual
-Studio Code that is the **Dev Containers: Reopen in Container** command.
-
-The same definition can be built and started from a terminal with the reference
-CLI, which performs the same steps the editor does:
+Studio Code that is **Dev Containers: Reopen in Container**. The reference CLI
+performs the same steps from a terminal:
 
 ```sh
 npx @devcontainers/cli up --workspace-folder .
@@ -50,22 +48,21 @@ docker run --rm --interactive --tty \
 The definition declares no mounts other than the workspace itself, no container
 features, no added capabilities, and no privileged access.
 
-Networking is ordinary: the build downloads the declared tools, and link
-checking reaches public documentation sites. The container sits on the
-container runtime's default network, so what it can reach is decided by that
-runtime and by the host, and may well include the host's own network. Treat
-its network position as equivalent to any other container running there.
+Networking is ordinary: the build downloads the declared tools and link checking
+reaches public documentation sites. The container sits on the runtime's default
+network, so what it can reach is decided by that runtime and the host, and may
+well include the host's own network. Treat its network position as equivalent to
+any other container running there.
 
-The boundary is what the repository supplies, not what the network permits.
-This definition ships no credentials, no endpoints or inventory, no decryption
-identities, no privileged host interfaces, and no private-network
-configuration. Nothing here is pointed at a deployment, and reaching one would
-mean a contributor adding those things themselves.
+**The boundary is what the repository supplies, not what the network permits.**
+This definition ships no credentials, endpoints, inventory, decryption
+identities, privileged host interfaces, or private-network configuration.
+Nothing here is pointed at a deployment; reaching one would mean a contributor
+adding those things themselves.
 
-Editors add their own conveniences outside this definition: a Dev Containers
-client may forward an SSH agent or share the host Git configuration so that
-commits and pushes work from inside the container. That behaviour belongs to the
-client, not to this repository, and it is the contributor's choice.
+Editors add conveniences outside this definition — a client may forward an SSH
+agent or share the host Git configuration. That belongs to the client and is the
+contributor's choice.
 
 ## Checking the environment
 
