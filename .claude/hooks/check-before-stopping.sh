@@ -43,9 +43,16 @@ fi
 root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 cd "$root" || exit 0
 
+# A repository with no commits yet has no HEAD to compare against. Everything
+# staged in one is new rather than changed, so the work below still applies,
+# but the whitespace check is defined against HEAD and is skipped instead of
+# being asked a question it cannot answer.
+has_head=false
+git rev-parse --verify --quiet HEAD >/dev/null 2>&1 && has_head=true
+
 # Nothing tracked has changed, so there is nothing this turn could have broken.
 # --quiet exits non-zero when a difference exists, which is the case to check.
-if git diff --quiet HEAD 2>/dev/null; then
+if [ "$has_head" = true ] && git diff --quiet HEAD 2>/dev/null; then
   exit 0
 fi
 
@@ -59,9 +66,11 @@ record() {
 # Whitespace errors across every tracked file, the same comparison
 # `task validate:whitespace` makes. git is always present: this hook already
 # needed it to find the repository root.
-empty_tree=$(git hash-object -t tree /dev/null)
-if ! git diff --check "$empty_tree" HEAD >/dev/null 2>&1; then
-  record 'whitespace errors in tracked content — reproduce with `task validate:whitespace`'
+if [ "$has_head" = true ]; then
+  empty_tree=$(git hash-object -t tree /dev/null)
+  if ! git diff --check "$empty_tree" HEAD >/dev/null 2>&1; then
+    record 'whitespace errors in tracked content — reproduce with `task validate:whitespace`'
+  fi
 fi
 
 if command -v markdownlint-cli2 >/dev/null 2>&1; then

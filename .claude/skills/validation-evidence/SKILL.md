@@ -21,21 +21,23 @@ For a virtual environment that is not on `PATH`, pass `task validate VENV_BIN=pa
 
 Take every number from the run you just did. Do not carry a count forward from an earlier run, and do not reconstruct one from memory — stale counts have been a blocking review finding here more than once.
 
-A pull request body's Validation section names the checks and their results, for example:
+A pull request body's Validation section names the checks and their results. The shape, with every count taken from your run:
 
 ```text
-`task validate` — passed, exit 0.
+`task validate` — passed, exit <exit status>.
 
-- Markdown — 25 files, 0 errors
-- link validation — 147 links, 0 errors
-- consumer example contract check — 78 checks, 0 failures
-- OpenTofu module contract tests — 25 passed, 0 failed
-- Ansible role contract — 22 checks, 0 failures
-- publication-safety patterns — 59 checks, 0 failures
+- Markdown — <n> files, <n> errors
+- link validation — <n> links, <n> errors
+- consumer example contract check — <n> checks, <n> failures
+- OpenTofu module contract tests — <n> passed, <n> failed
+- Ansible role contract — <n> checks, <n> failures
+- publication-safety patterns — <n> checks, <n> failures
 - secret scan — no leaks found
 - `git diff --check` — passed
 - complete diff reviewed
 ```
+
+The counts are deliberately not filled in here. A worked example would be a set of numbers to copy, and copying them is the mistake this page exists to prevent — the totals move whenever a check gains a case or the repository gains a file.
 
 Re-run and re-report on **every** push that changes what validation does or how much of it there is, including check counts and the cases a test covers.
 
