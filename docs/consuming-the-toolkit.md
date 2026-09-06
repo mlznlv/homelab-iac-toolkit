@@ -27,7 +27,9 @@ Everything environment-shaped, which is most of it:
 | Ansible inventory and authentication | Including the private half of every key you authorize |
 | Execution order | Nothing here runs anything for you |
 
-The toolkit owns the module and role interfaces and what they do internally. It does not acquire, update, synchronize, or choose your checkout, and neither OpenTofu, Ansible, nor Task does it on the toolkit's behalf. `vendor/homelab-iac-toolkit/` is the example's convention and nothing more; no code depends on that path.
+The toolkit owns the module and role interfaces and what they do internally. It does not acquire, update, synchronize, or choose your checkout, and neither OpenTofu, Ansible, nor Task does it on the toolkit's behalf.
+
+`vendor/homelab-iac-toolkit/` is a convention rather than a toolkit interface: nothing in the module or the role knows that path. It is not, however, free to change on its own. OpenTofu requires a module `source` to be a literal, so the example writes the path into `tofu/main.tf` and again into `ansible.cfg`. Putting your checkout somewhere else means editing both — and editing them **to the same place**, since two paths that disagree are exactly the silent drift this contract exists to prevent.
 
 ## The workflow
 
@@ -39,13 +41,15 @@ Two of those steps are deliberate rather than unfinished. **A person reviews the
 
 **Provider endpoints and credentials** are supplied at run time through the provider's own mechanisms, which [the provider documents](https://search.opentofu.org/provider/bpg/proxmox/latest). They are not toolkit interfaces and do not belong in source control.
 
-**The example declares no backend**, because it creates nothing and has no state worth protecting. That is not a recommendation to use local state for a real deployment: OpenTofu state records what was created and can hold sensitive values, so choose a backend and a state-custody policy before your first real apply.
+**The example declares no backend.** As committed it has never been applied and holds no state — but **applying it creates a real VM and real state**, and with no backend declared that state is written to a local file with nothing protecting it. Choose a backend and a state-custody policy before you apply anything, including this example: OpenTofu state records what was created and can hold sensitive values. The omission keeps the example free of a choice that is yours; it is not a recommendation to use local state.
 
-**The initial workflow commits no encrypted document**, so it needs no secret loader, credential broker, or decryption step, and the toolkit adds none. SOPS and age remain the interface for a workflow that does require committed encrypted secrets, deferred rather than rejected, as [ADR 0007](decisions/0007-single-revision-consumer-contract.md) records. Runtime credentials stay outside Git; real encrypted material, recipients, and decryption identities are yours.
+**The initial workflow commits no encrypted document**, so it needs no secret loader, credential broker, or decryption step, and the toolkit adds none. SOPS and age remain the interface for a workflow that does require committed encrypted secrets, deferred rather than rejected, as [ADR 0007](decisions/0007-single-revision-consumer-contract.md) records. Runtime credentials stay outside Git.
+
+Encrypted material and the recipients it was encrypted to are consumer-owned and never appear in this public toolkit. **The decryption identity is different in kind: it is a private key, so keep it out of Git.** An age identity or SSH private key that would open your secrets should live on the machines that need it and be distributed the way you already distribute private keys — committing it, to any repository, defeats the encryption it unlocks.
 
 ## What the checks here prove
 
-This repository validates the components and the example on every change, without credentials and without contacting anything: the configuration parses, the module call type-checks against the module's real interface, both halves resolve from one represented checkout, the committed inventory is the `connection` output mapped unchanged, and the play resolves the role.
+This repository validates the components and the example on every change, without credentials and without reaching any Proxmox host or guest. It does use the public network: the checks download the provider the configuration declares, and resolve the links in this documentation. Those checks establish that the configuration parses, the module call type-checks against the module's real interface, both halves resolve from one represented checkout, the committed inventory is the `connection` output mapped unchanged, and the play resolves the role.
 
 They establish nothing about a running system, and no check here has ever run against a Proxmox VE or a guest. [Compatibility](compatibility.md#current-evidence-level) enumerates what this evidence does not demonstrate.
 
@@ -93,7 +97,7 @@ Error: Missing required argument
 The argument "node_name" is required, but no definition was found.
 ```
 
-The module names every environment-specific value explicitly and defaults none of them. [Its README](../tofu/modules/proxmox-linux-vm/README.md) lists the required and optional inputs.
+The module defaults none of its **required** inputs — every environment-specific value is named explicitly, because no default could be right for your environment. It does default the four behavioural inputs (`vm_id`, `guest_agent_enabled`, `stop_on_destroy`, `ssh_port`), which describe how the module behaves rather than where it builds. [Its README](../tofu/modules/proxmox-linux-vm/README.md) lists both sets.
 
 ### An input is rejected
 
