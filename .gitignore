@@ -59,8 +59,16 @@ secrets.yaml
 .task/
 
 # Claude Code personal overrides. The shared project configuration in
-# .claude/ (settings.json, hooks, agents) is committed.
+# .claude/ (settings.json, hooks, skills, agents) is committed.
 .claude/settings.local.json
+
+# Claude Code working data. Worktrees are checkouts of this repository, so
+# committing one would embed the repository inside itself; session history is a
+# contributor's own notes about what they were doing. Neither is secret, which
+# is why the write-time hook has nothing to say about them, and neither is
+# reusable toolkit source.
+.claude/worktrees/
+.remember/
 
 # Editor, operating-system and language tooling files
 .DS_Store

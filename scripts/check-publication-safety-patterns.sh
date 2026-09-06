@@ -132,6 +132,8 @@ check "fictional.retry"                            ignored allowed
 check ".venv/bin/python"                           ignored allowed
 check "__pycache__/fictional.pyc"                  ignored allowed
 check ".claude/settings.local.json"                ignored allowed
+check ".claude/worktrees/fictional/README.md"      ignored allowed
+check ".remember/now.md"                           ignored allowed
 
 echo
 if [ "$failures" -eq 0 ]; then
