@@ -210,11 +210,11 @@ M3 is complete. ADR 0007 defines the accepted single-revision, separate-reposito
 - Cross-component handoffs and lifecycle ownership remain explicit.
 - Public examples demonstrate approved multi-component composition without hidden state or generated-inventory assumptions.
 - Any external-dotfiles integration is generic, optional, disabled by default, configurable with a consumer-supplied repository and never used for secrets.
-- Guest eligibility for dotfiles is explicit; any future recommendation or default for [mlznlv/dotfiles](https://github.com/mlznlv/dotfiles) requires accepted Architecture and preserves consumer override and toolkit independence.
+- Guest eligibility for dotfiles is explicit, and the consumer chooses the compatible repository without a toolkit recommendation or default.
 - Ecosystem integrations remain optional and do not make the toolkit depend on a private deployment repository.
 - Separate deployment repository patterns remain generic and public-safe.
 
-**Architecture dependencies:** Composition and handoff contracts; dotfiles interface and default policy; guest eligibility; external revision and compatibility handling; security and validation requirements.
+**Architecture dependencies:** Composition and handoff contracts; dotfiles interface and enablement policy; guest eligibility; external revision and compatibility handling; security and validation requirements.
 
 **Major deliverables:** Composition guidance, public examples, approved optional integrations and supporting documentation and validation.
 
