@@ -2,11 +2,11 @@
 
 ## Current state
 
-- **Current phase:** M4 — Consumer-ready toolkit
-- **Milestone state:** M1, M2 and M3 are complete; the initial M4 consumer contract is accepted.
-- **Implementation state:** M4 implementation is the current execution focus. Developer work becomes Ready only through focused Issues derived from the accepted consumer contract.
-- **Current blocker:** None at milestone level; Issue-level dependencies determine implementation readiness.
-- **Next action:** Implement the accepted consumer workflow through focused Developer Issues.
+- **Current phase:** M5 — First pre-release
+- **Milestone state:** M1, M2, M3 and M4 are complete. The M4 consumer example, its credential-free validation, the separate-repository workflow documentation, and the consolidated M4 document set are all merged.
+- **Implementation state:** M5 Architecture is the current execution focus. Developer work becomes Ready only after the first pre-release contract is accepted; no M5 implementation Issue precedes it.
+- **Current blocker:** M5 entry is not yet satisfied. The M4 consumer workflow is validated, but the release and compatibility decisions M5 also requires are not accepted.
+- **Next action:** Accept the first pre-release contract, which defines the pre-release identifier and the immutable consumer reference, and then decompose M5 into focused Developer Issues.
 
 ## Milestone sequence
 
