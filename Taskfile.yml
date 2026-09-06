@@ -66,6 +66,7 @@ tasks:
       - task: validate:workflow-audit
       - task: validate:public-safety
       - task: validate:safety-patterns
+      - task: validate:stop-hook
       - task: validate:secrets
       - task: validate:ansible
       - task: validate:tofu
@@ -138,6 +139,16 @@ tasks:
     desc: 'Security: check that the publication-safety file controls agree.'
     cmds:
       - ./scripts/check-publication-safety-patterns.sh
+
+  validate:stop-hook:
+    desc: 'Hygiene: check the optional Stop hook still decides what it claims to.'
+    cmds:
+      # Runs against a temporary repository the script builds and removes, not
+      # against this one: the blocking case has to make a check fail, and doing
+      # that in a contributor's own tree would be both rude and unreliable. The
+      # script reports nothing to check when .claude/ has been removed, which
+      # the repository design allows.
+      - ./scripts/check-stop-hook.sh
 
   validate:secrets:
     desc: 'Security: scan repository history for secrets.'
