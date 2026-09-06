@@ -68,27 +68,21 @@ The OpenTofu capability manages one Proxmox Linux VM under `tofu/modules/proxmox
 
 The bootstrap username and public keys do not give OpenTofu continuing ownership of guest users, authorized keys, or SSH configuration. Those remain Ansible or consumer concerns after creation.
 
-The module attaches the guest-agent channel when it creates the VM, and its guest-agent input defaults to enabled. The channel therefore exists before any guest configuration runs, which is what lets the Ansible capability start the agent on its first run: Proxmox attaches the channel only when the setting is enabled, and a guest whose service is bound to that device cannot start it before the device exists.
+The module attaches the guest-agent channel when it creates the VM, which is what lets the Ansible capability start the agent on its first run: Proxmox attaches the channel only when the setting is enabled, and a guest whose service is bound to that device cannot start it before the device exists. It never waits for agent-reported addressing and publishes no agent-reported address, so apply and refresh do not block on an agent that is not yet running. [ADR 0006](decisions/0006-guest-agent-channel-at-creation.md) records that decision, the window before the role first runs, and its sources.
 
-The module never waits for agent-reported addressing. Provider IP waiting is disabled unconditionally, so apply and refresh do not block on an agent that is not yet installed or running, and creation and access use the declared static address. The module publishes no agent-reported address.
+Destroy stops the VM by default rather than requesting a guest shutdown, so it depends on neither ACPI nor a running agent. **That can interrupt workloads and lose unwritten data**, and the alternative accepts a destroy that may block or time out. Neither value is free; the [module README](../tofu/modules/proxmox-linux-vm/README.md) sets out the trade-off. Nothing here changes the required plan, human review, and explicit apply workflow.
 
-A consumer may turn the channel off. That produces a VM in which the guest agent cannot run, and adding the channel afterwards requires stopping and starting the VM, because Proxmox does not hot-plug the change.
-
-Between creation and the role's first run, the VM has a channel with nothing behind it. Shutdown and reboot fall back to ACPI after a short probe rather than hanging, a backup taken in that window skips the guest filesystem freeze and is crash-consistent, and anything that queries the agent reports it unavailable. [ADR 0006](decisions/0006-guest-agent-channel-at-creation.md) records that window and its sources.
-
-The module exposes a `stop_on_destroy` input that defaults to `true`. With that default, the provider stops the VM rather than requesting a graceful shutdown before destroying it, avoiding reliance on ACPI or on a guest agent that may not yet be running. A stop can interrupt guest workloads and lose unwritten data. A consumer may set the input to `false` only when the consumer accepts reliance on reliable guest shutdown through ACPI or an enabled guest agent, including the risk that destroy can time out or remain blocked when shutdown fails. Which of the two performs that shutdown depends on when the destroy happens: before the role has run, Proxmox falls back to ACPI once its agent probe fails, and after it has run, the running agent shuts the guest down. This setting does not change the required plan, human review, and explicit apply workflow.
-
-The module exposes a required, non-sensitive `connection` output containing `host`, `user`, and `port`. `host` is the declared static IPv4 address without its prefix, `user` is the bootstrap username, and `port` is the `ssh_port` metadata value. The module does not configure the guest's SSH port, and the descriptor does not give OpenTofu continuing ownership of guest access. It is a consumer composition convenience, not an Ansible dependency. Other public outputs are limited to non-sensitive resource identity and composition values required by the module.
+The module exposes a required, non-sensitive `connection` output of `host`, `user`, and `port`. It is a consumer composition convenience, not an Ansible dependency, and it gives OpenTofu no continuing ownership of guest access. Other public outputs are limited to non-sensitive resource identity and composition values. Exact inputs, defaults, and derivations live in the module README.
 
 ### Ansible guest-agent capability
 
 The Ansible capability lives under `ansible/roles/qemu_guest_agent/`. It installs the `qemu-guest-agent` package and ensures that its service is running.
 
-Whether that service can also be enabled for boot belongs to the target's packaging rather than to the role. Where the unit is device-activated and static, as Debian's is, it is started from a udev rule when the channel appears and carries no installation configuration to enable; `systemctl is-enabled` reports `static`, which Ansible treats as already enabled. The capability's obligation is therefore that the package is installed and the service is running once the channel is present, and that enabling at boot is honoured where the packaging supports it rather than claimed where it does not.
+Whether that service can also be enabled for boot belongs to the target's packaging rather than to the role: where the unit is device-activated and static, as Debian's is, there is no installation configuration to enable. The capability's obligation is that the package is installed and the service is running once the channel is present, with boot-enabling honoured where the packaging supports it rather than claimed where it does not.
 
 The role operates on ordinary consumer inventory. It does not read OpenTofu state or outputs, manage provider integration, create guest users, own SSH configuration, or change Proxmox resources.
 
-Its guest contract is capability-based: supported Python and Ansible requirements, APT package management, systemd service management, and availability of the expected package and service. Current targets and evidence are declared in [Compatibility](compatibility.md).
+Its guest contract is capability-based. [Compatibility](compatibility.md#guest-capability-contract) declares the requirements, current targets, and evidence.
 
 ### Consumer-controlled flow
 
@@ -111,14 +105,13 @@ Credential-free contract validation must prove at minimum:
 - the guest-agent channel attached at creation, and provider IP waiting disabled;
 - `stop_on_destroy` defaulting to `true` and an explicit `false` override reaching the provider resource;
 - the required `connection` output and its declared `host`, `user`, and `port` derivation;
-- Ansible syntax and lint correctness;
-- the static package and service contract;
+- Ansible syntax and lint correctness, and the static package and service contract;
 - composition of the connection descriptor without coupling the role to OpenTofu state; and
 - the existing repository validation and publication-safety expectations.
 
-The current implementation may use OpenTofu provider mocking to obtain module evidence, but the required evidence rather than a particular test mechanism is the durable constraint.
+The durable constraint is the required evidence, not a particular test mechanism; the current implementation may use provider mocking to obtain it.
 
-This evidence does not prove live PVE plan, apply, or destroy behavior; graceful guest shutdown or reliable forced stop; template cloning or cloud-init bootstrapping; SSH connectivity; Ansible convergence or idempotency on a real guest; or that a guest agent answers Proxmox once the role has run. Static and contract proof must not be represented as live compatibility evidence.
+This evidence does not prove live behaviour of any kind, and static or contract proof must not be represented as live compatibility evidence. [Compatibility](compatibility.md#current-evidence-level) enumerates what it does not demonstrate.
 
 Locally decidable invalid inputs fail early and clearly. Runtime prerequisites remain visible responsibilities of their owning tools, and their failures are surfaced rather than hidden. The slice introduces no fallback orchestration, automatic recovery, blind apply, or implicit infrastructure mutation.
 

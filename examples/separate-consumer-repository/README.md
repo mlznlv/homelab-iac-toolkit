@@ -31,10 +31,9 @@ The one thing both `tofu/main.tf` and `ansible/ansible.cfg` have in common is `v
 
 ## What you supply
 
-The toolkit supplies neither, and this example contains neither:
+This example contains neither the checkout nor anything environment-specific — not the Proxmox endpoint and credentials, the backend and state custody, the node, template, datastore, bridge, addresses, sizing, the SSH keys you authorize and their private halves, how Ansible authenticates, or the order you run things in. [Using the toolkit](../../docs/consuming-the-toolkit.md#what-you-own) lists what that ownership covers.
 
-- **the checkout.** How you obtain it and where you put it are yours, along with any credentials that takes. A Git submodule pinned to the full SHA, a vendored copy whose origin and revision you record, or any other fetch you control all satisfy the contract. `vendor/homelab-iac-toolkit/` is this example's convention, not a toolkit interface. Nothing in the toolkit acquires, updates, verifies, or synchronizes it.
-- **everything environment-specific.** The Proxmox endpoint and credentials, the backend and state custody, the node, template, datastore, bridge, addresses, sizing, the SSH keys you authorize and their private halves, how Ansible authenticates, and the order you run things in.
+How you obtain the checkout and where you put it are yours. `vendor/homelab-iac-toolkit/` is this example's convention, not a toolkit interface, and nothing in the toolkit acquires, updates, verifies, or synchronizes it.
 
 ## Getting started
 
@@ -79,9 +78,9 @@ Run it from that directory. Ansible resolves the relative paths inside `ansible.
 
 ## Two things this example does not decide for you
 
-**There is no backend.** `tofu/versions.tf` declares none, because this example creates nothing and has no state worth protecting. That is not a recommendation to use local state for a real deployment. OpenTofu state records what was created and can hold sensitive values, so choose a backend and a state-custody policy before your first real apply.
+**There is no backend.** `tofu/versions.tf` declares none, because this example creates nothing and has no state worth protecting. That is not a recommendation to use local state for a real deployment: choose a backend and a state-custody policy before your first real apply.
 
-**There are no secrets, and no mechanism for them.** The initial workflow needs no encrypted document in source control, so the toolkit adds no secret loader, credential broker, or decryption step. Runtime credentials stay outside Git and reach the provider and Ansible through their own mechanisms. Real secret material, recipients, and decryption identities are yours and belong in your own private repository.
+**There are no secrets, and no mechanism for them.** Runtime credentials stay outside Git and reach the provider and Ansible through their own mechanisms. [Using the toolkit](../../docs/consuming-the-toolkit.md#secrets) records the boundary.
 
 ## What is actually proven
 

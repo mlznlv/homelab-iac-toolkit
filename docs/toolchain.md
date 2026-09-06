@@ -57,10 +57,8 @@ other tool is pinned to an exact release.
 | yamllint | `requirements-dev.txt` | YAML linting | [yamllint](https://pypi.org/project/yamllint/) |
 
 OpenTofu, Ansible, Task, SOPS, and age are declared because they are the project
-technologies a contributor needs available. The `proxmox-linux-vm` module and
-the `qemu_guest_agent` role are the first reusable content that uses them; the
-workflow definitions that would run an infrastructure change come with the
-milestone that introduces them.
+technologies a contributor needs available, whether or not current content uses
+each one yet.
 
 ## Determining a supported version
 
@@ -125,16 +123,12 @@ result with the commands below whichever way the tools were installed.
 
 ## Changing a supported version
 
-A version change is an ordinary repository change: edit the declaration file in
-a pull request, where it is reviewed like any other change.
+Edit the declaration file in a pull request, where it is reviewed like any other
+change. No consumer restates the declarations — the development environment and
+the workflows install from them — so the change takes effect everywhere at once.
 
-The declarations are authoritative, and no consumer restates them: the
-development environment and the GitHub Actions workflows install from them, so
-a version change takes effect everywhere once the declaration changes.
-
-`requirements-dev.lock` is the one file that repeats a declared version, because
-a lock has to name what it hashes. It is generated, not edited, so a Python
-package change is made in `requirements-dev.txt` and the lock is regenerated
-from it. `scripts/check-python-lock.sh` asserts that the two still agree, and
-runs as part of local validation and in continuous integration, so a
-regeneration that was forgotten fails the build rather than going unnoticed.
+`requirements-dev.lock` is the one file repeating a declared version, because a
+lock has to name what it hashes. It is generated rather than edited: change
+`requirements-dev.txt` and regenerate. `scripts/check-python-lock.sh` asserts the
+two still agree in both local validation and CI, so a forgotten regeneration
+fails the build rather than going unnoticed.

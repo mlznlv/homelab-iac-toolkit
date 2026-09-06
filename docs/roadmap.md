@@ -8,8 +8,6 @@
 - **Current blocker:** None at milestone level; Issue-level dependencies determine implementation readiness.
 - **Next action:** Implement the accepted consumer workflow through focused Developer Issues.
 
-M3 is complete. ADR 0007 defines the accepted single-revision, separate-repository consumer contract for M4. Implementation now proceeds through focused Developer Issues while preserving the accepted component boundaries, credential-free public validation, and explicit live-compatibility non-claims.
-
 ## Milestone sequence
 
 1. M1 — Architecture and roadmap baseline
