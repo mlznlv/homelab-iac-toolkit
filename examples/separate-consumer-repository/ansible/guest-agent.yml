@@ -1,0 +1,17 @@
+---
+# The play that installs the QEMU guest agent, run after the VM exists and you
+# have written its three connection values into inventory.yml.
+#
+# It is an ordinary play using an ordinary role. `become` is declared here
+# rather than in the role because privilege escalation is the consumer's
+# decision, and this file is where a consumer makes it.
+#
+# The VM the module creates already has the guest-agent channel attached, which
+# is why the service can start on this play's first run. That ordering belongs
+# to the module, not to this play.
+
+- name: Install the QEMU guest agent and bring its service up
+  hosts: fictional_guests
+  become: true
+  roles:
+    - role: qemu_guest_agent

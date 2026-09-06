@@ -26,6 +26,7 @@ The project is in its bootstrap, pre-release stage. The roadmap records the curr
 What exists today:
 
 - **First reusable components:** [`tofu/modules/proxmox-linux-vm/`](tofu/modules/proxmox-linux-vm) and [`ansible/roles/qemu_guest_agent/`](ansible/roles/qemu_guest_agent), the two halves of the slice accepted in [ADR 0006](docs/decisions/0006-guest-agent-channel-at-creation.md), each with its own README and contract checks. `task validate:tofu` and `task validate:ansible` run them, and `task validate:composition` checks that the module's connection output composes into ordinary Ansible inventory without coupling the role to OpenTofu. Both check what the components declare — the module's tests mock the provider, and the role's checks read its tasks — so neither is evidence about a live Proxmox VE or a real guest.
+- **The consumer example:** [`examples/separate-consumer-repository/`](examples/separate-consumer-repository), which represents a separate repository consuming both components from one checkout pinned at one full commit SHA, as accepted in [ADR 0007](docs/decisions/0007-single-revision-consumer-contract.md). `task validate:example` runs its checks against a temporary stand-in checkout the check builds and removes; the example deliberately contains no acquisition mechanism of its own. Like the component checks, this is structural evidence only, and its Getting Started steps from `tofu plan` onward have never been executed against real infrastructure.
 - **Project documentation:** the README and its documentation index, the roadmap, architecture, repository design, the ADR index and ADRs 0001–0007, the supported-tool-version and local-validation documentation, [`CONTRIBUTING.md`](CONTRIBUTING.md) and [`SECURITY.md`](SECURITY.md).
 - **Contribution governance:** the Issue templates and [`pull_request_template.md`](.github/pull_request_template.md) described below, plus [`dependabot.yml`](.github/dependabot.yml).
 - **Declared tool versions:** [`.tool-versions`](.tool-versions) for language runtimes and standalone command-line tools, and [`requirements-dev.txt`](requirements-dev.txt) for Python packages. These declarations are authoritative for supported versions; [`docs/toolchain.md`](docs/toolchain.md) explains how to read, obtain, check and change them. [`requirements-dev.lock`](requirements-dev.lock) is generated from the Python declaration and pins the whole closure with hashes; it is what every environment installs, and it is regenerated rather than edited.
@@ -40,7 +41,7 @@ What exists today:
 
 What does not exist yet, and must not be written about as though it did:
 
-- **No example content.** There is no `examples/` content. Its approved placement is in the repository design; cross-component consumer examples are M4 work.
+- **No second example.** [`examples/separate-consumer-repository/`](examples/separate-consumer-repository) is the only one, and the repository design permits exactly one at this stage.
 - **No build system, and no live-infrastructure test path.** Nothing here is built or packaged. The only component tests are the credential-free contract checks described above; no check has ever run against a Proxmox VE or a guest, and none may claim to.
 
 Do not document a command, path or setup procedure here or anywhere else in this repository without running it first.
