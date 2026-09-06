@@ -15,6 +15,11 @@
 3. M3 — First reusable toolkit slice
 4. M4 — Consumer-ready toolkit
 5. M5 — First pre-release
+6. M6 — Broader Proxmox infrastructure
+7. M7 — Reusable guest and service configuration
+8. M8 — Composition and ecosystem integration
+9. M9 — Integration confidence and compatibility expansion
+10. M10 — Release maturity and stable-readiness
 
 ## M1 — Architecture and roadmap baseline
 
@@ -142,6 +147,127 @@
 
 **Deferred work:** Stable 1.0 commitment, registry publication unless justified, automated deployment and broad toolkit expansion.
 
+## M6 — Broader Proxmox infrastructure
+
+**Goal:** Expand reusable OpenTofu capabilities beyond the initial Linux VM slice.
+
+**Why:** Practical Proxmox deployments need more resource and networking patterns without importing one private environment into the toolkit.
+
+**Entry criteria:** M5 is complete, demonstrated consumer needs are identified, and Architecture has accepted the boundaries and evidence requirements for the selected expansion.
+
+**Exit criteria:**
+
+- Architecture-approved additional VM patterns and LXC support are reusable, documented and validated.
+- Storage and disk capabilities approved for demonstrated needs document lifecycle, replacement and destructive behavior.
+- Approved network capabilities cover the required VLAN, multi-NIC, DHCP and IPv6 use cases without environment-specific defaults.
+- Other Proxmox resources are added only where reusable consumer value is demonstrated.
+- Public validation remains credential-free and compatibility claims match the evidence.
+
+**Architecture dependencies:** Capability selection; provider and platform compatibility; resource, storage and network ownership; lifecycle and replacement behavior; public interfaces; validation and evidence requirements.
+
+**Major deliverables:** Approved OpenTofu components, component documentation, focused public examples and credential-free validation.
+
+**Risks / blockers:** Premature abstraction may produce monolithic interfaces. Storage and network changes can be destructive, and private-environment assumptions can become accidental defaults.
+
+**Deferred work:** Guest and service configuration expansion, higher-level composition and live infrastructure evidence.
+
+## M7 — Reusable guest and service configuration
+
+**Goal:** Expand reusable Ansible capabilities beyond the initial guest-agent role.
+
+**Why:** Consumers need repeatable guest and service configuration without turning the toolkit into an unbounded role catalog.
+
+**Entry criteria:** M6 is complete, demonstrated consumer needs are identified, and Architecture has accepted the boundaries and evidence requirements for the selected guest and service capabilities.
+
+**Exit criteria:**
+
+- Approved common guest baseline and administration capabilities are independently reusable, documented and validated.
+- Service roles exist only for demonstrated reusable needs.
+- User or developer environment bootstrap is explicit, optional and limited to appropriate guest types; service-only and appliance guests are never included implicitly.
+- Each capability documents prerequisites, lifecycle ownership, idempotency expectations and validation evidence.
+- No capability assumes private inventory, secrets or topology.
+
+**Architecture dependencies:** Capability selection; role boundaries; guest platform support; privilege and secrets boundaries; public interfaces; idempotency and evidence requirements.
+
+**Major deliverables:** Approved Ansible roles, role documentation, focused public examples and credential-free validation.
+
+**Risks / blockers:** Role-catalog sprawl, hidden distribution assumptions, excessive privilege and environment-specific behavior.
+
+**Deferred work:** External-dotfiles integration, higher-level composition and live infrastructure evidence.
+
+## M8 — Composition and ecosystem integration
+
+**Goal:** Provide reusable composition patterns and optional ecosystem integrations without crossing lifecycle boundaries.
+
+**Why:** Consumers need clear ways to combine toolkit capabilities while retaining control of deployment-specific state and choices.
+
+**Entry criteria:** M6 and M7 capabilities are available, and Architecture has accepted the required handoff, composition and optional integration boundaries.
+
+**Exit criteria:**
+
+- Cross-component handoffs and lifecycle ownership remain explicit.
+- Public examples demonstrate approved multi-component composition without hidden state or generated-inventory assumptions.
+- Any external-dotfiles integration is generic, optional, disabled by default, configurable with a consumer-supplied repository and never used for secrets.
+- Guest eligibility for dotfiles is explicit, and the consumer chooses the compatible repository without a toolkit recommendation or default.
+- Ecosystem integrations remain optional and do not make the toolkit depend on a private deployment repository.
+- Separate deployment repository patterns remain generic and public-safe.
+
+**Architecture dependencies:** Composition and handoff contracts; dotfiles interface and enablement policy; guest eligibility; external revision and compatibility handling; security and validation requirements.
+
+**Major deliverables:** Composition guidance, public examples, approved optional integrations and supporting documentation and validation.
+
+**Risks / blockers:** Hidden coupling, duplicated lifecycle ownership, implicit inventory generation, ecosystem lock-in and accidental secret distribution.
+
+**Deferred work:** Isolated live integration evidence and broader release maturity.
+
+## M9 — Integration confidence and compatibility expansion
+
+**Goal:** Add evidence-backed confidence for supported compositions and reference platforms.
+
+**Why:** Credential-free validation proves contracts, but selected live evidence may be needed before broader compatibility claims are credible.
+
+**Entry criteria:** M8 compositions are stable enough to test, and Architecture has accepted the scope and isolation model for any live validation.
+
+**Exit criteria:**
+
+- Compatibility claims are tied to documented evidence and explicit non-claims.
+- Approved reference-platform evidence covers the selected reusable workflows.
+- Any live testing is isolated, opt-in and separate from normal credential-free public CI.
+- Credential custody, triggering, cleanup, failure handling and cost boundaries are documented for live validation.
+- Troubleshooting guidance reflects observed integration behavior.
+
+**Architecture dependencies:** Reference-platform scope; credential custody; test triggers and isolation; infrastructure ownership; cleanup and failure behavior; compatibility evidence thresholds.
+
+**Major deliverables:** Integration evidence, compatibility documentation, isolated opt-in validation where approved, and evidence-based troubleshooting guidance.
+
+**Risks / blockers:** Credential exposure, test flakiness, infrastructure cost, incomplete cleanup and compatibility overclaims.
+
+**Deferred work:** Mandatory live public CI and stable-release commitments not supported by evidence.
+
+## M10 — Release maturity and stable-readiness
+
+**Goal:** Make ongoing releases predictable and determine whether the toolkit is ready for a stable compatibility commitment.
+
+**Why:** Broader use requires repeatable releases, understandable changes and evidence-based compatibility expectations.
+
+**Entry criteria:** M9 evidence is available and Architecture has accepted the required release, versioning and compatibility policies.
+
+**Exit criteria:**
+
+- Public interfaces and supported compatibility are versioned and documented.
+- Releases, changelogs and migration guidance are repeatable.
+- Upgrade expectations and compatibility non-claims are explicit.
+- Project maintenance and open-source contribution paths support continued releases.
+- A stable-readiness assessment records whether a 1.0 commitment is justified; no stable release is implied by this milestone.
+
+**Architecture dependencies:** Versioning; release channels; compatibility guarantees and non-guarantees; changelog and migration policy; upgrade expectations; distribution and release mechanics.
+
+**Major deliverables:** Repeatable releases, maintained compatibility information, migration guidance, contributor-facing release documentation, maturity and discoverability guidance, and a stable-readiness assessment.
+
+**Risks / blockers:** Premature compatibility commitments, unsupported upgrade promises and release maintenance burden.
+
+**Deferred work:** A 1.0 release until evidence and maintenance capacity justify its guarantees.
+
 ## Architecture prerequisites
 
 ### Foundational architecture baseline
@@ -162,15 +288,20 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 - **First slice:** its scope, public boundary and relevant provider, platform, validation and evidence requirements.
 - **Consumer:** consumption model, examples contract, required configuration/secrets interfaces and optional live-test needs.
+- **Capability expansion:** selected Proxmox, guest and service boundaries, lifecycle behavior and evidence requirements.
+- **Composition and ecosystem:** cross-component handoffs, optional integrations and public/private boundaries.
+- **Integration confidence:** reference-platform scope, live-test isolation and evidence thresholds.
 - **Release:** versioning, compatibility, changelog, migration and release decisions.
 
 ## Near-term Developer work
 
-Near-term Developer work implements the accepted first slice through focused GitHub Issues. Issue-level scope, dependencies, and execution state live in GitHub rather than this milestone roadmap. M4 work remains deferred.
+Near-term Developer work completes M4 through focused GitHub Issues derived from the accepted consumer contract. Issue-level scope, dependencies and execution state live in GitHub. M5 and later milestones remain planning horizons until their required Architecture is accepted.
 
-## Deferred work
+## Deferred from current execution
 
-- Additional modules and roles beyond the first validated slice.
+The following remains outside current M4 execution. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
+
+- Proxmox and Ansible expansion beyond the first validated slice.
 - Generic dotfiles integration.
 - Live Proxmox testing outside an approved isolated path.
 - Stable 1.0 compatibility commitment.

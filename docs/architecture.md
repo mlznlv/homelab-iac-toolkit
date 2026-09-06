@@ -156,7 +156,9 @@ SSH private keys and other Ansible authentication material remain outside the pu
 
 The canonical example declares no backend. Its documentation must state that this omission is not a recommendation to use local state for a real deployment. A consumer must choose its backend and state-custody policy before real use.
 
-SOPS and age remain the canonical interface when a toolkit-supported workflow requires encrypted secrets committed to source control. They are explicitly deferred from the initial M4 workflow because that flow requires no version-controlled encrypted secret document. Runtime-only credentials may remain outside Git and use native consumer-controlled mechanisms. Real encrypted secret material, recipients, and decryption identities remain consumer-owned and belong in the private deployment repository, never in the public toolkit.
+SOPS and age remain the canonical interface when a toolkit-supported workflow requires encrypted secrets committed to source control. They are explicitly deferred from the initial M4 workflow because that flow requires no version-controlled encrypted secret document. Runtime-only credentials may remain outside Git and use native consumer-controlled mechanisms.
+
+Real encrypted secret material, its recipients, and the decryption identities that open it are all consumer-owned, and none of them appears in the public toolkit. They are not, however, kept the same way. Encrypted material and the recipient list it was encrypted to are committable, and committing them to a consumer's own repository is the point of the interface. A decryption identity is a private key, and a private key kept beside the ciphertext it opens is not protecting anything: identities stay out of source control, on the systems that need them, distributed by whatever means the consumer already uses for private keys. Choosing that means is the consumer's, and the toolkit adds no mechanism for it.
 
 ### Validation and live-testing boundary
 
