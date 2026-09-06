@@ -38,6 +38,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-before-stopping.sh",
+            "timeout": 60,
+            "statusMessage": "Running the fast local checks"
+          }
+        ]
+      }
     ]
   }
 }

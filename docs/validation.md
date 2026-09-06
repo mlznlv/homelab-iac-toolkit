@@ -41,7 +41,13 @@ Check the generated Python lock still matches its declaration, so a stale lock c
 ./scripts/check-python-lock.sh
 ```
 
-Task entry points: `task validate:whitespace`, `task validate:python-lock`.
+Check that the optional Stop hook still decides what it claims to — staying silent when nothing has changed or a tool is missing, and blocking only when a check it runs actually fails. It builds a temporary repository and removes it, so it never touches this one, and reports nothing to check when `.claude/` has been removed.
+
+```sh
+./scripts/check-stop-hook.sh
+```
+
+Task entry points: `task validate:whitespace`, `task validate:python-lock`, `task validate:stop-hook`.
 
 ### Documentation
 
@@ -151,11 +157,12 @@ None of the above reads OpenTofu state, generates inventory, contacts Proxmox, o
 | 7 | `validate:workflow-audit` | zizmor |
 | 8 | `validate:public-safety` | `scripts/check-publication-safety.sh` |
 | 9 | `validate:safety-patterns` | `scripts/check-publication-safety-patterns.sh` |
-| 10 | `validate:secrets` | gitleaks |
-| 11 | `validate:ansible` | `ansible-playbook --syntax-check`, ansible-lint, the role contract check |
-| 12 | `validate:tofu` | `tofu fmt`, `tofu init`, `tofu validate`, `tofu test` |
-| 13 | `validate:composition` | `ansible-inventory`, `jq` |
-| 14 | `validate:example` | `tofu fmt`, the example's fixture check, the example contract check |
-| 15 | `validate:links` | lychee |
+| 10 | `validate:stop-hook` | `scripts/check-stop-hook.sh` |
+| 11 | `validate:secrets` | gitleaks |
+| 12 | `validate:ansible` | `ansible-playbook --syntax-check`, ansible-lint, the role contract check |
+| 13 | `validate:tofu` | `tofu fmt`, `tofu init`, `tofu validate`, `tofu test` |
+| 14 | `validate:composition` | `ansible-inventory`, `jq` |
+| 15 | `validate:example` | `tofu fmt`, the example's fixture check, the example contract check |
+| 16 | `validate:links` | lychee |
 
 CI invokes these same entry points, so the check set, tool versions, configuration and pass-or-fail semantics are defined once. Every check here has a CI counterpart, and the five jobs together invoke exactly what `task validate` invokes.
