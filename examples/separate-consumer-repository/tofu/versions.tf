@@ -11,11 +11,13 @@
 # toolkit. An empty block is valid: every argument the provider accepts is
 # optional, and it reads what it needs from the environment.
 #
-# There is no `backend` block either. This example creates nothing and keeps no
-# state worth protecting, so it declares none. That omission is not a
-# recommendation to use local state for a real deployment: OpenTofu state
-# records what was created and can hold sensitive values, so a real deployment
-# chooses its backend and its state-custody policy before its first apply.
+# There is no `backend` block either, so the choice stays with you. As
+# committed this example has never been applied and holds no state, but
+# applying it creates a real VM and real state, and with no backend declared
+# that state lands in a local file with nothing protecting it. Choose a backend
+# and a state-custody policy before you apply anything, including this:
+# OpenTofu state records what was created and can hold sensitive values. The
+# omission is not a recommendation to use local state.
 
 terraform {
   required_version = ">= 1.6.0"
