@@ -5,11 +5,13 @@
 | Area | Ownership |
 | --- | --- |
 | `README.md` | Public landing page, scope, maturity, and navigation |
+| `CHANGELOG.md` | Notable consumer-facing change history and concise migration actions |
 | `docs/` | Durable project, architecture, contributor, and user documentation |
 | `docs/roadmap.md` | Approved milestone-level plan |
 | `docs/architecture.md` | Cross-cutting architecture and boundaries |
 | `docs/repository-design.md` | Repository structure and ownership |
 | `docs/compatibility.md` | Public compatibility targets, evidence levels, and non-claims |
+| `docs/release-policy.md` | Release identity, maturity, publication gates, evidence, and correction policy |
 | `docs/decisions/` | Architecture Decision Records |
 | `.devcontainer/` | Canonical reproducible contributor environment |
 | `.github/` | GitHub workflows, dependency automation, and contribution templates |
@@ -28,6 +30,14 @@ Areas described for deferred use need not be created until they contain approved
 Architecture documents and ADRs live under `docs/` and are reachable from the root README or a documentation index. Architecture, roadmap, and ADR content must not be duplicated in tool-specific guidance.
 
 ADRs use `docs/decisions/NNNN-title.md`. Their index is `docs/decisions/README.md`.
+
+Release documentation keeps three sources of truth distinct:
+
+- `CHANGELOG.md` records what changed, breaking or removed behavior, and concise migration actions;
+- `docs/compatibility.md` at a release commit records that release's compatibility snapshot and evidence level; and
+- executable source-controlled declarations own machine-consumable provider, dependency, runtime, and tool constraints.
+
+`docs/release-policy.md` owns durable release rules and publication gates. It references rather than restates exact Task targets, CI jobs, validation commands, tool versions, or detailed validation configuration. Those implementation details remain authoritative in their existing repository tooling, validation documentation, and CI sources.
 
 ## OpenTofu and Ansible
 
@@ -64,6 +74,16 @@ The example must be copyable and statically valid, but not deployment-ready. It 
 
 The example does not contain toolkit-acquisition or update automation, generated inventory, automatic OpenTofu-output wiring, state-reading automation, Taskfile orchestration, secret loading or decryption, or unattended apply behavior. Validation may represent the shared checkout with a credential-free fixture; the example does not own a submodule, vendoring, or other acquisition mechanism merely to support CI.
 
+## Releases
+
+The initial release structure is deliberately small: a root changelog, durable release policy, an immutable Git tag, and a GitHub Release containing only GitHub-provided source archives. `v0.1.0-alpha.1` is the only concrete first-release identifier. No package, container, or other registry hierarchy and no custom release-artifact directory is introduced for M5.
+
+The GitHub Release is the discoverable version record and states the exact full source SHA. It summarizes and links to the changelog entry and compatibility document at that released snapshot. It does not replace those committed sources or the consumer's source-controlled full-SHA checkout declaration.
+
+Release preparation and publication evidence belong to the PO-selected durable M5 completion record. That record identifies the candidate SHA, validation and safety evidence, and final release URL without pre-deciding the implementation-ticket boundaries. Concrete validation commands and CI jobs stay in their existing owning files rather than being copied into the record or release policy as a second implementation specification.
+
+Publication remains an explicit maintainer operation outside normal public CI. Repository settings may enforce release immutability, but the first release requires no release workflow, privileged CI trigger, credential broker, custom signing system, registry, or artifact pipeline.
+
 ## Repository tooling
 
 The Dev Container defines the canonical development environment, not the authoritative tool-version policy. Source-controlled version declarations and dependency locks are authoritative and must be consumable by the container, native development path, and CI as applicable.
@@ -85,7 +105,7 @@ The first slice and initial consumer workflow must not create:
 - live-test infrastructure;
 - toolkit-owned acquisition or synchronization of a consumer checkout;
 - generated inventory, cross-component state reading, or automatic Task wiring;
-- release or registry structure;
+- custom release artifacts, registry publication, or automated release infrastructure;
 - additional virtualization-platform abstractions.
 
 ## Existing-foundation reconciliation
