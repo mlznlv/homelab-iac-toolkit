@@ -41,7 +41,7 @@ Check the generated Python lock still matches its declaration, so a stale lock c
 ./scripts/check-python-lock.sh
 ```
 
-Check that the optional Stop hook still decides what it claims to — staying silent when nothing has changed or a tool is missing, and blocking only when a check it runs actually fails. It builds a temporary repository and removes it, so it never touches this one, and reports nothing to check when `.claude/` has been removed.
+Check that the optional Stop hook obeys the Stop contract: running on a normal stop, preventing it with exit 2 when a check on the current change fails, and standing down when a stop hook has already blocked. Each case states what the contract requires rather than what the hook happens to do, because a suite written the other way round passed while the hook did nothing. It builds a temporary repository and removes it, so it never touches this one, and reports nothing to check when `.claude/` has been removed.
 
 ```sh
 ./scripts/check-stop-hook.sh

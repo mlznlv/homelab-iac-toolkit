@@ -15,6 +15,23 @@
 # Claude Code sessions: removing it must leave the repository fully usable, and
 # every contributor is held to the same checks by CI whatever tools they use.
 #
+# Three parts of the Stop contract decide how it behaves, and getting any of
+# them wrong makes the hook look like it works while doing nothing:
+#
+#   stop_hook_active is a recursion guard, not a capability flag. A normal stop
+#   carries false; true means the agent is already continuing because a stop
+#   hook blocked. Blocking again on that path is how a hook loops, so this one
+#   stands down there and does its work on the normal stop.
+#
+#   Blocking is exit code 2, with the reason on stderr, which the hook
+#   reference documents as preventing Claude from stopping. Exit 0 ends the
+#   turn whatever is printed.
+#
+#   The subject is the change this turn made, so the comparison is the working
+#   tree and index against HEAD. Comparing the empty tree against HEAD asks
+#   what is committed, which is the question `task validate:whitespace` asks
+#   about the whole repository and the wrong one here.
+#
 # Three limits are deliberate.
 #
 # It runs nothing when no tracked file has changed. Most turns answer a
@@ -33,10 +50,9 @@
 
 input=$(cat)
 
-# stop_hook_active is false when this hook cannot block, which is also how
-# Claude Code breaks out after repeated blocks. Doing the work anyway would
-# burn seconds to produce a verdict nothing can act on.
-if [ "$(jq -r '.stop_hook_active // false' <<<"$input")" != "true" ]; then
+# The recursion guard. True means a stop hook has already blocked and the agent
+# is continuing because of it; blocking again is how that becomes a loop.
+if [ "$(jq -r '.stop_hook_active // false' <<<"$input" 2>/dev/null)" = "true" ]; then
   exit 0
 fi
 
@@ -45,8 +61,8 @@ cd "$root" || exit 0
 
 # A repository with no commits yet has no HEAD to compare against. Everything
 # staged in one is new rather than changed, so the work below still applies,
-# but the whitespace check is defined against HEAD and is skipped instead of
-# being asked a question it cannot answer.
+# but the comparisons that name HEAD are skipped instead of being asked a
+# question they cannot answer.
 has_head=false
 git rev-parse --verify --quiet HEAD >/dev/null 2>&1 && has_head=true
 
@@ -63,17 +79,22 @@ record() {
 - ${1}"
 }
 
-# Whitespace errors across every tracked file, the same comparison
-# `task validate:whitespace` makes. git is always present: this hook already
+# Whitespace errors in what this turn changed: the working tree and index
+# against HEAD, staged or not. git is always present, since this hook already
 # needed it to find the repository root.
 if [ "$has_head" = true ]; then
-  empty_tree=$(git hash-object -t tree /dev/null)
-  if ! git diff --check "$empty_tree" HEAD >/dev/null 2>&1; then
-    record 'whitespace errors in tracked content — reproduce with `task validate:whitespace`'
+  if ! git diff --check HEAD -- >/dev/null 2>&1; then
+    record 'whitespace errors in the current change — reproduce with `git diff --check HEAD --`'
   fi
 fi
 
-if command -v markdownlint-cli2 >/dev/null 2>&1; then
+# Probed by running it rather than by testing that it exists, for the reason
+# Taskfile.yml gives about the Python virtual environment: a tool can be on
+# PATH and still be unable to run. A mise shim resolves per directory, so it is
+# discoverable everywhere and only works where the toolchain is declared.
+# Reading "could not run" as "found lint errors" would block a turn over a
+# setup problem, which is the one thing this hook promises not to do.
+if markdownlint-cli2 --version >/dev/null 2>&1; then
   if ! git ls-files -z '*.md' | xargs -0 markdownlint-cli2 >/dev/null 2>&1; then
     record 'Markdown lint errors — reproduce with `task validate:markdown`'
   fi
@@ -86,7 +107,7 @@ if [ -x scripts/check-publication-safety.sh ]; then
   fi
 fi
 
-if [ -x scripts/check-publication-safety-patterns.sh ] && command -v jq >/dev/null 2>&1; then
+if [ -x scripts/check-publication-safety-patterns.sh ] && jq --version >/dev/null 2>&1; then
   if ! ./scripts/check-publication-safety-patterns.sh >/dev/null 2>&1; then
     record 'the .gitignore rules and the write-time hook disagree — reproduce with `task validate:safety-patterns`'
   fi
@@ -94,13 +115,12 @@ fi
 
 [ -z "$failures" ] && exit 0
 
-jq -n --arg reason "The working tree fails checks that CI also runs:
+# Exit 2 is what prevents the stop; stderr is what Claude is given to act on.
+cat >&2 <<EOF
+The working tree fails checks that CI also runs:
 ${failures}
 
-Fix these before ending the turn. This hook runs only the fast local checks; run \`task validate\` for the whole set, which is what a pull request needs." '{
-  hookSpecificOutput: {
-    blockTurn: true,
-    reason: $reason
-  }
-}'
-exit 0
+Fix these before ending the turn. This hook runs only the fast local checks;
+run \`task validate\` for the whole set, which is what a pull request needs.
+EOF
+exit 2
