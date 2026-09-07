@@ -3,10 +3,10 @@
 ## Current state
 
 - **Current phase:** M5 — First pre-release
-- **Milestone state:** M1, M2, M3 and M4 are complete. The M4 consumer example, its credential-free validation, the separate-repository workflow documentation, and the consolidated M4 document set are all merged.
-- **Implementation state:** M5 Architecture is the current execution focus. Developer work becomes Ready only after the first pre-release contract is accepted; no M5 implementation Issue precedes it.
-- **Current blocker:** M5 entry is not yet satisfied. The M4 consumer workflow is validated, but the release and compatibility decisions M5 also requires are not accepted.
-- **Next action:** Accept the first pre-release contract, which defines the pre-release identifier and the immutable consumer reference, and then decompose M5 into focused Developer Issues.
+- **Milestone state:** M1, M2, M3 and M4 are complete. The first pre-release contract is accepted through ADR 0008.
+- **Implementation state:** M5 implementation is the current execution focus. Developer work becomes Ready only through focused Issues derived from the accepted first pre-release contract.
+- **Current blocker:** None at milestone level; Issue-level dependencies determine implementation readiness.
+- **Next action:** Decompose and implement the accepted source-only first pre-release through focused Developer Issues.
 
 ## Milestone sequence
 
@@ -295,11 +295,11 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 ## Near-term Developer work
 
-Near-term Developer work completes M4 through focused GitHub Issues derived from the accepted consumer contract. Issue-level scope, dependencies and execution state live in GitHub. M5 and later milestones remain planning horizons until their required Architecture is accepted.
+Near-term Developer work implements M5 through focused GitHub Issues derived from the accepted first pre-release contract. Issue-level scope, dependencies and execution state live in GitHub. M6 and later milestones remain planning horizons until their required Architecture is accepted.
 
 ## Deferred from current execution
 
-The following remains outside current M4 execution. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
+The following remains outside current M5 execution. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
 
 - Proxmox and Ansible expansion beyond the first validated slice.
 - Generic dotfiles integration.
