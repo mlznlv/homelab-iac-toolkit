@@ -88,7 +88,13 @@ if [ "$has_head" = true ]; then
   fi
 fi
 
-if command -v markdownlint-cli2 >/dev/null 2>&1; then
+# Probed by running it rather than by testing that it exists, for the reason
+# Taskfile.yml gives about the Python virtual environment: a tool can be on
+# PATH and still be unable to run. A mise shim resolves per directory, so it is
+# discoverable everywhere and only works where the toolchain is declared.
+# Reading "could not run" as "found lint errors" would block a turn over a
+# setup problem, which is the one thing this hook promises not to do.
+if markdownlint-cli2 --version >/dev/null 2>&1; then
   if ! git ls-files -z '*.md' | xargs -0 markdownlint-cli2 >/dev/null 2>&1; then
     record 'Markdown lint errors — reproduce with `task validate:markdown`'
   fi
@@ -101,7 +107,7 @@ if [ -x scripts/check-publication-safety.sh ]; then
   fi
 fi
 
-if [ -x scripts/check-publication-safety-patterns.sh ] && command -v jq >/dev/null 2>&1; then
+if [ -x scripts/check-publication-safety-patterns.sh ] && jq --version >/dev/null 2>&1; then
   if ! ./scripts/check-publication-safety-patterns.sh >/dev/null 2>&1; then
     record 'the .gitignore rules and the write-time hook disagree — reproduce with `task validate:safety-patterns`'
   fi

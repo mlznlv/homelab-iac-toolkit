@@ -25,8 +25,8 @@
 # It contacts nothing, needs no credentials, and removes what it creates.
 #
 # Usage: scripts/check-stop-hook.sh
-# Requires: git, jq. markdownlint-cli2 if present, which one case needs; that
-# case is skipped when it is absent.
+# Requires: git, jq. markdownlint-cli2 where it can run, which one case needs;
+# that case is skipped otherwise.
 
 set -uo pipefail
 
@@ -44,12 +44,22 @@ fi
 checks=0
 failures=0
 
+# A fixture repository has to resolve the declared toolchain the way a real one
+# does. A mise shim reads .tool-versions from the directory it runs in, so a
+# fixture without it leaves markdownlint-cli2 on PATH and unable to run, which
+# is how the documented direct command failed on the native path while passing
+# under Task.
+declare_toolchain() {
+  [ -f .tool-versions ] && cp .tool-versions "$1/"
+}
+
 work=$(mktemp -d)
 trap 'rm -rf "${work}"' EXIT
 
 git -C "$work" init -q
 git -C "$work" config user.email fictional@example.invalid
 git -C "$work" config user.name Fictional
+declare_toolchain "$work"
 printf '# Probe\n\nA well-formed paragraph.\n' > "$work/README.md"
 git -C "$work" add README.md
 git -C "$work" commit -qm "probe"
@@ -65,6 +75,15 @@ for tool in git jq; do
   ln -sf "$(command -v "$tool")" "$stub/$tool"
 done
 without_markdownlint=$stub:/usr/bin:/bin
+
+# A markdownlint-cli2 that is on PATH and cannot run, which is what a mise shim
+# is outside a directory declaring the toolchain. Testing that a tool exists
+# rather than probing it reads this failure as lint errors.
+broken=$work/broken
+mkdir -p "$broken"
+printf '#!/bin/sh\nexit 1\n' > "$broken/markdownlint-cli2"
+chmod +x "$broken/markdownlint-cli2"
+with_broken_markdownlint=$broken:$stub:/usr/bin:/bin
 
 # run <description> <stop_hook_active> <expected: allow|block> [dir] [path]
 #
@@ -123,10 +142,10 @@ rm -f "$work/notes.txt"
 
 printf '# Probe\n\n#  Probe\n\n*  loose bullet\n' > "$work/README.md"
 git -C "$work" add README.md
-if command -v markdownlint-cli2 >/dev/null 2>&1; then
+if markdownlint-cli2 --version >/dev/null 2>&1; then
   run "Markdown lint errors in the current change" false block
 else
-  echo "skip markdownlint-cli2 absent, so the Markdown case cannot run"
+  echo "skip markdownlint-cli2 cannot run here, so the Markdown case cannot run"
 fi
 
 echo
@@ -139,11 +158,13 @@ run "already continuing, so it stands down despite the failure" true allow
 echo
 echo "A missing tool is a setup problem, not a reason to refuse to end a turn:"
 run "the failing check's tool is absent" false allow "$work" "$without_markdownlint"
+run "the tool is present but cannot run" false allow "$work" "$with_broken_markdownlint"
 
 echo
 echo "A repository with no commits has no HEAD to compare against:"
 fresh=$(mktemp -d)
 git -C "$fresh" init -q
+declare_toolchain "$fresh"
 printf '# Fresh\n\nA well-formed paragraph.\n' > "$fresh/README.md"
 git -C "$fresh" add README.md
 run "no commits yet, staged content well formed" false allow "$fresh"
