@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, and its initial separate-repository consumer contract. Component design and consumer workflows beyond that contract, live infrastructure testing, and release design remain deferred to the milestones that require them.
+This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, and the first pre-release. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
 
 ## Repository boundary
 
@@ -119,7 +119,7 @@ Locally decidable invalid inputs fail early and clearly. Runtime prerequisites r
 
 ### Deferred from the first slice
 
-The first slice does not design or implement template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, or release behavior. Its initial cross-component consumer contract is defined separately below for M4; implementing the example remains focused M4 work.
+The first slice does not design or implement template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, or release behavior. Its cross-component consumer and release contracts are defined separately below.
 
 ## Initial separate-repository consumer contract
 
@@ -177,6 +177,30 @@ Public validation does not establish successful Proxmox provisioning, cloud-init
 
 Toolkit-owned live testing is deferred. Any future live test must be isolated from normal public CI, explicitly opt-in, and Architecture-reviewed with credential custody, trusted triggers, infrastructure ownership, cleanup, failure handling, and cost responsibility defined before implementation. A new ADR is required when that design changes a durable security, lifecycle-ownership, compatibility, or validation boundary. Implementation details within an accepted design, such as its runner, schedule, or trigger mechanics, may change without a new ADR when those boundaries remain unchanged.
 
+## First pre-release contract
+
+The first public version is `v0.1.0-alpha.1`: a GitHub pre-release for evaluation and early consumers. It publishes source only from one already-merged commit on `main`, as accepted in [ADR 0008](decisions/0008-first-pre-release-contract.md). The release consists of an immutable tag, a GitHub Release, and GitHub-provided source archives. It introduces no custom artifact, package registry, container registry, or automated publisher.
+
+The version tag is the human-facing release identity, not the coordinated consumer reference. The release record states the exact full commit SHA, and consumers continue to record that SHA in their own source-controlled checkout declaration under [ADR 0007](decisions/0007-single-revision-consumer-contract.md). Both components therefore remain selected by one immutable revision. The tag must never become a movable convenience alias.
+
+Repository release immutability must be enabled before publication. Once published, the tag is locked to its selected commit and release assets cannot be replaced or deleted; the release title and notes may still receive editorial, non-semantic corrections. A substantive source, compatibility, migration, or artifact correction requires a new version rather than a moved tag, replaced content, rewritten source snapshot, or deleted-and-recreated release.
+
+### Release ownership and evidence
+
+Publication is an explicit maintainer operation outside normal public CI. It uses maintainer GitHub authorization and must not give normal CI a release credential, elevated write permission, or privileged path for untrusted pull-request code. Normal validation remains credential-free and non-destructive, and publication changes none of the lifecycle boundaries in this document.
+
+One exact release-candidate SHA must pass the required gate from a clean checkout. The evidence includes complete repository validation, all required or otherwise applicable GitHub checks produced under the accepted trigger model, publication-safety validation, and secret scanning. A missing check that should apply is not success, but Architecture does not require a check run that the accepted CI trigger model does not produce. The completion record identifies the candidate SHA and the actual evidence used.
+
+The detailed candidate, draft, review, publication, verification, and correction rules are in [Release policy](release-policy.md). That policy defines outcomes and evidence rather than duplicating the commands, job names, versions, or configuration owned by [Local validation](validation.md), repository tooling, and GitHub Actions.
+
+### Compatibility, change, and upgrade boundaries
+
+The release inherits only the compatibility evidence recorded at its commit. [Compatibility](compatibility.md) at that commit is the authoritative compatibility snapshot; executable source-controlled declarations remain authoritative for machine-consumable constraints. Static, mocked, and credential-free checks do not become live Proxmox or guest-runtime evidence because a release is published.
+
+The committed changelog records notable consumer-facing change history, while release notes summarize and link to that history and the released compatibility snapshot. The initial release states that no migration from an earlier toolkit release exists. Later upgrades remain deliberate consumer actions: review the target change and compatibility information, update the source-controlled full-SHA pin, plan, review, and apply explicitly when infrastructure changes are intended. The toolkit does not update consumer checkouts, configuration, state, inventories, or provider constraints automatically.
+
+`v0.1.0-alpha.1` makes no stable-interface, support-duration, maintenance-line, LTS, response-time, release-cadence, or 1.0 commitment. Later releases require new semantic-version identifiers and must document breaking changes and required migration actions before publication.
+
 ## Constraints for future components
 
 Future components must:
@@ -189,4 +213,4 @@ Future components must:
 - remain usable by unrelated consumers;
 - add abstractions only for demonstrated reusable needs.
 
-Provider, module, role, platform, and validation decisions beyond the first slice remain deferred. Consumer workflows beyond the initial contract, live testing, broader compatibility commitments, and release design also remain deferred.
+Provider, module, role, platform, and validation decisions beyond the first slice remain deferred. Consumer workflows beyond the initial contract, live testing, broader compatibility commitments, future release cadence, and stable-release guarantees also remain deferred.

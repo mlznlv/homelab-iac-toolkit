@@ -24,3 +24,4 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 | [0005](0005-first-reusable-toolkit-slice.md) | Adopt the coordinated OpenTofu VM and Ansible guest-agent first slice | Superseded |
 | [0006](0006-guest-agent-channel-at-creation.md) | Adopt the coordinated first slice with the guest-agent channel present from creation | Accepted |
 | [0007](0007-single-revision-consumer-contract.md) | Single-revision separate-repository consumer contract | Accepted |
+| [0008](0008-first-pre-release-contract.md) | First pre-release contract | Accepted |

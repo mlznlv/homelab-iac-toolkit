@@ -1,8 +1,14 @@
 # Compatibility
 
-This document is the public compatibility contract for approved reusable toolkit components. It records current platform targets and the level of evidence supporting them. It is not a release guarantee or a duplicate tool-version manifest.
+This document is the public compatibility contract for approved reusable toolkit components. It records current platform targets and the level of evidence supporting them. At a release commit, this file is the authoritative compatibility snapshot for that release; on `main`, it may describe later unreleased changes. It is not a duplicate tool-version manifest.
 
 Executable tool versions remain authoritative in [Supported tool versions](toolchain.md). Exact provider constraints belong in the OpenTofu module's source-controlled provider requirements when the module exists.
+
+## Release maturity
+
+`v0.1.0-alpha.1` is an evaluation and early-consumer pre-release. Its source identity is immutable, but its public interfaces are not yet stable and breaking changes may occur before 1.0. It creates no support-duration, maintenance-line, LTS, response-time, future release-cadence, or 1.0 commitment.
+
+The first release inherits only the targets and evidence recorded on this page at its release commit. Publication does not promote an expected-compatible platform to a runtime-validated reference platform or turn static and mocked checks into live compatibility evidence. Release notes link to this snapshot rather than maintaining a competing compatibility table.
 
 ## Proxmox VE target
 
@@ -33,7 +39,9 @@ The consumer-supplied source template must support the cloud-init bootstrap inpu
 
 The initial coordinated consumer contract is revision-based: a consumer records one immutable full toolkit commit SHA in source control, establishes one checkout at that revision, and consumes both the OpenTofu module and Ansible role from it. This makes the selected source revision reproducible without choosing the consumer's acquisition mechanism or checkout location.
 
-The repository remains pre-release. A full commit SHA identifies exact source; it does not create a semantic-versioning, upgrade, migration, stability, or release-support guarantee. Those policies remain M5 decisions.
+The coordinated workflow continues to use the immutable full commit SHA as its exact source revision. `v0.1.0-alpha.1` is the discoverable version identity, and its GitHub Release states the full SHA to which that immutable tag resolves. The tag does not replace the consumer's source-controlled SHA pin or change who owns checkout acquisition and updates.
+
+Consumers upgrade deliberately. For a later release they review its changelog, compatibility snapshot, and any migration guidance before changing their source-controlled full-SHA declaration. The toolkit does not update consumer checkouts, state, inventories, provider constraints, or configuration automatically.
 
 The approved M4 separate-repository example inherits the PVE target and guest capability contract on this page. It does not add a supported PVE version, provider line, guest distribution, or validated reference platform. Its public validation is structural and credential-free, so a passing example does not add live compatibility evidence.
 

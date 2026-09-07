@@ -53,6 +53,7 @@ The project is currently in its bootstrap, pre-release stage.
 | [Architecture](docs/architecture.md) | Cross-cutting boundaries and lifecycle ownership |
 | [Repository design](docs/repository-design.md) | Where content belongs and what each area owns |
 | [Compatibility](docs/compatibility.md) | Current platform targets, evidence, and explicit non-claims |
+| [Release policy](docs/release-policy.md) | Pre-release identity, maturity, publication gates, and correction rules |
 | [Architecture Decision Records](docs/decisions/README.md) | Durable decisions and their status |
 
 ## License
