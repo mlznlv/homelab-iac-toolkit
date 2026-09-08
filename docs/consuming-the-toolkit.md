@@ -53,7 +53,25 @@ This repository validates the components and the example on every change, withou
 
 They establish nothing about a running system, and no check here has ever run against a Proxmox VE or a guest. [Compatibility](compatibility.md#current-evidence-level) enumerates what this evidence does not demonstrate.
 
-A full commit SHA selects exact pre-release source. It creates no semantic-versioning, upgrade, migration, stability, or release-support guarantee; those remain M5 decisions.
+## Versions, and what you actually pin
+
+The first public version is `v0.1.0-alpha.1`. That tag is the human-facing identity: it is what to call the version you are on, and what release notes and changelog entries are written against.
+
+**It is not what you pin.** The coordinated consumption identity is still one immutable full commit SHA, exactly as [above](#one-checkout-one-commit) — a tag names a commit, but your two components have to resolve from the *same* checkout, and a full SHA is what records that unambiguously. Each release states its full SHA explicitly in its notes, so reading the release is how you find the value to put in your own source control.
+
+A version identifier is not a stability promise. `v0.1.0-alpha.1` is for evaluation and early consumers: its released source is immutable, its public interfaces are not stable, and breaking changes may happen before 1.0. It creates no support-duration, maintenance, response-time, or release-cadence commitment. The [release policy](release-policy.md) is the authority on all of that.
+
+### Upgrading
+
+Upgrading is something you decide to do, not something that happens to you. Nothing here updates your checkout, your state, your inventory, or your provider constraints.
+
+Before you move a pin, read three things for the version you are moving to:
+
+- its **[changelog](../CHANGELOG.md)** entry, for what changed and whether anything breaks;
+- its **[compatibility](compatibility.md)** snapshot, for the platform targets and evidence that version actually claims; and
+- its **migration guidance**, which every release either provides or explicitly states is unnecessary.
+
+Then update the full SHA in your source control, and run the ordinary workflow: `tofu plan`, read the plan, apply explicitly. A changelog entry is never a reason to apply without reviewing the plan.
 
 ## Troubleshooting
 
