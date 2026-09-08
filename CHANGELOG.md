@@ -6,9 +6,9 @@ This file records consumer-facing change. It does not restate platform targets o
 
 ## Unreleased
 
-Everything below is on `main` and has not been published in any release yet.
+Nothing yet.
 
-The first release will be `v0.1.0-alpha.1`. Its dated entry is committed during candidate finalization, before a candidate commit is selected, as the [candidate gate](docs/release-policy.md#release-candidate-gate) requires.
+## 0.1.0-alpha.1 - 2026-09-08
 
 ### Added
 
@@ -26,4 +26,4 @@ The first release will be `v0.1.0-alpha.1`. Its dated entry is committed during 
 
 ### Migration
 
-None. There is no earlier release of this toolkit to migrate from.
+None. `0.1.0-alpha.1` is the initial release of this toolkit, so there is no earlier release to migrate from.
