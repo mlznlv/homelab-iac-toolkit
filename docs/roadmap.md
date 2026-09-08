@@ -2,11 +2,11 @@
 
 ## Current state
 
-- **Current phase:** M5 — First pre-release
-- **Milestone state:** M1, M2, M3 and M4 are complete. The first pre-release contract is accepted through ADR 0008.
-- **Implementation state:** M5 implementation is the current execution focus. Developer work becomes Ready only through focused Issues derived from the accepted first pre-release contract.
-- **Current blocker:** None at milestone level; Issue-level dependencies determine implementation readiness.
-- **Next action:** Decompose and implement the accepted source-only first pre-release through focused Developer Issues.
+- **Current phase:** M6 — Broader Proxmox infrastructure
+- **Milestone state:** M1 through M5 are complete. The immutable `v0.1.0-alpha.1` pre-release is published.
+- **Implementation state:** No M6 Developer work is Ready.
+- **Current blocker:** Architecture has not selected the first demonstrated M6 expansion or accepted its boundaries and evidence requirements.
+- **Next action:** Architecture selects the smallest useful M6 expansion and records only the decisions PO needs to create focused Developer Issues.
 
 ## Milestone sequence
 
@@ -295,13 +295,13 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 ## Near-term Developer work
 
-Near-term Developer work implements M5 through focused GitHub Issues derived from the accepted first pre-release contract. Issue-level scope, dependencies and execution state live in GitHub. M6 and later milestones remain planning horizons until their required Architecture is accepted.
+No Developer work is Ready. M6 implementation begins only after Architecture selects a demonstrated Proxmox expansion and accepts its lifecycle, interface, compatibility and validation boundaries. Issue-level scope, dependencies and execution state live in GitHub.
 
 ## Deferred from current execution
 
-The following remains outside current M5 execution. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
+The following remains outside current M6 Architecture work. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
 
-- Proxmox and Ansible expansion beyond the first validated slice.
+- Proxmox expansion beyond the Architecture-selected M6 scope, and Ansible expansion beyond the first validated slice.
 - Generic dotfiles integration.
 - Live Proxmox testing outside an approved isolated path.
 - Stable 1.0 compatibility commitment.
