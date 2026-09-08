@@ -6,7 +6,9 @@ This file records consumer-facing change. It does not restate platform targets o
 
 ## Unreleased
 
-Everything below is on `main` and has not been published in any release yet. The first release will be `v0.1.0-alpha.1`; its entry is added when it is published, with the date it was published on.
+Everything below is on `main` and has not been published in any release yet.
+
+The first release will be `v0.1.0-alpha.1`. Its dated entry is committed during candidate finalization, before a candidate commit is selected and the draft release is created — the [candidate gate](docs/release-policy.md#release-candidate-gate) requires the selected source to already contain it, so the date cannot be filled in afterwards. If publication slips past the date that entry carries, the date is corrected in a reviewed pull request, a new candidate is selected, and the gate is run again.
 
 ### Added
 
