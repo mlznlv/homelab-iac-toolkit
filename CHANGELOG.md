@@ -8,7 +8,7 @@ This file records consumer-facing change. It does not restate platform targets o
 
 Nothing yet.
 
-## 0.1.0-alpha.1 - 2026-09-09
+## 0.1.0-alpha.1 - 2026-09-08
 
 ### Added
 
