@@ -207,7 +207,7 @@ The first implementable M6 expansion defines optional consumer-controlled access
 
 ### VLAN interface and ownership
 
-The public input is `network_vlan_id`, with nullable-integer semantics and a default of `null`. `null` is the only public untagged or disabled value. A tagged value must be a whole number from `1` through `4094`; `0`, negative values, fractional values, and values above `4094` fail before apply. The provider's internal zero sentinel is not a toolkit input value.
+The public input is `network_vlan_id`, with nullable-integer semantics and a default of `null`. `null` is the only public value meaning untagged; it does not disable the network attachment. A tagged value must be a whole number from `1` through `4094`; `0`, negative values, fractional values, and values above `4094` fail before apply. The provider's internal zero sentinel is not a toolkit input value.
 
 The value applies one access VLAN tag to the VM's existing single Proxmox network attachment. It does not create or manage VLANs, configure a VLAN-aware bridge, expose trunk semantics, configure switching or routing, or configure a VLAN interface inside the guest.
 
@@ -223,7 +223,7 @@ Credential-free module and mock-provider tests must prove the public input contr
 
 Before implementation receives an Architecture `ACCEPT` verdict, its pull request must record reliable provider-level evidence for the exact locked `bpg/proxmox` build showing that `network_device.vlan_id` exists, is mutable rather than replacement-forcing, and preserves the existing VM resource for untagged-to-tagged, tagged-to-tagged, and tagged-to-untagged transitions. The record identifies the provider build and source revision where applicable, what was inspected or executed, and why it establishes the claim. A credential-free real-provider plan, pinned provider schema and implementation inspection, enabled upstream tests, or equivalent Architecture-reviewed evidence may satisfy the gate; Architecture requires the evidence, not one permanent mechanism. Provider upgrades must re-evaluate it.
 
-A VLAN update may interrupt the virtual link or leave the guest unreachable when consumer-owned network configuration is inconsistent. Public validation does not prove successful live PVE application, VLAN-aware bridge correctness, upstream switch configuration, routing, guest reachability, uninterrupted SSH, or zero-downtime updates.
+On the evidenced PVE update path, every VLAN-tag change detaches and re-attaches the virtual link and signals link-down to the guest, so a link interruption is expected even when the external network is configured correctly. Whether connectivity returns depends on the consumer-owned bridge, selected VLAN, upstream switching, routing, and static guest configuration. Public validation does not prove successful live PVE application, guest reachability, uninterrupted SSH, or zero-downtime updates.
 
 Multiple NICs, VLAN trunks, DHCP, IPv6, bridge discovery or management, network orchestration, private topology, and guest-network configuration remain deferred.
 

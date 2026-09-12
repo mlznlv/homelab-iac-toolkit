@@ -24,6 +24,8 @@ The accepted first M6 expansion defines an optional access VLAN tag for the exis
 
 The compatibility contract requires VLAN-only changes to preserve the existing VM resource. Before implementation is accepted, its pull request must record reliable provider-level evidence for the exact locked `bpg/proxmox` build that untagged-to-tagged, tagged-to-tagged, and tagged-to-untagged transitions are mutable rather than replacement-forcing. Provider upgrades must re-evaluate that evidence; a version that plans replacement for a VLAN-only change is blocked pending Architecture review.
 
+The in-place behavior is the toolkit contract, while the evidence supporting it is build-specific. The repository lock identifies the exact provider build for which the toolkit has accepted evidence; a build merely allowed by the executable version constraint does not acquire that evidence until reviewed. Consumers own their root provider lock and must inspect the resulting plan before apply.
+
 This provider-level lifecycle evidence is distinct from runtime compatibility. It does not show that a VLAN change succeeds against PVE, that a consumer's bridge or upstream network is configured correctly, or that connectivity survives the update.
 
 ## Guest capability contract

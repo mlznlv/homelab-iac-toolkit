@@ -16,7 +16,7 @@ This decision operates within the accepted [public toolkit and private deploymen
 
 Adopt optional consumer-controlled access-VLAN tagging on the existing single-NIC `proxmox-linux-vm` capability as the first implementable M6 expansion.
 
-The public input is `network_vlan_id`. It has nullable-integer semantics, defaults to `null`, and accepts whole numbers from `1` through `4094`. `null` is the only public untagged or disabled value; the provider's internal zero sentinel is not exposed as a toolkit value.
+The public input is `network_vlan_id`. It has nullable-integer semantics, defaults to `null`, and accepts whole numbers from `1` through `4094`. `null` is the only public value meaning untagged and does not disable the network attachment; the provider's internal zero sentinel is not exposed as a toolkit value.
 
 The input configures the existing single Proxmox network attachment on the existing `proxmox_virtual_environment_vm` resource. Adding, changing, or removing the VLAN tag must preserve that VM resource rather than replace it. Before implementation can be accepted, its pull request records provider-level evidence for this behavior from the exact locked provider build, separately from module or mock-provider contract tests. A later supported provider that plans replacement for a VLAN-only change is blocked pending Architecture review.
 
@@ -30,7 +30,7 @@ Normal public validation remains credential-free and does not claim successful l
 
 - Existing consumers remain untagged unless they deliberately provide a VLAN identifier.
 - The capability extends the existing module root and resource family without adding a module, role, example, or orchestration layer.
-- A VLAN update can interrupt connectivity or make the guest unreachable when consumer-owned network configuration is inconsistent.
+- A VLAN-tag change detaches and re-attaches the virtual link and signals link-down to the guest, so a link interruption is expected. Whether connectivity returns depends on consumer-owned bridge, VLAN, upstream switching, routing, and guest configuration.
 - Module and mock-provider tests can establish public input and resource-address structure, but cannot alone establish the provider's in-place lifecycle behavior.
 - Implementation acceptance and later provider upgrades require reviewable provider-level no-replacement evidence.
 - Additional VM data disks remain Architecture-blocked in [Issue #80](https://github.com/mlznlv/homelab-iac-toolkit/issues/80) until the supported provider preserves inherited disks and supplies predictable additional-disk lifecycle behavior.
@@ -51,4 +51,4 @@ Normal public validation remains credential-free and does not claim successful l
 - [`bpg/proxmox` v0.111.1 experimental cloned-VM limitations](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/docs/resources/cloned_vm.md#L1-L35)
 - [`bpg/proxmox` v0.111.1 cloned-VM migration and recreation](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/docs/guides/migration-vm-clone.md#L374-L405)
 - [Proxmox QEMU network VLAN range](https://github.com/proxmox/qemu-server/blob/14c0f871fa926e04eee090afae5d2d8670aa4a79/src/PVE/QemuServer/Network.pm#L87-L92)
-- [Proxmox running-VM network tag update path](https://github.com/proxmox/qemu-server/blob/14c0f871fa926e04eee090afae5d2d8670aa4a79/src/PVE/QemuServer.pm#L5106-L5185)
+- [Proxmox running-VM network tag update path](https://github.com/proxmox/qemu-server/blob/14c0f871fa926e04eee090afae5d2d8670aa4a79/src/PVE/QemuServer.pm#L5137-L5186)
