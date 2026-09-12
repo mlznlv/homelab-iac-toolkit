@@ -18,6 +18,14 @@ The supported PVE major is explicit and does not float when a new major is relea
 
 The toolkit owns the provider requirement and reusable module interface. Consumers continue to own concrete provider configuration, credentials, endpoints, backend configuration, and state.
 
+### Optional VLAN capability
+
+The accepted first M6 expansion defines an optional access VLAN tag for the existing single network attachment of `proxmox-linux-vm`. It does not change the PVE 9.x target, select another provider line, or introduce another provider resource family. `null` remains untagged, and tagged values are whole VLAN identifiers from `1` through `4094`.
+
+The compatibility contract requires VLAN-only changes to preserve the existing VM resource. Before implementation is accepted, its pull request must record reliable provider-level evidence for the exact locked `bpg/proxmox` build that untagged-to-tagged, tagged-to-tagged, and tagged-to-untagged transitions are mutable rather than replacement-forcing. Provider upgrades must re-evaluate that evidence; a version that plans replacement for a VLAN-only change is blocked pending Architecture review.
+
+This provider-level lifecycle evidence is distinct from runtime compatibility. It does not show that a VLAN change succeeds against PVE, that a consumer's bridge or upstream network is configured correctly, or that connectivity survives the update.
+
 ## Guest capability contract
 
 The `qemu_guest_agent` role requires a managed guest with:
@@ -54,6 +62,8 @@ The first slice requires public, credential-free static and contract validation 
 - connection-value composition without an OpenTofu-state dependency in the role; and
 - repository validation and publication safety.
 
+The approved VLAN expansion additionally requires credential-free module evidence for its default, accepted and rejected values, provider-field mapping, use of the existing single network device and module resource address, unchanged static-network and `connection` interfaces, and explicit exclusions. Module or mock-provider tests establish that module contract, not the provider's in-place lifecycle behavior; the separate provider-level evidence gate above establishes the no-replacement claim.
+
 This evidence does not demonstrate:
 
 - live compatibility with a PVE 9.x installation or a particular `bpg/proxmox` release;
@@ -62,6 +72,7 @@ This evidence does not demonstrate:
 - Ansible convergence or idempotency on Debian Stable, Kali Rolling, or another real guest;
 - that a guest agent starts once the channel is present, or that Proxmox subsequently reports one;
 - that adding or removing the channel behaves as described on a running VM;
+- successful VLAN application or update, suitable VLAN-aware bridge configuration, upstream switching or routing, guest reachability, uninterrupted SSH, or zero-downtime VLAN changes;
 - a consumer's checkout-acquisition mechanism; or
 - compatibility with a live consumer environment.
 

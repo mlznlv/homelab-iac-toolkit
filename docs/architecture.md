@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, and the first pre-release. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
+This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, and the first M6 Proxmox expansion. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
 
 ## Repository boundary
 
@@ -119,7 +119,7 @@ Locally decidable invalid inputs fail early and clearly. Runtime prerequisites r
 
 ### Deferred from the first slice
 
-The first slice does not design or implement template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, or release behavior. Its cross-component consumer and release contracts are defined separately below.
+At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6 is defined later without changing first-slice ownership.
 
 ## Initial separate-repository consumer contract
 
@@ -200,6 +200,36 @@ The release inherits only the compatibility evidence recorded at its commit. [Co
 The committed changelog records notable consumer-facing change history, while release notes summarize and link to that history and the released compatibility snapshot. The initial release states that no migration from an earlier toolkit release exists. Later upgrades remain deliberate consumer actions: review the target change and compatibility information, update the source-controlled full-SHA pin, plan, review, and apply explicitly when infrastructure changes are intended. The toolkit does not update consumer checkouts, configuration, state, inventories, or provider constraints automatically.
 
 `v0.1.0-alpha.1` makes no stable-interface, support-duration, maintenance-line, LTS, response-time, release-cadence, or 1.0 commitment. Later releases require new semantic-version identifiers and must document breaking changes and required migration actions before publication.
+
+## First M6 Proxmox expansion
+
+The first implementable M6 expansion defines optional consumer-controlled access-VLAN tagging for the existing single network attachment of `tofu/modules/proxmox-linux-vm/`, as accepted in [ADR 0009](decisions/0009-first-m6-vlan-expansion.md). Its implementation remains on the existing `proxmox_virtual_environment_vm` resource at the existing module resource address and introduces no alternate or parallel VM lifecycle.
+
+### VLAN interface and ownership
+
+The public input is `network_vlan_id`, with nullable-integer semantics and a default of `null`. `null` is the only public untagged or disabled value. A tagged value must be a whole number from `1` through `4094`; `0`, negative values, fractional values, and values above `4094` fail before apply. The provider's internal zero sentinel is not a toolkit input value.
+
+The value applies one access VLAN tag to the VM's existing single Proxmox network attachment. It does not create or manage VLANs, configure a VLAN-aware bridge, expose trunk semantics, configure switching or routing, or configure a VLAN interface inside the guest.
+
+OpenTofu continues to own the existing VM network attachment and its optional VLAN tag. The consumer owns bridge selection, VLAN selection, the pre-existing Proxmox bridge configuration, upstream switching, routing, and consistency between the selected VLAN and the declared static IPv4 settings. Ansible gains no guest-network ownership from this capability.
+
+The module still declares exactly one network attachment. Its bridge, static IPv4, gateway, DNS, and required `connection` contracts remain unchanged. The connection descriptor remains declared bootstrap metadata and is not evidence of reachability.
+
+### VLAN lifecycle and evidence
+
+Adding, changing, or removing `network_vlan_id` must update the existing VM and network attachment in place. A provider behavior that plans VM replacement for a VLAN-only change is a compatibility regression: the toolkit must not silently accept the replacement or weaken this lifecycle contract, and adoption remains blocked until Architecture reviews the change.
+
+Credential-free module and mock-provider tests must prove the public input contract, mapping to the existing single `network_device`, preservation of the existing module resource address, unchanged networking and connection interfaces, exclusions, and locally decidable validation. Those tests may not by themselves claim that the provider updates the VM in place.
+
+Before implementation receives an Architecture `ACCEPT` verdict, its pull request must record reliable provider-level evidence for the exact locked `bpg/proxmox` build showing that `network_device.vlan_id` exists, is mutable rather than replacement-forcing, and preserves the existing VM resource for untagged-to-tagged, tagged-to-tagged, and tagged-to-untagged transitions. The record identifies the provider build and source revision where applicable, what was inspected or executed, and why it establishes the claim. A credential-free real-provider plan, pinned provider schema and implementation inspection, enabled upstream tests, or equivalent Architecture-reviewed evidence may satisfy the gate; Architecture requires the evidence, not one permanent mechanism. Provider upgrades must re-evaluate it.
+
+A VLAN update may interrupt the virtual link or leave the guest unreachable when consumer-owned network configuration is inconsistent. Public validation does not prove successful live PVE application, VLAN-aware bridge correctness, upstream switch configuration, routing, guest reachability, uninterrupted SSH, or zero-downtime updates.
+
+Multiple NICs, VLAN trunks, DHCP, IPv6, bridge discovery or management, network orchestration, private topology, and guest-network configuration remain deferred.
+
+### Blocked data-disk need
+
+Additional persistent VM data disks are a demonstrated consumer need, but the current supported provider path does not establish safe management of additional disks while preserving template-inherited disks. [The blocked Architecture record](https://github.com/mlznlv/homelab-iac-toolkit/issues/80) retains the exact provider evidence and unblock condition. The existing module must not be redesigned around the experimental cloned-VM resource family, and no future disk interface or migration mechanism is pre-designed while that blocker remains.
 
 ## Constraints for future components
 

@@ -25,3 +25,4 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 | [0006](0006-guest-agent-channel-at-creation.md) | Adopt the coordinated first slice with the guest-agent channel present from creation | Accepted |
 | [0007](0007-single-revision-consumer-contract.md) | Single-revision separate-repository consumer contract | Accepted |
 | [0008](0008-first-pre-release-contract.md) | First pre-release contract | Accepted |
+| [0009](0009-first-m6-vlan-expansion.md) | Optional access-VLAN tagging as the first M6 expansion | Accepted |
