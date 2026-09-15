@@ -92,3 +92,77 @@ run "a_vm_identifier_can_be_supplied" {
     error_message = "A declared vm_id must reach the provider resource."
   }
 }
+
+# These runs show the tag reaching the existing network device. They do not
+# show that Proxmox applies it, or that the provider changes it in place: that
+# is provider behaviour, which a mock cannot exercise.
+
+run "the_lowest_vlan_identifier_tags_the_existing_network_device" {
+  command = plan
+
+  variables {
+    network_vlan_id = 1
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[0].vlan_id == 1
+    error_message = "network_vlan_id = 1 must reach the network device's vlan_id."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.network_device) == 1
+    error_message = "A VLAN tag must be applied to the existing network device, not to an additional one."
+  }
+}
+
+run "the_highest_vlan_identifier_tags_the_existing_network_device" {
+  command = plan
+
+  variables {
+    network_vlan_id = 4094
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[0].vlan_id == 4094
+    error_message = "network_vlan_id = 4094 must reach the network device's vlan_id."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.network_device) == 1
+    error_message = "A VLAN tag must be applied to the existing network device, not to an additional one."
+  }
+}
+
+run "a_vlan_tag_leaves_the_network_and_connection_contracts_unchanged" {
+  command = plan
+
+  variables {
+    network_vlan_id = 4094
+  }
+
+  # Without this, the run would pass just as well if the tag never arrived.
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[0].vlan_id == 4094
+    error_message = "The tag must be applied for this run to show that it leaves everything else unchanged."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[0].bridge == "vmbr0"
+    error_message = "A VLAN tag must not change the declared bridge."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.10/24" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == "192.0.2.1"
+    error_message = "A VLAN tag must not change the declared static IPv4 address or gateway."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].dns[0].servers == tolist(["192.0.2.53"])
+    error_message = "A VLAN tag must not change the declared DNS servers."
+  }
+
+  assert {
+    condition     = output.connection == { host = "192.0.2.10", user = "fictional", port = 22 }
+    error_message = "A VLAN tag must not change the connection output."
+  }
+}

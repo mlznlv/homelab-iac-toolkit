@@ -20,6 +20,7 @@ You supply, and continue to own:
 - backend configuration and state;
 - a Proxmox VM template on the target node that has `cloud-init` and reads the addressing, user, and SSH-key data this module sets;
 - the datastore, node, bridge, addresses, sizing, and identifiers below;
+- if you tag the network device, the VLAN and everything that carries it: the bridge's configuration, upstream switching and routing, and addressing that belongs on that VLAN;
 - the private half of the SSH keys you authorize.
 
 ## Usage
@@ -75,8 +76,9 @@ Optional:
 | `guest_agent_enabled` | `bool` | `true` | Whether to attach the guest-agent channel. Off produces a VM where the agent cannot run. |
 | `stop_on_destroy` | `bool` | `true` | Whether destroy stops the VM instead of asking the guest to shut down. |
 | `ssh_port` | `number` | `22` | Port published in the `connection` output. Metadata only. |
+| `network_vlan_id` | `number` | `null` | Access VLAN tag for the single network device, `1` to `4094`. Null leaves it untagged. See [VLAN tagging](#vlan-tagging). |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, and so on.
 
 ## Outputs
 
@@ -116,6 +118,39 @@ The composition is therefore one apply, then guest configuration: create the VM,
 
 Setting `guest_agent_enabled = false` is supported and means something specific: a VM in which the guest agent cannot run at all. Attaching the channel later requires stopping and starting the VM, because Proxmox does not hot-plug that change.
 
+## VLAN tagging
+
+`network_vlan_id` puts one access VLAN tag on the VM's single network device. Leave it `null`, the default, and the device stays untagged and attached; set it to a whole number from `1` to `4094` to tag it.
+
+```hcl
+module "fictional_vm" {
+  # ...the other inputs shown in Usage...
+
+  network_bridge  = "vmbr0"
+  network_vlan_id = 42
+
+  ipv4_address_cidr = "192.0.2.10/24"
+  ipv4_gateway      = "192.0.2.1"
+  dns_servers       = ["192.0.2.53"]
+}
+```
+
+The tag is as fictional as the addresses. `0` is rejected: the provider uses it internally to mean untagged, and `null` is this module's only way to say that.
+
+The module sets the tag on the Proxmox side of the attachment and nothing more. For a tagged VM to reach anything, you provide:
+
+- a bridge on the node configured to carry the VLAN you choose;
+- upstream switching and routing that deliver that VLAN;
+- a static address, gateway, and DNS servers that belong on that VLAN. The module does not check that they agree with the tag.
+
+It does not create VLANs, configure or discover bridges, expose trunks, or configure a VLAN interface inside the guest.
+
+**Changing the tag of an existing VM interrupts its network link.** Adding, changing, or removing the tag updates the VM in place rather than replacing it, but Proxmox applies the change to a running VM by detaching and re-attaching its virtual link, so the guest sees the link go down even when everything around it is configured correctly. Whether connectivity comes back depends on the bridge, VLAN, switching, routing, and addressing above, not on this module.
+
+Read the plan before you apply. A tag-only change shows the VM as `update in-place`. If a plan shows the VM being replaced for a tag-only change, do not apply it: that is not the behaviour this module relies on. Check which provider build your root module's lock selects, because only the build named below has been evaluated.
+
+That in-place behaviour is evidenced for the provider build this repository locks, `bpg/proxmox` v0.111.1, at provider level: its schema and source, and credential-free plans made with that build for untagged-to-tagged, tagged-to-different-tag, and tagged-to-untagged changes. It has not been observed against a real Proxmox VE, and nothing here shows that a tag is applied successfully, that a bridge or upstream network carries it, or that the guest stays reachable. [Compatibility](../../../docs/compatibility.md#optional-vlan-capability) records that boundary, and that your own root module's lock decides which provider build you run.
+
 ## Limitations
 
 This module is one VM, cloned once, addressed statically. It does not do:
@@ -123,7 +158,8 @@ This module is one VM, cloned once, addressed statically. It does not do:
 - template creation or upkeep;
 - disk resizing, extra disks, or any disk management — the clone inherits the template's layout;
 - linked clones, or cloning from a template on another node;
-- DHCP, IPv6, VLAN tags, or more than one network interface;
+- DHCP, IPv6, VLAN trunks, or more than one network interface;
+- VLAN creation, bridge configuration or discovery, or network configuration inside the guest;
 - guest packages, services, users, authorized keys, or SSH configuration after cloud-init;
 - LXC containers, HA, pools, or firewall rules.
 
@@ -131,8 +167,8 @@ This module is one VM, cloned once, addressed statically. It does not do:
 
 Formatting, `tofu validate`, and a set of contract tests under [`tests/`](tests) that run against a **mocked** provider: no Proxmox endpoint, no credentials, nothing created. Run them with `task validate:tofu`, or directly as [Local validation](../../../docs/validation.md) describes.
 
-They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, the guest-agent channel attached by default and absent when it is turned off, waiting for an agent-reported address disabled in both cases, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation — and that bad input fails at plan time.
+They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, the guest-agent channel attached by default and absent when it is turned off, waiting for an agent-reported address disabled in both cases, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation, the network device left untagged by default and tagged with `1` and `4094` without gaining a second device or changing the addressing or `connection` output — and that bad input fails at plan time.
 
-They prove nothing about a real Proxmox VE. No clone, boot, cloud-init run, SSH connection, shutdown, stop, destroy, or guest agent has been exercised. [Compatibility](../../../docs/compatibility.md) records what this evidence does and does not cover.
+They prove nothing about a real Proxmox VE. No clone, boot, cloud-init run, SSH connection, shutdown, stop, destroy, VLAN change, or guest agent has been exercised. Nor can a mocked provider show that a tag change is made in place; [VLAN tagging](#vlan-tagging) says where that evidence comes from. [Compatibility](../../../docs/compatibility.md) records what this evidence does and does not cover.
 
 `.terraform.lock.hcl` is committed so those checks resolve the same provider build every time, verified against recorded hashes, on Linux and macOS. It governs this repository's own validation. Your root module has its own lock file; this one does not constrain it.

@@ -53,8 +53,12 @@ resource "proxmox_virtual_environment_vm" "this" {
     dedicated = var.memory_mib
   }
 
+  # A null tag leaves vlan_id unset, which the provider plans as its untagged
+  # default. The provider spells that default 0; the module does not accept 0,
+  # so null is the one way to say untagged.
   network_device {
-    bridge = var.network_bridge
+    bridge  = var.network_bridge
+    vlan_id = var.network_vlan_id
   }
 
   # Bootstrap only. These values give the consumer a way in to the new guest;
