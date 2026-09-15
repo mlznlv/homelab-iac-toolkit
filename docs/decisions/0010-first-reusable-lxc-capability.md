@@ -1,0 +1,78 @@
+# ADR 0010: Adopt one unprivileged Debian container as the first reusable LXC capability
+
+## Status
+
+Accepted
+
+## Context
+
+M6 requires reusable LXC support alongside the Linux VM capability. A container is not a VM with a different resource name. On the supported `bpg/proxmox` provider build, `v0.111.1` at revision `b22fe919fc34476b232191b69c8907f0c1aa5bea`, containers are a separate resource family whose lifecycle differs from the VM resource in ways that decide the public contract.
+
+- **Bootstrap is performed by Proxmox, not cloud-init.** Proxmox writes the network configuration, hostname, DNS, and root's authorized keys into the container when it creates it. It does so only through a managed operating-system plugin: the `unmanaged` plugin implements every one of those steps as a no-op. The provider's default operating-system type is `unmanaged`.
+- **Several inputs force replacement.** The provider marks the template file, the root-filesystem datastore, the unprivileged flag, and root's bootstrap keys and password as replacement-forcing, and forces replacement when the root filesystem shrinks.
+- **Unprivileged is not the provider default.** Proxmox itself creates an unprivileged container unless asked otherwise and requires elevated host privilege for a privileged one, but the provider defaults `unprivileged` to `false`.
+- **DNS has a host fallback.** When no nameserver is configured, Proxmox copies the node's own resolvers into the container.
+- **Updates and destroy disrupt.** The provider reboots a running container after a network, DNS, or hostname change, and destroy shuts the container down with a forced stop when its timeout expires.
+- **Systemd-based guests may need nesting.** Proxmox warns that a container running systemd newer than version 241 without the nesting feature may need it, and the provider defaults nesting to off.
+
+These sources establish the basis for a public interface and an implementation evidence gate. They are source inspection, not live toolkit evidence.
+
+This decision operates within the accepted [public toolkit and private deployment boundary](0001-public-toolkit-private-deployment-boundary.md), [lifecycle and orchestration ownership](0002-lifecycle-orchestration-ownership.md), and [local validation, Task, and CI security boundary](0004-local-validation-task-ci-security-boundary.md). It deliberately does not inherit the [Linux VM slice](0006-guest-agent-channel-at-creation.md) contract.
+
+## Decision
+
+Adopt one unprivileged Debian container, created from a consumer-supplied container template, as the first reusable LXC capability.
+
+It is a new OpenTofu module at `tofu/modules/proxmox-linux-container/`, separate from `proxmox-linux-vm`, managing one `proxmox_virtual_environment_container` resource. It targets PVE 9.x through the existing `bpg/proxmox` provider line and shares no module code or public interface with the VM module.
+
+The container is created from a template volume that already exists on Proxmox storage; the consumer acquires and maintains the template. The module declares the Debian operating-system type, always creates an unprivileged container, and enables nesting by default with a consumer override; it exposes no other container feature.
+
+The consumer supplies the container name, optional identifier, node, template, root-filesystem datastore and size, CPU cores, and dedicated memory. The container has exactly one network interface on one consumer-selected bridge, with a required static IPv4 CIDR, gateway, and at least one DNS server. Root's SSH public keys are required creation-time bootstrap; no password is set.
+
+OpenTofu owns the container resource, its network interface, and its root filesystem. The consumer owns the node, storage, bridge, addresses, sizing, identifiers, template, private keys, and all configuration inside the container after creation. Bootstrap keys give OpenTofu no continuing ownership of root's authorized keys, users, or SSH configuration.
+
+The module exposes a required, non-sensitive `connection` output of `host`, `user`, and `port`: the declared IPv4 address without its prefix, `root`, and a port metadata value defaulting to `22`. It neither waits for nor publishes a provider-reported container address.
+
+Network, DNS, and name changes and root-filesystem growth update the container in place. Template, datastore, node, and identifier changes and root-filesystem shrinking replace it and are documented as destructive. A later change to the bootstrap keys must not replace the container. Before implementation can be accepted, its pull request records provider-level evidence for these behaviors from the exact locked provider build, separately from module or mock-provider contract tests.
+
+Normal public validation remains credential-free and does not claim successful container creation, template compatibility, in-container configuration, reachability, or reboot, shutdown, forced-stop, or destroy behavior. Exact inputs, examples, and validation implementation remain in their owning component and validation sources rather than this ADR.
+
+## Consequences
+
+- Consumers gain a container capability without changing the VM module, its interface, or its consumers.
+- A consumer must supply a Debian container template with an SSH server that accepts root public-key login; template acquisition stays consumer-owned.
+- Replacement-forcing changes destroy the container and its root filesystem. The module documents them, and plan review remains the consumer's control.
+- Updating bootstrap keys through OpenTofu has no effect on an existing container; rotating root's keys is guest configuration.
+- A network, DNS, or name change reboots a running container on the pinned provider, so an interruption is expected.
+- Nesting is on by default, which trades a broader container profile for systemd guests that behave as Proxmox expects.
+- Module and mock-provider tests establish the public contract, but cannot alone establish the provider's in-place and replacement behavior.
+- The `qemu_guest_agent` role does not apply to containers, and no container-specific Ansible role is introduced.
+
+## Alternatives considered
+
+- **Extend `proxmox-linux-vm` with a container mode:** rejected. The resource family, bootstrap mechanism, replacement semantics, and guest-agent assumptions differ, so a shared interface would couple two lifecycles and blur which contract applies.
+- **Clone an existing container:** rejected for the first capability. It requires the consumer to maintain a source container, and the provider forces replacement on every clone input without establishing a benefit over creating from a template.
+- **Inherit the provider's `unmanaged` operating-system type:** rejected. Proxmox would skip network, hostname, DNS, and key configuration, leaving a container the declared inputs do not describe.
+- **Allow privileged containers:** rejected. A privileged container's root maps to host root, Proxmox requires elevated host privilege to create one, and no demonstrated need justifies the risk.
+- **Support several distributions:** deferred. Each managed operating-system type configures the guest differently, and the demonstrated need is Debian.
+- **Bootstrap with a password:** rejected. Key-based bootstrap is sufficient, and a password would be sensitive state the toolkit does not need.
+- **Make DNS servers optional:** rejected. The Proxmox fallback would silently copy node-specific resolvers into a reusable component's result.
+- **Include mount points, bind mounts, device passthrough, or ID mapping:** deferred. Each introduces storage or host-access ownership decisions beyond the smallest useful slice.
+- **Include VLAN tags, multiple interfaces, DHCP, or IPv6:** deferred. The VM decisions for those capabilities do not transfer, because Proxmox configures container networking itself rather than through cloud-init.
+
+## Sources
+
+- [`bpg/proxmox` v0.111.1 container `unmanaged` operating-system default](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L91)
+- [`bpg/proxmox` v0.111.1 container bootstrap account replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L642-L676)
+- [`bpg/proxmox` v0.111.1 container template replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L995-L1013)
+- [`bpg/proxmox` v0.111.1 container root-filesystem datastore replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L408-L414)
+- [`bpg/proxmox` v0.111.1 container unprivileged default and replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L1152-L1158)
+- [`bpg/proxmox` v0.111.1 container root-filesystem shrink replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L1182-L1228)
+- [`bpg/proxmox` v0.111.1 container DNS, hostname, and network updates requiring reboot](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L3832-L4051)
+- [`bpg/proxmox` v0.111.1 container reboot after update](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L4162-L4174)
+- [`bpg/proxmox` v0.111.1 container destroy with forced stop](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L4204-L4236)
+- [Proxmox container create applies keys, network, hostname, and DNS through the setup plugin](https://github.com/proxmox/pve-container/blob/1c0488315a1df22a9bba635a81e7543b5ce664b7/src/PVE/LXC/Setup/Base.pm#L718-L736)
+- [Proxmox `unmanaged` setup plugin no-ops](https://github.com/proxmox/pve-container/blob/1c0488315a1df22a9bba635a81e7543b5ce664b7/src/PVE/LXC/Setup/Unmanaged.pm#L19-L85)
+- [Proxmox container DNS host fallback](https://github.com/proxmox/pve-container/blob/1c0488315a1df22a9bba635a81e7543b5ce664b7/src/PVE/LXC/Setup/Base.pm#L33-L54)
+- [Proxmox container systemd nesting warning](https://github.com/proxmox/pve-container/blob/1c0488315a1df22a9bba635a81e7543b5ce664b7/src/PVE/LXC/Setup/Base.pm#L662-L679)
+- [Proxmox unprivileged create default and privileged-create permission](https://github.com/proxmox/pve-container/blob/1c0488315a1df22a9bba635a81e7543b5ce664b7/src/PVE/API2/LXC.pm#L272-L273)
