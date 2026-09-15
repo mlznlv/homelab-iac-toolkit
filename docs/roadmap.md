@@ -3,10 +3,10 @@
 ## Current state
 
 - **Current phase:** M6 — Broader Proxmox infrastructure
-- **Milestone state:** M1 through M5 are complete. The immutable `v0.1.0-alpha.1` pre-release is published.
-- **Implementation state:** No M6 Developer work is Ready.
-- **Current blocker:** Architecture has not selected the first demonstrated M6 expansion or accepted its boundaries and evidence requirements.
-- **Next action:** Architecture selects the smallest useful M6 expansion and records only the decisions PO needs to create focused Developer Issues.
+- **Milestone state:** M1 through M5 are complete. The first M6 expansion is accepted through ADR 0009.
+- **Implementation state:** Optional VLAN tagging on the existing Linux VM module is the current execution focus.
+- **Current blocker:** None at milestone level. Additional VM data disks remain independently blocked in Issue #80.
+- **Next action:** Implement the accepted optional VLAN capability through one focused Developer Issue.
 
 ## Milestone sequence
 
@@ -295,13 +295,13 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 ## Near-term Developer work
 
-No Developer work is Ready. M6 implementation begins only after Architecture selects a demonstrated Proxmox expansion and accepts its lifecycle, interface, compatibility and validation boundaries. Issue-level scope, dependencies and execution state live in GitHub.
+Near-term Developer work implements optional VLAN tagging on the existing Linux VM module through one focused GitHub Issue derived from ADR 0009. Issue-level scope, dependencies and execution state live in GitHub.
 
 ## Deferred from current execution
 
-The following remains outside current M6 Architecture work. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
+The following remains outside the current VLAN increment. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
 
-- Proxmox expansion beyond the Architecture-selected M6 scope, and Ansible expansion beyond the first validated slice.
+- Proxmox expansion beyond optional VLAN tagging, including additional VM data disks while Issue #80 remains blocked, and Ansible expansion beyond the first validated slice.
 - Generic dotfiles integration.
 - Live Proxmox testing outside an approved isolated path.
 - Stable 1.0 compatibility commitment.
