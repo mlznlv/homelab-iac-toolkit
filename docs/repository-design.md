@@ -50,6 +50,8 @@ The first reusable slice has exactly these approved component roots:
 
 Implementation of the first M6 expansion belongs in the existing `tofu/modules/proxmox-linux-vm/` root as an optional access-VLAN input for its existing single network attachment. It creates no new module, provider resource family, Ansible role, example, shared layer, or orchestration entry point. The exact input syntax, fictional usage example, consumer prerequisites, and connectivity-disruption warning belong in that module's co-located README when the capability is implemented.
 
+Multiple VM network attachments also belong in the existing `tofu/modules/proxmox-linux-vm/` root, on its existing resource. They create no new module, provider resource family, Ansible role, example, shared network layer, or orchestration entry point, and their input syntax, fictional usage example, and slot-order and disruption warnings belong in that module's co-located README when implemented.
+
 Component documentation and contract tests are co-located with their owning component. A small test fixture may demonstrate required connection-descriptor composition, but it must not become a consumer example, read real state, or couple the Ansible role to OpenTofu.
 
 Additional module, role, collection, shared-library, or platform hierarchies remain deferred until approved content requires them.

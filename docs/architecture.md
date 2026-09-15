@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, and the first M6 Proxmox expansion. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
+This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, the first M6 Proxmox expansion, and multiple VM network attachments. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
 
 ## Repository boundary
 
@@ -213,7 +213,7 @@ The value applies one access VLAN tag to the VM's existing single Proxmox networ
 
 OpenTofu continues to own the existing VM network attachment and its optional VLAN tag. The consumer owns bridge selection, VLAN selection, the pre-existing Proxmox bridge configuration, upstream switching, routing, and consistency between the selected VLAN and the declared static IPv4 settings. Ansible gains no guest-network ownership from this capability.
 
-The module still declares exactly one network attachment. Its bridge, static IPv4, gateway, DNS, and required `connection` contracts remain unchanged. The connection descriptor remains declared bootstrap metadata and is not evidence of reachability.
+The VLAN increment itself adds no network attachment. Its bridge, static IPv4, gateway, DNS, and required `connection` contracts remain unchanged. The connection descriptor remains declared bootstrap metadata and is not evidence of reachability.
 
 ### VLAN lifecycle and evidence
 
@@ -225,11 +225,70 @@ Before implementation receives an Architecture `ACCEPT` verdict, its pull reques
 
 On the evidenced PVE update path, every VLAN-tag change detaches and re-attaches the virtual link and signals link-down to the guest, so a link interruption is expected even when the external network is configured correctly. Whether connectivity returns depends on the consumer-owned bridge, selected VLAN, upstream switching, routing, and static guest configuration. Public validation does not prove successful live PVE application, guest reachability, uninterrupted SSH, or zero-downtime updates.
 
-Multiple NICs, VLAN trunks, DHCP, IPv6, bridge discovery or management, network orchestration, private topology, and guest-network configuration remain deferred.
+VLAN trunks, DHCP, IPv6, bridge discovery or management, network orchestration, private topology, and guest-network configuration remain outside this increment. Multiple network attachments are defined separately [below](#multiple-vm-network-attachments).
 
 ### Blocked data-disk need
 
 Additional persistent VM data disks are a demonstrated consumer need, but the current supported provider path does not establish safe management of additional disks while preserving template-inherited disks. [The blocked Architecture record](https://github.com/mlznlv/homelab-iac-toolkit/issues/80) retains the exact provider evidence and unblock condition. The existing module must not be redesigned around the experimental cloned-VM resource family, and no future disk interface or migration mechanism is pre-designed while that blocker remains.
+
+## Multiple VM network attachments
+
+The Linux VM capability supports additional network attachments after its existing primary attachment, as accepted in [ADR 0011](decisions/0011-multiple-vm-network-attachments.md). They are part of `tofu/modules/proxmox-linux-vm/` and the existing `proxmox_virtual_environment_vm` resource at its existing module resource address; no module, resource family, or parallel VM lifecycle is introduced.
+
+### Attachment identity and interface
+
+The primary attachment is the existing one: its bridge, optional access VLAN, static IPv4 address, gateway, and the global DNS servers keep their accepted inputs, defaults, and meaning. It is always Proxmox device slot `net0` and cloud-init IP configuration `0`. A configuration that declares no additional attachment plans exactly as it did before.
+
+Additional attachments are optional and none exist by default. The consumer declares them in an explicit order, and an attachment's identity is its position: the first additional attachment is slot `net1`, the next `net2`, and so on, with the same index for its cloud-init IP configuration. The pinned provider expresses network devices and cloud-init addressing only as contiguous positional lists, so no identity other than position can be represented. The public interface must make that order explicit and consumer-controlled; it must not derive order implicitly, for example by sorting keys, because inserting a key would silently re-map every later slot.
+
+At most eight attachments are supported in total, the primary included. The provider accepts at most eight cloud-init IP configurations, and a slot beyond them could not be addressed the same way as the others.
+
+Each additional attachment:
+
+- requires a consumer-selected bridge;
+- accepts an optional access VLAN with exactly the [VLAN contract](#vlan-interface-and-ownership) of the primary attachment;
+- accepts an optional static IPv4 address in CIDR notation, and no gateway; and
+- accepts an optional MAC address.
+
+Only the primary attachment carries a gateway. A gateway on another attachment would give the guest several default routes, and choosing between them is routing policy inside the guest, which this capability does not own. An additional attachment without an address receives no cloud-init network configuration for its interface; whether and how the guest configures it is guest configuration.
+
+Locally decidable invalid values fail before apply, including more than eight attachments, a malformed address, the same address on two attachments, a malformed or multicast MAC address, and a VLAN outside the accepted range.
+
+### MAC addresses and guest interface identity
+
+When an attachment declares no MAC address, Proxmox assigns one when the device is created. A declared MAC address is used as given. The module publishes every attachment's MAC address, in slot order, as a non-sensitive output, because it is resource identity a consumer may need for its own inventory or address reservations.
+
+The MAC address is how the guest recognizes an interface: Proxmox's cloud-init network data identifies each addressed interface by its MAC address and names it `eth` followed by the slot index. Changing an attachment's MAC address therefore replaces the device the guest sees; on a running VM Proxmox hot-unplugs the old device and plugs a new one.
+
+### Ownership and connection
+
+OpenTofu owns every network attachment, its optional tag, its declared MAC address, and its declared static address. The consumer owns bridge and VLAN selection, the pre-existing bridge configuration, upstream switching, routing, address allocation, and consistency between each attachment's network and its address. Ansible gains no guest-network ownership.
+
+The required `connection` output is unchanged. It is derived only from the primary attachment's declared address, and additional attachments never alter it.
+
+### Attachment lifecycle
+
+No attachment change may replace the VM. A provider behavior that plans replacement for one is a compatibility regression, and adoption is blocked pending Architecture review.
+
+- **Adding an attachment after the last one** updates the VM in place and plugs the new device.
+- **Removing the last additional attachment** updates the VM in place and unplugs its device.
+- **Changing an attachment's bridge or VLAN** updates it in place with the link interruption described for [VLAN changes](#vlan-lifecycle-and-evidence).
+- **Changing an attachment's MAC address** updates it in place by replacing the device the guest sees.
+- **Removing or reordering any attachment other than the last** re-maps every later slot in place: each later slot takes the next attachment's bridge, VLAN, address, and declared MAC address, so every later interface changes identity or network. This is disruptive, and the module cannot detect it before apply, because input validation cannot see the prior configuration. The module documents it; a consumer that needs later interfaces to stay stable removes attachments from the end.
+
+Any change to an attachment's declared address, including adding or removing an addressed attachment, changes the cloud-init network data the VM boots with. Proxmox derives the cloud-init instance identifier from a digest of the generated user and network data, so the identifier changes too. On the pinned provider an initialization change rebuilds the cloud-init drive and, by default, reboots a running VM. On that boot cloud-init treats the guest as a new instance: it re-applies network configuration, which it otherwise applies only on a new instance, and re-runs its per-instance modules, including the SSH module, which deletes and regenerates the guest's SSH host keys unless the template's cloud-init configuration turns that off. The same consequence already applies to the primary attachment's static address, and a consumer should expect a reboot and a changed host key after any addressing change. Adding or removing an unaddressed attachment does not change the cloud-init network data.
+
+The pinned provider emits a cloud-init IP configuration only for attachments that declare one and sends no deletion for configurations that disappear. Implementation must establish whether removing an addressed attachment leaves its IP configuration in the Proxmox VM configuration, and what a later attachment at that slot then receives. If the configuration persists, the module documentation must say so.
+
+### Attachment validation and evidence
+
+Credential-free module and mock-provider tests must prove that a configuration without additional attachments is unchanged; the slot order and index of every declared attachment; per-attachment bridge, VLAN, address, and MAC mapping; that only the primary attachment carries a gateway; the eight-attachment limit and other locally decidable validation; the MAC output; the unchanged `connection` output and module resource address; and the exclusions below. Those tests may not by themselves claim that the provider updates the VM in place.
+
+Before implementation receives an Architecture `ACCEPT` verdict, its pull request must record provider-level evidence for the exact locked `bpg/proxmox` build showing no VM replacement when an attachment is added after the last one, the last additional attachment is removed, an additional attachment's bridge, VLAN, address, or MAC address changes, and a non-final attachment is removed. For each, the record states how the device list, MAC addresses, and cloud-init IP configurations are planned. As for [the VLAN evidence gate](#vlan-lifecycle-and-evidence), Architecture requires the evidence, not one permanent mechanism, and provider upgrades must re-evaluate it.
+
+Public validation does not prove that devices hot-plug or unplug successfully, that a guest names, configures, or brings up an interface, that cloud-init re-applies configuration or regenerates host keys on a given template, reachability through any attachment, or routing between attachments.
+
+DHCP and IPv6 on any attachment, gateways or routes on additional attachments, VLAN trunks, NIC models, firewall, MTU, rate limit, queue, and link-state settings, bridge discovery or management, network orchestration, and guest-network configuration remain deferred. Separate DHCP and IPv6 decisions must consume, not redefine, this decision's slot identity, primary-attachment connection source, eight-configuration limit, and addressing-change lifecycle.
 
 ## Constraints for future components
 
