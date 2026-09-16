@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, and the first M6 Proxmox expansion. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
+This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, the first M6 Proxmox expansion, and the first reusable LXC capability. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
 
 ## Repository boundary
 
@@ -119,7 +119,7 @@ Locally decidable invalid inputs fail early and clearly. Runtime prerequisites r
 
 ### Deferred from the first slice
 
-At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6 is defined later without changing first-slice ownership.
+At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6 and the separate first LXC capability are defined later without changing first-slice ownership.
 
 ## Initial separate-repository consumer contract
 
@@ -230,6 +230,54 @@ Multiple NICs, VLAN trunks, DHCP, IPv6, bridge discovery or management, network 
 ### Blocked data-disk need
 
 Additional persistent VM data disks are a demonstrated consumer need, but the current supported provider path does not establish safe management of additional disks while preserving template-inherited disks. [The blocked Architecture record](https://github.com/mlznlv/homelab-iac-toolkit/issues/80) retains the exact provider evidence and unblock condition. The existing module must not be redesigned around the experimental cloned-VM resource family, and no future disk interface or migration mechanism is pre-designed while that blocker remains.
+
+## First reusable LXC capability
+
+The first reusable Proxmox LXC capability creates one unprivileged Debian container from a consumer-supplied container template, as accepted in [ADR 0010](decisions/0010-first-reusable-lxc-capability.md). It is a separate component from the Linux VM module. It shares the PVE 9.x target and the `bpg/proxmox` provider line, and assumes nothing else from the VM contract: not its resource family, clone model, bootstrap mechanism, or connection derivation.
+
+### Container interface and ownership
+
+The capability manages one `proxmox_virtual_environment_container` resource under `tofu/modules/proxmox-linux-container/`. It:
+
+- creates the container from a consumer-supplied container template volume that already exists on Proxmox storage, and does not clone an existing container;
+- declares the Debian operating-system type rather than inheriting the provider's `unmanaged` default, because Proxmox configures the network, hostname, DNS, and root SSH keys inside a container only through a managed operating-system type;
+- always creates an unprivileged container;
+- enables the nesting feature by default, lets the consumer disable it, and exposes no other container feature;
+- declares start-on-boot explicitly rather than inheriting the provider's default, and declares it so that a container starts again when its host boots;
+- accepts a consumer-owned container name, which the module sets as the provider's `initialization.hostname` and which must therefore be a valid DNS name, and a consumer-owned optional identifier, node, template, root-filesystem datastore and size, CPU cores, and dedicated memory;
+- accepts a port value, defaulting to `22`, published in `connection` as metadata only, as the VM module's `ssh_port` is;
+- attaches exactly one network interface to one consumer-selected bridge, with a static IPv4 CIDR, gateway, and at least one DNS server; and
+- installs consumer-supplied SSH public keys for the container's root account as creation-time bootstrap only, and sets no password.
+
+DNS servers are required rather than optional, because Proxmox otherwise copies the node's own resolver configuration into the container, and a node's resolvers are environment detail that a reusable component must not adopt silently.
+
+OpenTofu owns the container resource, its single network interface, and its root filesystem. The consumer owns the node, storage, bridge, addresses, sizing, and identifiers; acquiring and maintaining the template, including an SSH server that accepts public-key login for root; the private half of the bootstrap keys; and everything configured inside the container after creation. The bootstrap keys give OpenTofu no continuing ownership of root's authorized keys, users, or SSH configuration.
+
+The module exposes a required, non-sensitive `connection` output of `host`, `user`, and `port`. `host` is the declared IPv4 address without its prefix, `user` is `root`, and `port` is connection metadata that defaults to `22` and configures nothing. The module publishes no address the provider reads back from the running container, and `connection` never depends on one. The provider's own read path does read interfaces: on the pinned build, reading a started container that has an interface waits up to ten seconds for one to report an address, and treats a timeout as a warning rather than an error. Omitting its wait-for-IP block, as the module does, selects waiting for any address rather than none. That bounded, non-fatal wait belongs to the provider; the module neither configures nor consumes its result, so a refresh can take up to ten seconds longer while nothing in the module's contract changes. Other public outputs are limited to non-sensitive resource identity.
+
+The consumer composes inventory from that output or from independent values and runs its own guest configuration. No Ansible role is added, and the `qemu_guest_agent` role does not apply: a container has no QEMU guest-agent channel.
+
+### Container lifecycle
+
+Changing the bridge, static IPv4 address, gateway, DNS servers, container name, or dedicated memory must update the existing container in place. On the pinned provider a running container is rebooted to apply any of those, so an interruption is expected. Changing CPU cores also updates in place, and the provider requests no reboot for it. Growing the root filesystem must also update in place.
+
+Enabling or disabling nesting updates the configuration in place, but the pinned provider requests no restart for a feature change. The container keeps running under its previous profile until something else restarts it, so the capability documents the change as taking effect at next start rather than immediately.
+
+The following replace the container, destroying it and its root filesystem and creating a new one: changing the template, the root-filesystem datastore, the node, or the identifier, and shrinking the root filesystem, which Proxmox cannot do in place. The module documents each as destructive and never hides the replacement; the consumer's plan review is the control. A shrink cannot be caught by input validation, which cannot see the prior size, so it reaches the consumer as a planned replacement rather than a plan-time error.
+
+Changing the bootstrap SSH keys after creation must not replace the container. The pinned provider marks root's keys as replacement-forcing, so the module keeps that behaviour from reaching consumers by ignoring later changes to the bootstrap key attribute on its own resource. A key change therefore produces no plan at all: the existing container and its authorized keys are untouched, and rotating root's keys is guest configuration.
+
+Destroy asks Proxmox to shut the container down with forcing already enabled, and with a timeout five seconds shorter than the provider's delete timeout, so under the defaults the guest gets 55 seconds before Proxmox stops it and the container is deleted. That can interrupt workloads and lose unwritten data. The module exposes no timeout or destroy-policy input in this slice; a consumer-controlled destroy policy like the VM module's remains deferred.
+
+Before implementation receives an Architecture `ACCEPT` verdict, its pull request must record provider-level evidence for the exact locked `bpg/proxmox` build showing that: the Debian operating-system type, unprivileged mode, and the declared start-on-boot value reach the create request; a bootstrap-key change plans nothing at all under the module's declared handling, rather than the replacement the provider would otherwise force; root-filesystem growth updates in place while shrinking, a datastore change, a template change, a node change, and an identifier change plan replacement; network, DNS, name, and memory changes update in place; a CPU-cores change updates in place; and enabling or disabling nesting updates the container in place without a restart. As for [the VLAN evidence gate](#vlan-lifecycle-and-evidence), Architecture requires the evidence, not one permanent mechanism, and provider upgrades must re-evaluate it.
+
+### Container validation and non-claims
+
+Credential-free module and mock-provider tests must prove the required inputs and locally decidable validation; creation from a template rather than a clone; the Debian operating-system type, unprivileged mode, the nesting default and override, and the explicit start-on-boot declaration; the single network interface and its static addressing; bootstrap keys without a password; the root-filesystem datastore and size; the `connection` output and its derivation; and the exclusions below. Those tests cannot by themselves establish the provider's replacement behavior.
+
+Public validation does not prove container creation, template compatibility, in-container network configuration, SSH reachability, whether nesting is sufficient for a guest's init system, reboot, shutdown, forced stop, or destroy behavior.
+
+Cloning, privileged containers, other container features, mount points, bind mounts, device passthrough, ID mapping, multiple network interfaces, VLAN tags, DHCP, IPv6, passwords, non-root bootstrap accounts, other distributions, a consumer override for start-on-boot, startup ordering, protection, HA, timeout and destroy-policy inputs, template acquisition, container-specific Ansible roles, and examples remain deferred.
 
 ## Constraints for future components
 

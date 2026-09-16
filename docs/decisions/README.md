@@ -26,3 +26,4 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 | [0007](0007-single-revision-consumer-contract.md) | Single-revision separate-repository consumer contract | Accepted |
 | [0008](0008-first-pre-release-contract.md) | First pre-release contract | Accepted |
 | [0009](0009-first-m6-vlan-expansion.md) | Optional access-VLAN tagging as the first M6 expansion | Accepted |
+| [0010](0010-first-reusable-lxc-capability.md) | First reusable LXC capability | Accepted |
