@@ -28,3 +28,4 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 | [0009](0009-first-m6-vlan-expansion.md) | Optional access-VLAN tagging as the first M6 expansion | Accepted |
 | [0010](0010-first-reusable-lxc-capability.md) | First reusable LXC capability | Accepted |
 | [0011](0011-multiple-vm-network-attachments.md) | Multiple VM network attachments | Accepted |
+| [0012](0012-dhcp-primary-attachment-addressing.md) | DHCP addressing for the primary VM attachment | Accepted |

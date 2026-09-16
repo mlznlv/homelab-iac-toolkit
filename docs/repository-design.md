@@ -53,6 +53,8 @@ Implementation of the first M6 expansion belongs in the existing `tofu/modules/p
 Multiple VM network attachments also belong in the existing `tofu/modules/proxmox-linux-vm/` root, on its existing resource. They create no new module, provider resource family, Ansible role, example, shared network layer, or orchestration entry point, and their input syntax, fictional usage example, and slot-order and disruption warnings belong in that module's co-located README when implemented.
 The first reusable LXC capability has its own approved root, `tofu/modules/proxmox-linux-container/`, for the single unprivileged Debian container module. It is a sibling of the VM module rather than a mode of it, shares no module code or interface with it, and adds no Ansible role, example, shared layer, or orchestration entry point.
 
+DHCP addressing for the primary attachment belongs in the same root and resource. It adds no DHCP, IPAM, or naming integration, example, or orchestration entry point; the addressing-mode and connection-host inputs, a fictional usage example, and the consumer-owned DHCP prerequisites and mode-change warning belong in that module's co-located README when implemented.
+
 Component documentation and contract tests are co-located with their owning component. A small test fixture may demonstrate required connection-descriptor composition, but it must not become a consumer example, read real state, or couple the Ansible role to OpenTofu.
 
 Additional module, role, collection, shared-library, or platform hierarchies remain deferred until approved content requires them.
