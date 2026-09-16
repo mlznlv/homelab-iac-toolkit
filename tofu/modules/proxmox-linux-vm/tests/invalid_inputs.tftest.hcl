@@ -174,3 +174,45 @@ run "a_bridge_name_that_is_not_an_interface_name_is_rejected" {
 
   expect_failures = [var.network_bridge]
 }
+
+# The provider spells an untagged device as tag 0. The module's only way to say
+# untagged is null, so 0 is rejected rather than accepted as a second spelling.
+run "a_vlan_identifier_of_zero_is_rejected" {
+  command = plan
+
+  variables {
+    network_vlan_id = 0
+  }
+
+  expect_failures = [var.network_vlan_id]
+}
+
+run "a_negative_vlan_identifier_is_rejected" {
+  command = plan
+
+  variables {
+    network_vlan_id = -1
+  }
+
+  expect_failures = [var.network_vlan_id]
+}
+
+run "a_fractional_vlan_identifier_is_rejected" {
+  command = plan
+
+  variables {
+    network_vlan_id = 1.5
+  }
+
+  expect_failures = [var.network_vlan_id]
+}
+
+run "a_vlan_identifier_above_the_vlan_range_is_rejected" {
+  command = plan
+
+  variables {
+    network_vlan_id = 4095
+  }
+
+  expect_failures = [var.network_vlan_id]
+}
