@@ -34,6 +34,18 @@ The accepted multiple-attachment capability extends `proxmox-linux-vm` on the sa
 
 Its lifecycle contract is that adding, removing, and changing attachments preserves the VM. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted, a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans VM replacement for an attachment change is blocked pending Architecture review. Preserving the VM does not preserve an interface's identity: removing or reordering a non-final attachment re-maps every later slot, and any addressing change reboots a running VM on the pinned provider and makes the next boot a new cloud-init instance. Nor does it clear a slot's addressing: the pinned provider omits an empty cloud-init IP configuration from its update and deletes none, so an address retired from a slot stays in the Proxmox VM configuration and can reach a later attachment at that slot.
 
+### DHCP addressing
+
+The accepted DHCP capability adds an explicit IPv4 DHCP mode for the primary attachment of `proxmox-linux-vm` on the same PVE 9.x target, provider line, and resource. It relies on Proxmox's cloud-init IP configuration accepting `dhcp` and rendering it as a DHCPv4 subnet for that interface.
+
+Its lifecycle contract is that switching between static and DHCP preserves the VM. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted, a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans VM replacement for an addressing-mode change is blocked pending Architecture review. Preserving the VM does not preserve the guest's address or SSH host keys. The capability also adds the optional primary-attachment MAC address, which ADR 0011 gave only to additional attachments; changing it preserves the VM while replacing the device the guest sees.
+
+### Static IPv6 addressing
+
+The accepted IPv6 capability adds optional static IPv6 addressing to the primary attachment of `proxmox-linux-vm` on the same PVE 9.x target, provider line, and resource. Only static IPv6 is supported, because in cloud-init 25.1.4, the upstream version Debian 13 packages, the ENI, netplan, and systemd-networkd renderers render Proxmox's dynamic IPv6 forms differently while all rendering a static address and gateway.
+
+Its lifecycle contract is that adding, changing, and removing IPv6 preserves the VM. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted, a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans VM replacement for an IPv6 change is blocked pending Architecture review.
+
 ### LXC capability
 
 The first reusable LXC capability, `proxmox-linux-container`, targets the same PVE 9.x major and `bpg/proxmox` provider line as the VM module, through the `proxmox_virtual_environment_container` resource. It selects no other provider line or resource family.
@@ -51,18 +63,6 @@ When implemented, the `proxmox-linux-container` module will require a consumer-s
 - contains an SSH server that accepts public-key login for the root account.
 
 Debian Stable container templates are expected-compatible targets for this contract. They are not runtime-validated reference platforms, and no other distribution is targeted by this capability.
-
-### DHCP addressing
-
-The accepted DHCP capability adds an explicit IPv4 DHCP mode for the primary attachment of `proxmox-linux-vm` on the same PVE 9.x target, provider line, and resource. It relies on Proxmox's cloud-init IP configuration accepting `dhcp` and rendering it as a DHCPv4 subnet for that interface.
-
-Its lifecycle contract is that switching between static and DHCP preserves the VM. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted, a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans VM replacement for an addressing-mode change is blocked pending Architecture review. Preserving the VM does not preserve the guest's address or SSH host keys. The capability also adds the optional primary-attachment MAC address, which ADR 0011 gave only to additional attachments; changing it preserves the VM while replacing the device the guest sees.
-
-### Static IPv6 addressing
-
-The accepted IPv6 capability adds optional static IPv6 addressing to the primary attachment of `proxmox-linux-vm` on the same PVE 9.x target, provider line, and resource. Only static IPv6 is supported, because in cloud-init 25.1.4, the upstream version Debian 13 packages, the ENI, netplan, and systemd-networkd renderers render Proxmox's dynamic IPv6 forms differently while all rendering a static address and gateway.
-
-Its lifecycle contract is that adding, changing, and removing IPv6 preserves the VM. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted, a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans VM replacement for an IPv6 change is blocked pending Architecture review.
 
 ## Guest capability contract
 
