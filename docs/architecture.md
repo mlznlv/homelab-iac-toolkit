@@ -119,7 +119,7 @@ Locally decidable invalid inputs fail early and clearly. Runtime prerequisites r
 
 ### Deferred from the first slice
 
-At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6 is defined later without changing first-slice ownership.
+At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6 and the separate first LXC capability are defined later without changing first-slice ownership.
 
 ## Initial separate-repository consumer contract
 
@@ -243,7 +243,7 @@ The capability manages one `proxmox_virtual_environment_container` resource unde
 - declares the Debian operating-system type rather than inheriting the provider's `unmanaged` default, because Proxmox configures the network, hostname, DNS, and root SSH keys inside a container only through a managed operating-system type;
 - always creates an unprivileged container;
 - enables the nesting feature by default, lets the consumer disable it, and exposes no other container feature;
-- accepts consumer-owned container name, identifier, node, template, root-filesystem datastore and size, CPU cores, and dedicated memory;
+- accepts a consumer-owned container name, which Proxmox keeps as the container's hostname and which must therefore be a valid DNS name, and a consumer-owned optional identifier, node, template, root-filesystem datastore and size, CPU cores, and dedicated memory;
 - attaches exactly one network interface to one consumer-selected bridge, with a static IPv4 CIDR, gateway, and at least one DNS server; and
 - installs consumer-supplied SSH public keys for the container's root account as creation-time bootstrap only, and sets no password.
 
@@ -263,9 +263,9 @@ The following replace the container, destroying it and its root filesystem and c
 
 Changing the bootstrap SSH keys after creation must not replace the container. The pinned provider marks root's keys as replacement-forcing, but they are creation-time bootstrap, so a later change to them leaves the existing container and its authorized keys untouched.
 
-Destroy asks the container to shut down and forces a stop when the provider's delete timeout expires, then deletes it. That can interrupt workloads and lose unwritten data.
+Destroy asks the container to shut down and forces a stop when the provider's delete timeout expires, then deletes it. That can interrupt workloads and lose unwritten data. The module exposes no timeout or destroy-policy input in this slice, so the provider's own defaults govern how long the shutdown is given; a consumer-controlled destroy policy like the VM module's remains deferred.
 
-Before implementation receives an Architecture `ACCEPT` verdict, its pull request must record provider-level evidence for the exact locked `bpg/proxmox` build showing that: the Debian operating-system type and unprivileged mode reach the create request; a bootstrap-key change plans no replacement; root-filesystem growth updates in place while shrinking, a datastore change, and a template change plan replacement; and network, DNS, and name changes update in place. As for [the VLAN evidence gate](#vlan-lifecycle-and-evidence), Architecture requires the evidence, not one permanent mechanism, and provider upgrades must re-evaluate it.
+Before implementation receives an Architecture `ACCEPT` verdict, its pull request must record provider-level evidence for the exact locked `bpg/proxmox` build showing that: the Debian operating-system type and unprivileged mode reach the create request; a bootstrap-key change plans no replacement; root-filesystem growth updates in place while shrinking, a datastore change, and a template change plan replacement; network, DNS, and name changes update in place; and enabling or disabling nesting updates the container in place rather than replacing it. As for [the VLAN evidence gate](#vlan-lifecycle-and-evidence), Architecture requires the evidence, not one permanent mechanism, and provider upgrades must re-evaluate it.
 
 ### Container validation and non-claims
 
@@ -273,7 +273,7 @@ Credential-free module and mock-provider tests must prove the required inputs an
 
 Public validation does not prove container creation, template compatibility, in-container network configuration, SSH reachability, whether nesting is sufficient for a guest's init system, reboot, shutdown, forced stop, or destroy behavior.
 
-Cloning, privileged containers, other container features, mount points, bind mounts, device passthrough, ID mapping, multiple network interfaces, VLAN tags, DHCP, IPv6, passwords, non-root bootstrap accounts, other distributions, start-on-boot and startup ordering, protection, HA, template acquisition, container-specific Ansible roles, and examples remain deferred.
+Cloning, privileged containers, other container features, mount points, bind mounts, device passthrough, ID mapping, multiple network interfaces, VLAN tags, DHCP, IPv6, passwords, non-root bootstrap accounts, other distributions, start-on-boot and startup ordering, protection, HA, timeout and destroy-policy inputs, template acquisition, container-specific Ansible roles, and examples remain deferred.
 
 ## Constraints for future components
 

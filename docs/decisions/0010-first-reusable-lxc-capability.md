@@ -27,13 +27,13 @@ It is a new OpenTofu module at `tofu/modules/proxmox-linux-container/`, separate
 
 The container is created from a template volume that already exists on Proxmox storage; the consumer acquires and maintains the template. The module declares the Debian operating-system type, always creates an unprivileged container, and enables nesting by default with a consumer override; it exposes no other container feature.
 
-The consumer supplies the container name, optional identifier, node, template, root-filesystem datastore and size, CPU cores, and dedicated memory. The container has exactly one network interface on one consumer-selected bridge, with a required static IPv4 CIDR, gateway, and at least one DNS server. Root's SSH public keys are required creation-time bootstrap; no password is set.
+The consumer supplies the container name, which Proxmox keeps as the container's hostname and which must therefore be a valid DNS name, and an optional identifier, node, template, root-filesystem datastore and size, CPU cores, and dedicated memory. The container has exactly one network interface on one consumer-selected bridge, with a required static IPv4 CIDR, gateway, and at least one DNS server. Root's SSH public keys are required creation-time bootstrap; no password is set.
 
 OpenTofu owns the container resource, its network interface, and its root filesystem. The consumer owns the node, storage, bridge, addresses, sizing, identifiers, template, private keys, and all configuration inside the container after creation. Bootstrap keys give OpenTofu no continuing ownership of root's authorized keys, users, or SSH configuration.
 
 The module exposes a required, non-sensitive `connection` output of `host`, `user`, and `port`: the declared IPv4 address without its prefix, `root`, and a port metadata value defaulting to `22`. It neither waits for nor publishes a provider-reported container address.
 
-Network, DNS, and name changes and root-filesystem growth update the container in place. Template, datastore, node, and identifier changes and root-filesystem shrinking replace it and are documented as destructive. A later change to the bootstrap keys must not replace the container. Before implementation can be accepted, its pull request records provider-level evidence for these behaviors from the exact locked provider build, separately from module or mock-provider contract tests.
+Network, DNS, and name changes, enabling or disabling nesting, and root-filesystem growth update the container in place. Template, datastore, node, and identifier changes and root-filesystem shrinking replace it and are documented as destructive. A later change to the bootstrap keys must not replace the container. The module exposes no timeout or destroy-policy input, so the provider's own defaults govern the shutdown destroy allows before it forces a stop. Before implementation can be accepted, its pull request records provider-level evidence for these behaviors from the exact locked provider build, separately from module or mock-provider contract tests.
 
 Normal public validation remains credential-free and does not claim successful container creation, template compatibility, in-container configuration, reachability, or reboot, shutdown, forced-stop, or destroy behavior. Exact inputs, examples, and validation implementation remain in their owning component and validation sources rather than this ADR.
 
@@ -45,6 +45,7 @@ Normal public validation remains credential-free and does not claim successful c
 - Updating bootstrap keys through OpenTofu has no effect on an existing container; rotating root's keys is guest configuration.
 - A network, DNS, or name change reboots a running container on the pinned provider, so an interruption is expected.
 - Nesting is on by default, which trades a broader container profile for systemd guests that behave as Proxmox expects.
+- Destroy follows the provider's default timeouts, so a consumer who needs a longer shutdown or a different destroy policy has no input for it in this slice.
 - Module and mock-provider tests establish the public contract, but cannot alone establish the provider's in-place and replacement behavior.
 - The `qemu_guest_agent` role does not apply to containers, and no container-specific Ansible role is introduced.
 
