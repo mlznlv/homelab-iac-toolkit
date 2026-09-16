@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, the first M6 Proxmox expansion, multiple VM network attachments, and the first reusable LXC capability. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
+This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, the first M6 Proxmox expansion, multiple VM network attachments, DHCP addressing for the primary VM attachment, and the first reusable LXC capability. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
 
 ## Repository boundary
 
@@ -119,7 +119,7 @@ Locally decidable invalid inputs fail early and clearly. Runtime prerequisites r
 
 ### Deferred from the first slice
 
-At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6, the later multiple-attachment contract, and the separate first LXC capability are defined later without changing first-slice ownership.
+At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6, the later multiple-attachment contract, the DHCP addressing mode, and the separate first LXC capability are defined later without changing first-slice ownership. Agent-based address discovery stays deferred, and the DHCP decision rejects it outright.
 
 ## Initial separate-repository consumer contract
 
@@ -264,7 +264,7 @@ The MAC address is how the guest recognizes an interface: Proxmox's cloud-init n
 
 OpenTofu owns every network attachment, its optional tag, its declared MAC address, and its declared static address. The consumer owns bridge and VLAN selection, the pre-existing bridge configuration, upstream switching, routing, address allocation, and consistency between each attachment's network and its address. Ansible gains no guest-network ownership.
 
-The required `connection` output is unchanged. It is derived only from the primary attachment's declared address, and additional attachments never alter it.
+The required `connection` output is unchanged by additional attachments. It is derived only from the primary attachment, as [DHCP addressing](#dhcp-addressing-for-the-primary-vm-attachment) refines, and additional attachments never alter it.
 
 ### Attachment lifecycle
 
@@ -294,7 +294,56 @@ Before implementation receives an Architecture `ACCEPT` verdict, its pull reques
 
 Public validation does not prove that devices hot-plug or unplug successfully, that a guest names, configures, or brings up an interface, that cloud-init re-applies configuration or regenerates host keys on a given template, reachability through any attachment, or routing between attachments.
 
-DHCP and IPv6 on any attachment, gateways or routes on additional attachments, VLAN trunks, NIC models, firewall, MTU, rate limit, queue, and link-state settings, bridge discovery or management, network orchestration, and guest-network configuration remain deferred. Separate DHCP and IPv6 decisions must consume, not redefine, this decision's slot identity, primary-attachment connection source, eight-configuration limit, and addressing-change lifecycle.
+DHCP on additional attachments, IPv6 on any attachment, gateways or routes on additional attachments, VLAN trunks, NIC models, firewall, MTU, rate limit, queue, and link-state settings, bridge discovery or management, network orchestration, and guest-network configuration remain deferred. DHCP for the primary attachment is defined [below](#dhcp-addressing-for-the-primary-vm-attachment). Separate DHCP and IPv6 decisions must consume, not redefine, this decision's slot identity, primary-attachment connection source, eight-configuration limit, and addressing-change lifecycle.
+
+## DHCP addressing for the primary VM attachment
+
+The Linux VM capability supports DHCP as an explicit IPv4 addressing mode for its primary attachment, as accepted in [ADR 0012](decisions/0012-dhcp-primary-attachment-addressing.md). It consumes the [multiple-attachment contract](#multiple-vm-network-attachments) and changes no module root, resource, or resource address.
+
+### Addressing mode
+
+The primary attachment has exactly one IPv4 addressing mode:
+
+- **Static**, the default, keeps its existing contract: a required address in CIDR notation and a required gateway.
+- **DHCP** is selected explicitly and forbids a declared address and gateway, as Proxmox expects no explicit gateway with DHCP. Cloud-init configures DHCP on the primary interface.
+
+A configuration that does not select DHCP plans exactly as it did before. DHCP on additional attachments remains deferred, because a DHCP service may supply a default route on each, which is the routing ambiguity the multiple-attachment contract avoids by giving only the primary attachment a gateway.
+
+DNS servers remain required in both modes. When none are configured, Proxmox writes the node's own resolvers into the guest's cloud-init network data, and a reusable component must not adopt that environment detail silently.
+
+### Connection host
+
+The required `connection` output keeps its `host`, `user`, and `port` shape. The module accepts an optional consumer-supplied connection host: a hostname or an IP address literal, without scheme or port.
+
+| Mode | Connection host supplied | `host` published |
+| --- | --- | --- |
+| Static | No | The declared address without its prefix, as before |
+| Static | Yes | The supplied connection host |
+| DHCP | Yes | The supplied connection host |
+
+A DHCP configuration that supplies no connection host is rejected before apply, so the table above covers every configuration that reaches Proxmox.
+
+The module never derives `host` from a lease, from an agent-reported or provider-read address, from OpenTofu state, or from generated inventory, and it never waits for an address. Agent-based discovery in particular would be circular: the guest agent is installed by the Ansible capability over SSH, which needs the address first, and waiting for it would block apply and refresh as [ADR 0006](decisions/0006-guest-agent-channel-at-creation.md) forbids. The connection host is declared metadata, not evidence of reachability.
+
+### DHCP ownership and bootstrap
+
+OpenTofu owns the declaration that the primary attachment uses DHCP, and its MAC address where the consumer declares one. The consumer owns the DHCP service, scopes, reservations, leases, name registration, and the guarantee that the supplied connection host reaches the guest. Ansible gains no guest-network ownership.
+
+A reservation that must apply from the first boot requires the consumer to declare the primary attachment's MAC address, so this capability adds that input. The [multiple-attachment contract](#mac-addresses-and-guest-interface-identity) gives an optional MAC address to additional attachments only and leaves the primary attachment's inputs as they were; the primary gains one here. It is optional in both addressing modes, takes the same form and validation as an additional attachment's, and maps to the device at slot `net0`. Without one, Proxmox assigns the MAC address at creation, the module publishes it afterwards as it does for every attachment, and the first lease is whatever the consumer's DHCP service grants. Changing it updates the VM in place and replaces the device the guest sees, exactly as [changing any attachment's MAC address](#attachment-lifecycle) does, so a reservation keyed to the old address stops matching.
+
+Bootstrap is otherwise unchanged: cloud-init creates the bootstrap account with its keys and requests a lease on the primary interface. Apply completes without any evidence of a lease or of reachability.
+
+### DHCP lifecycle and evidence
+
+Switching the primary attachment between static and DHCP must update the existing VM in place. It is an addressing change under the [attachment lifecycle](#attachment-lifecycle): on the pinned provider it reboots a running VM, and the next boot is a new cloud-init instance that re-applies network configuration and regenerates SSH host keys unless the template turns that off. The guest's address may change, and the consumer updates anything that depends on it. Changing only the connection host changes the output and no infrastructure. A provider behavior that plans VM replacement for an addressing-mode change is a compatibility regression, and adoption is blocked pending Architecture review.
+
+Credential-free module and mock-provider tests must prove that static remains the default and unchanged; the DHCP mapping to the primary IP configuration with no address or gateway; that DHCP with a declared address or gateway, DHCP without a connection host, and a malformed connection host fail before apply; the connection-host rules in both modes; required DNS servers in both modes; the optional primary MAC address mapping to the primary device in both modes, with its validation and its absence by default; that DHCP is not accepted on additional attachments; and the unchanged module resource address. Those tests may not by themselves claim that the provider updates the VM in place.
+
+Before implementation receives an Architecture `ACCEPT` verdict, its pull request must record provider-level evidence for the exact locked `bpg/proxmox` build showing no VM replacement for static-to-DHCP and DHCP-to-static transitions, and how the primary IP configuration is planned in each, and showing that a declared primary MAC address reaches the primary device and that changing it updates the VM in place. As for [the VLAN evidence gate](#vlan-lifecycle-and-evidence), Architecture requires the evidence, not one permanent mechanism, and provider upgrades must re-evaluate it.
+
+Public validation does not prove lease acquisition, DHCP service or reservation behavior, name registration, a guest's DHCP client, that the supplied connection host resolves to or reaches the guest, or reachability after a mode change.
+
+Proxmox SDN DHCP or IPAM integration, DHCP option management, lease or address discovery, and generated inventory remain deferred.
 
 ## First reusable LXC capability
 

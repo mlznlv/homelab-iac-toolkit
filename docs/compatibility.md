@@ -52,6 +52,12 @@ When implemented, the `proxmox-linux-container` module will require a consumer-s
 
 Debian Stable container templates are expected-compatible targets for this contract. They are not runtime-validated reference platforms, and no other distribution is targeted by this capability.
 
+### DHCP addressing
+
+The accepted DHCP capability adds an explicit IPv4 DHCP mode for the primary attachment of `proxmox-linux-vm` on the same PVE 9.x target, provider line, and resource. It relies on Proxmox's cloud-init IP configuration accepting `dhcp` and rendering it as a DHCPv4 subnet for that interface.
+
+Its lifecycle contract is that switching between static and DHCP preserves the VM. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted, a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans VM replacement for an addressing-mode change is blocked pending Architecture review. Preserving the VM does not preserve the guest's address or SSH host keys. The capability also adds the optional primary-attachment MAC address, which ADR 0011 gave only to additional attachments; changing it preserves the VM while replacing the device the guest sees.
+
 ## Guest capability contract
 
 The `qemu_guest_agent` role requires a managed guest with:
@@ -67,7 +73,7 @@ Debian Stable and Kali Rolling are expected-compatible targets for this capabili
 
 On those targets the guest-agent unit is device-activated: it is bound to the guest-agent channel, started from a udev rule when that device appears, and carries no installation configuration, so `systemctl is-enabled` reports `static`. The role's obligation there is that the package is installed and the service is running; enabling it for boot is not something a guest can configure, and the toolkit does not claim it.
 
-The consumer-supplied source template must support the cloud-init bootstrap inputs used by the OpenTofu module: static IPv4 addressing, gateway, DNS servers, username, and SSH public keys. The template need not contain `qemu-guest-agent`: the module attaches the channel at creation and waits for no agent, so the package arrives afterwards with the Ansible role. A consumer that declares additional attachments also needs a template whose cloud-init applies network configuration to each addressed interface identified by MAC address; the toolkit does not claim that a particular template does.
+The consumer-supplied source template must support the cloud-init bootstrap inputs used by the OpenTofu module: static IPv4 addressing, gateway, DNS servers, username, and SSH public keys. The template need not contain `qemu-guest-agent`: the module attaches the channel at creation and waits for no agent, so the package arrives afterwards with the Ansible role. A consumer that declares additional attachments also needs a template whose cloud-init applies network configuration to each addressed interface identified by MAC address; the toolkit does not claim that a particular template does. A consumer that selects DHCP needs a template whose cloud-init renders a DHCPv4 subnet into a running DHCP client, and a DHCP service and naming it controls.
 
 ## Consumer revision and example compatibility
 
@@ -93,6 +99,8 @@ The approved VLAN expansion additionally requires credential-free module evidenc
 The approved multiple-attachment capability additionally requires credential-free module evidence that configurations without additional attachments are unchanged, and for slot order, per-attachment bridge, VLAN, address, and MAC mapping, the absent IP configuration of an addressless attachment, the primary-only gateway, the attachment limit and other local validation, the MAC output, the unchanged `connection` output and resource address, and exclusions. Its no-replacement claims rest on the separate provider-level evidence gate above.
 The approved LXC capability requires credential-free module evidence for its required inputs and validation, template-based creation, Debian operating-system type, unprivileged mode, nesting default and override, the explicit start-on-boot declaration, single static network interface, password-free bootstrap keys, root-filesystem inputs, `connection` output, and exclusions. Its replacement and in-place claims rest on the separate provider-level evidence gate above, not on those tests.
 
+The approved DHCP capability additionally requires credential-free module evidence for the unchanged static default, the DHCP mapping without address or gateway, the connection-host rules and their validation in both modes, required DNS servers, the optional primary MAC address and its validation, the exclusion of DHCP from additional attachments, and the unchanged resource address. Its no-replacement claims rest on the separate provider-level evidence gate above.
+
 This evidence does not demonstrate:
 
 - live compatibility with a PVE 9.x installation or a particular `bpg/proxmox` release;
@@ -103,6 +111,7 @@ This evidence does not demonstrate:
 - that adding or removing the channel behaves as described on a running VM;
 - successful VLAN application or update, suitable VLAN-aware bridge configuration, upstream switching or routing, guest reachability, uninterrupted SSH, or zero-downtime VLAN changes;
 - successful network-device hot-plug or unplug, guest interface naming or configuration, cloud-init re-application or host-key regeneration on a given template, or reachability and routing through any additional attachment;
+- lease acquisition, DHCP service, reservation, or name-registration behavior, a guest's DHCP client, or that a supplied connection host resolves to or reaches the guest;
 - successful container creation, template compatibility, in-container network, DNS, or key configuration, sufficiency of the nesting setting, container reboot, shutdown, forced stop, or destroy behavior;
 - that a container starts after a host reboot, or that one reports an address within the bounded wait the provider's read path performs;
 - a consumer's checkout-acquisition mechanism; or
