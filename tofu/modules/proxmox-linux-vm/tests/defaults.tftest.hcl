@@ -132,6 +132,27 @@ run "destroy_stops_the_vm_by_default" {
   }
 }
 
+run "the_network_device_is_untagged_by_default" {
+  command = plan
+
+  # The mock applies no provider defaults, so an unset tag plans as null here.
+  # The real provider plans the same unset tag as its untagged default.
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[0].vlan_id == null
+    error_message = "With no network_vlan_id, the network device's tag must be left unset, so the device stays untagged."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.network_device) == 1
+    error_message = "Leaving the device untagged must still attach exactly one network device."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[0].enabled != false && proxmox_virtual_environment_vm.this.network_device[0].disconnected != true
+    error_message = "An untagged device must not be disabled or disconnected."
+  }
+}
+
 run "connection_output_is_derived_from_the_declared_values" {
   command = plan
 

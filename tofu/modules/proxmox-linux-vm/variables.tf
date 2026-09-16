@@ -168,3 +168,14 @@ variable "ssh_port" {
     error_message = "The ssh_port must be a whole number in the range 1 to 65535."
   }
 }
+
+variable "network_vlan_id" {
+  description = "Access VLAN tag for the VM's single network device, a whole number from 1 to 4094. Null, the default, leaves the device untagged and still attached. The bridge's configuration, upstream switching and routing, and a static address that belongs on the chosen VLAN are the consumer's. Changing the tag of an existing VM interrupts the guest's network link."
+  type        = number
+  default     = null
+
+  validation {
+    condition     = var.network_vlan_id == null || (var.network_vlan_id == floor(var.network_vlan_id) && var.network_vlan_id >= 1 && var.network_vlan_id <= 4094)
+    error_message = "The network_vlan_id must be null for an untagged device, or a whole number in the VLAN range 1 to 4094."
+  }
+}
