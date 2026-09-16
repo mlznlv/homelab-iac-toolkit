@@ -28,6 +28,12 @@ The in-place behavior is the toolkit contract, while the evidence supporting it 
 
 This provider-level lifecycle evidence is distinct from runtime compatibility. It does not show that a VLAN change succeeds against PVE, that a consumer's bridge or upstream network is configured correctly, or that connectivity survives the update.
 
+### Multiple network attachments
+
+The accepted multiple-attachment capability extends `proxmox-linux-vm` on the same PVE 9.x target, provider line, and resource. It supports at most eight attachments, identified by position, because the pinned provider represents network devices and cloud-init addressing as positional lists and accepts at most eight cloud-init IP configurations.
+
+Its lifecycle contract is that adding, removing, and changing attachments preserves the VM. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted, a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans VM replacement for an attachment change is blocked pending Architecture review. Preserving the VM does not preserve an interface's identity: removing or reordering a non-final attachment re-maps every later slot, and any addressing change reboots a running VM on the pinned provider and makes the next boot a new cloud-init instance. Nor does it clear a slot's addressing: the pinned provider omits an empty cloud-init IP configuration from its update and deletes none, so an address retired from a slot stays in the Proxmox VM configuration and can reach a later attachment at that slot.
+
 ### LXC capability
 
 The first reusable LXC capability, `proxmox-linux-container`, targets the same PVE 9.x major and `bpg/proxmox` provider line as the VM module, through the `proxmox_virtual_environment_container` resource. It selects no other provider line or resource family.
@@ -61,7 +67,7 @@ Debian Stable and Kali Rolling are expected-compatible targets for this capabili
 
 On those targets the guest-agent unit is device-activated: it is bound to the guest-agent channel, started from a udev rule when that device appears, and carries no installation configuration, so `systemctl is-enabled` reports `static`. The role's obligation there is that the package is installed and the service is running; enabling it for boot is not something a guest can configure, and the toolkit does not claim it.
 
-The consumer-supplied source template must support the cloud-init bootstrap inputs used by the OpenTofu module: static IPv4 addressing, gateway, DNS servers, username, and SSH public keys. The template need not contain `qemu-guest-agent`: the module attaches the channel at creation and waits for no agent, so the package arrives afterwards with the Ansible role.
+The consumer-supplied source template must support the cloud-init bootstrap inputs used by the OpenTofu module: static IPv4 addressing, gateway, DNS servers, username, and SSH public keys. The template need not contain `qemu-guest-agent`: the module attaches the channel at creation and waits for no agent, so the package arrives afterwards with the Ansible role. A consumer that declares additional attachments also needs a template whose cloud-init applies network configuration to each addressed interface identified by MAC address; the toolkit does not claim that a particular template does.
 
 ## Consumer revision and example compatibility
 
@@ -84,6 +90,7 @@ The first slice requires public, credential-free static and contract validation 
 
 The approved VLAN expansion additionally requires credential-free module evidence for its default, accepted and rejected values, provider-field mapping, use of the existing single network device and module resource address, unchanged static-network and `connection` interfaces, and explicit exclusions. Module or mock-provider tests establish that module contract, not the provider's in-place lifecycle behavior; the separate provider-level evidence gate above establishes the no-replacement claim.
 
+The approved multiple-attachment capability additionally requires credential-free module evidence that configurations without additional attachments are unchanged, and for slot order, per-attachment bridge, VLAN, address, and MAC mapping, the absent IP configuration of an addressless attachment, the primary-only gateway, the attachment limit and other local validation, the MAC output, the unchanged `connection` output and resource address, and exclusions. Its no-replacement claims rest on the separate provider-level evidence gate above.
 The approved LXC capability requires credential-free module evidence for its required inputs and validation, template-based creation, Debian operating-system type, unprivileged mode, nesting default and override, the explicit start-on-boot declaration, single static network interface, password-free bootstrap keys, root-filesystem inputs, `connection` output, and exclusions. Its replacement and in-place claims rest on the separate provider-level evidence gate above, not on those tests.
 
 This evidence does not demonstrate:
@@ -95,6 +102,7 @@ This evidence does not demonstrate:
 - that a guest agent starts once the channel is present, or that Proxmox subsequently reports one;
 - that adding or removing the channel behaves as described on a running VM;
 - successful VLAN application or update, suitable VLAN-aware bridge configuration, upstream switching or routing, guest reachability, uninterrupted SSH, or zero-downtime VLAN changes;
+- successful network-device hot-plug or unplug, guest interface naming or configuration, cloud-init re-application or host-key regeneration on a given template, or reachability and routing through any additional attachment;
 - successful container creation, template compatibility, in-container network, DNS, or key configuration, sufficiency of the nesting setting, container reboot, shutdown, forced stop, or destroy behavior;
 - that a container starts after a host reboot, or that one reports an address within the bounded wait the provider's read path performs;
 - a consumer's checkout-acquisition mechanism; or
