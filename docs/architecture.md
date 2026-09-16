@@ -119,7 +119,7 @@ Locally decidable invalid inputs fail early and clearly. Runtime prerequisites r
 
 ### Deferred from the first slice
 
-At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6 is defined later without changing first-slice ownership.
+At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6 and the later multiple-attachment contract are defined later without changing first-slice ownership.
 
 ## Initial separate-repository consumer contract
 
@@ -250,7 +250,7 @@ Each additional attachment:
 - accepts an optional static IPv4 address in CIDR notation, and no gateway; and
 - accepts an optional MAC address.
 
-Only the primary attachment carries a gateway. A gateway on another attachment would give the guest several default routes, and choosing between them is routing policy inside the guest, which this capability does not own. An additional attachment without an address receives no cloud-init network configuration for its interface; whether and how the guest configures it is guest configuration.
+Only the primary attachment carries a gateway. A gateway on another attachment would give the guest several default routes, and choosing between them is routing policy inside the guest, which this capability does not own. An additional attachment without an address receives no cloud-init network configuration for its interface, because the network data Proxmox generates for these guests describes only the interfaces that have one; whether and how the guest configures it is guest configuration.
 
 Locally decidable invalid values fail before apply, including more than eight attachments, a malformed address, the same address on two attachments, a malformed or multicast MAC address, and a VLAN outside the accepted range.
 
