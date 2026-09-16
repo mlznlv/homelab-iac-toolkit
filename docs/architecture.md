@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, the first M6 Proxmox expansion, multiple VM network attachments, DHCP addressing for the primary VM attachment, and the first reusable LXC capability. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
+This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, the first M6 Proxmox expansion, multiple VM network attachments, DHCP addressing for the primary VM attachment, static IPv6 for the primary VM attachment, and the first reusable LXC capability. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
 
 ## Repository boundary
 
@@ -119,7 +119,7 @@ Locally decidable invalid inputs fail early and clearly. Runtime prerequisites r
 
 ### Deferred from the first slice
 
-At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6, the later multiple-attachment contract, the DHCP addressing mode, and the separate first LXC capability are defined later without changing first-slice ownership. Agent-based address discovery stays deferred, and the DHCP decision rejects it outright.
+At acceptance, the first slice deferred template lifecycle, disk mutation, linked clones, DHCP or agent-based address discovery, IPv6, VLAN inputs, multiple network interfaces, LXC, HA, generated inventory, automatic Task wiring, live infrastructure tests, runtime distribution validation, and release behavior. Its cross-component consumer and release contracts are defined separately below, and the optional single-NIC access-VLAN contract selected for M6, the later multiple-attachment contract, the DHCP addressing mode, static IPv6, and the separate first LXC capability are defined later without changing first-slice ownership. Agent-based address discovery stays deferred, and the DHCP decision rejects it outright; stateless autoconfiguration, DHCPv6, and IPv6-only addressing stay deferred too.
 
 ## Initial separate-repository consumer contract
 
@@ -294,7 +294,7 @@ Before implementation receives an Architecture `ACCEPT` verdict, its pull reques
 
 Public validation does not prove that devices hot-plug or unplug successfully, that a guest names, configures, or brings up an interface, that cloud-init re-applies configuration or regenerates host keys on a given template, reachability through any attachment, or routing between attachments.
 
-DHCP on additional attachments, IPv6 on any attachment, gateways or routes on additional attachments, VLAN trunks, NIC models, firewall, MTU, rate limit, queue, and link-state settings, bridge discovery or management, network orchestration, and guest-network configuration remain deferred. DHCP for the primary attachment is defined [below](#dhcp-addressing-for-the-primary-vm-attachment). Separate DHCP and IPv6 decisions must consume, not redefine, this decision's slot identity, primary-attachment connection source, eight-configuration limit, and addressing-change lifecycle.
+DHCP and IPv6 on additional attachments, gateways or routes on additional attachments, VLAN trunks, NIC models, firewall, MTU, rate limit, queue, and link-state settings, bridge discovery or management, network orchestration, and guest-network configuration remain deferred. DHCP and static IPv6 for the primary attachment are defined [below](#dhcp-addressing-for-the-primary-vm-attachment). Separate DHCP and IPv6 decisions must consume, not redefine, this decision's slot identity, primary-attachment connection source, eight-configuration limit, and addressing-change lifecycle.
 
 ## DHCP addressing for the primary VM attachment
 
@@ -344,6 +344,45 @@ Before implementation receives an Architecture `ACCEPT` verdict, its pull reques
 Public validation does not prove lease acquisition, DHCP service or reservation behavior, name registration, a guest's DHCP client, that the supplied connection host resolves to or reaches the guest, or reachability after a mode change.
 
 Proxmox SDN DHCP or IPAM integration, DHCP option management, lease or address discovery, and generated inventory remain deferred.
+
+## Static IPv6 for the primary VM attachment
+
+The Linux VM capability supports optional static IPv6 addressing on its primary attachment, alongside its IPv4 mode, as accepted in [ADR 0013](decisions/0013-static-ipv6-primary-attachment.md). It consumes the [multiple-attachment](#multiple-vm-network-attachments) and [DHCP](#dhcp-addressing-for-the-primary-vm-attachment) contracts and changes no module root, resource, or resource address.
+
+### IPv6 interface
+
+IPv6 is off by default, and a configuration that does not declare it plans exactly as it did before. When declared, it has:
+
+- a required IPv6 address with prefix length; and
+- an optional IPv6 gateway, which may be a global or a link-local address.
+
+It is added to the primary attachment's existing cloud-init IP configuration. It changes neither the attachment's IPv4 mode nor that mode's rules, so the attachment is dual-stack: an IPv4 mode, static or DHCP, remains required.
+
+The gateway is optional because the consumer's network may supply the IPv6 default route by router advertisement, and Proxmox treats it as optional. When the gateway is omitted, the toolkit makes no claim about where the guest's IPv6 default route comes from.
+
+DNS server addresses may be IPv4 or IPv6, and at least one remains required in every mode. Locally decidable invalid values fail before apply, including an IPv6 address without a prefix length, an IPv4 value in an IPv6 input, a gateway with a prefix length, a gateway without an address, and the non-address literals `auto`, `dhcp`, and `manual`, each of which Proxmox accepts in this field and none of which the pinned provider rejects.
+
+### Supported and deferred IPv6 modes
+
+Only static IPv6 is supported. Proxmox also accepts `auto` for stateless autoconfiguration, `dhcp` for DHCPv6, and `manual`, which configures no address at all, but the cloud-init version Debian 13 packages does not render the dynamic two consistently: its ENI renderer treats `auto` as stateless autoconfiguration, its netplan renderer turns every dynamic IPv6 form into DHCPv6, and its systemd-networkd renderer enables DHCPv6 only for `dhcp` and renders nothing specific for `auto`. A toolkit input for either would therefore mean different guest configurations depending on the template. All three renderers render a static IPv6 address and its gateway.
+
+Stateless autoconfiguration, DHCPv6, IPv6-only addressing, and IPv6 on additional attachments remain deferred.
+
+### IPv6 ownership and connection
+
+OpenTofu owns the declared IPv6 address and gateway. The consumer owns prefix allocation, address uniqueness, routing, router advertisements, upstream IPv6 service, and consistency between the address, gateway, and the attachment's network. Ansible gains no guest-network ownership.
+
+The `connection` output is unchanged. A declared IPv6 address never becomes `host` automatically, because that would silently change the published host for an existing consumer that adds IPv6. A consumer that wants to connect over IPv6 supplies the [connection host](#connection-host), which may be an IPv6 literal or a name.
+
+### IPv6 lifecycle and evidence
+
+Adding, changing, or removing IPv6 must update the existing VM in place. Each is an addressing change under the [attachment lifecycle](#attachment-lifecycle): on the pinned provider it reboots a running VM, and the next boot is a new cloud-init instance that re-applies network configuration and regenerates SSH host keys unless the template turns that off. Removing the declared address removes it from the cloud-init network data; it does not claim to remove IPv6 from the guest, which may still configure addresses from router advertisements. A provider behavior that plans VM replacement for an IPv6 change is a compatibility regression, and adoption is blocked pending Architecture review.
+
+Credential-free module and mock-provider tests must prove that IPv6 is absent by default and the configuration unchanged; the mapping of the address and optional gateway to the primary IP configuration alongside both IPv4 modes; the rejected values above; that IPv6 is not accepted on additional attachments; IPv4 and IPv6 DNS server acceptance; the unchanged `connection` output, including with IPv6 declared; and the unchanged module resource address. Those tests may not by themselves claim that the provider updates the VM in place.
+
+Before implementation receives an Architecture `ACCEPT` verdict, its pull request must record provider-level evidence for the exact locked `bpg/proxmox` build showing no VM replacement when IPv6 is added, when its address or gateway changes, and when it is removed, and how the primary IP configuration is planned in each. As for [the VLAN evidence gate](#vlan-lifecycle-and-evidence), Architecture requires the evidence, not one permanent mechanism, and provider upgrades must re-evaluate it.
+
+Public validation does not prove IPv6 configuration in a guest, a template's cloud-init renderer, routing, router-advertisement behavior, reachability over IPv6, or the absence of other IPv6 addresses the guest configures for itself.
 
 ## First reusable LXC capability
 
