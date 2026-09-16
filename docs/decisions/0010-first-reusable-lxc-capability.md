@@ -13,6 +13,8 @@ M6 requires reusable LXC support alongside the Linux VM capability. A container 
 - **Unprivileged is not the provider default.** Proxmox itself creates an unprivileged container unless asked otherwise and requires elevated host privilege for a privileged one, but the provider defaults `unprivileged` to `false`.
 - **DNS has a host fallback.** When no nameserver is configured, Proxmox copies the node's own resolvers into the container.
 - **Updates and destroy disrupt.** The provider reboots a running container after a network, DNS, or hostname change, and destroy shuts the container down with a forced stop when its timeout expires.
+- **Reading a container waits briefly for an address.** When a started container has a network interface, the provider's read path asks Proxmox for its interfaces and waits up to ten seconds. Omitting the wait-for-IP block, or setting both of its options to false, selects waiting for any address rather than none. A timeout is logged as a warning, not returned as an error, so a guest that has not configured an address delays a read without failing it.
+- **Containers start with their host unless told otherwise.** The provider defaults `start_on_boot` to true and sends it in the create request, so a module that says nothing about it still produces containers that start after a host reboot.
 - **Systemd-based guests may need nesting.** Proxmox warns that a container running systemd newer than version 241 without the nesting feature may need it, and the provider defaults nesting to off.
 
 These sources establish the basis for a public interface and an implementation evidence gate. They are source inspection, not live toolkit evidence.
@@ -31,7 +33,9 @@ The consumer supplies the container name, which the module sets as the provider'
 
 OpenTofu owns the container resource, its network interface, and its root filesystem. The consumer owns the node, storage, bridge, addresses, sizing, identifiers, template, private keys, and all configuration inside the container after creation. Bootstrap keys give OpenTofu no continuing ownership of root's authorized keys, users, or SSH configuration.
 
-The module exposes a required, non-sensitive `connection` output of `host`, `user`, and `port`: the declared IPv4 address without its prefix, `root`, and a port metadata value defaulting to `22`. It neither waits for nor publishes a provider-reported container address.
+The module exposes a required, non-sensitive `connection` output of `host`, `user`, and `port`: the declared IPv4 address without its prefix, `root`, and a port metadata value defaulting to `22`. It publishes no provider-reported container address, and `host` never depends on one. The provider's read path still waits up to ten seconds for a started container to report an address and warns on timeout; that bounded, non-fatal wait is the provider's, and the module neither configures nor consumes it.
+
+The module declares start-on-boot explicitly rather than leaving the provider's default implicit, and declares it so that a container starts again when its host boots. That is the operational default this capability chooses, not an inherited one, and the module's own contract checks assert it. A consumer override and startup ordering remain deferred.
 
 Network, DNS, and name changes and root-filesystem growth update the container in place, restarting a running container. Changing dedicated memory also updates in place and restarts it; changing CPU cores updates in place without a restart. Enabling or disabling nesting updates the configuration in place, but the provider requests no restart for it, so it takes effect only when the container next starts, and the module documents that rather than implying the change is live.
 
@@ -52,6 +56,8 @@ Normal public validation remains credential-free and does not claim successful c
 - A network, DNS, name, or dedicated-memory change reboots a running container on the pinned provider, so an interruption is expected. A CPU-cores change does not.
 - Nesting is on by default, which trades a broader container profile for systemd guests that behave as Proxmox expects. Changing it later is not live: the container keeps running with its previous profile until it is restarted.
 - Destroy follows the provider's default timeouts, so a consumer who needs a longer graceful shutdown than 55 seconds has no input for it in this slice.
+- Containers come back when their host reboots. That is a deliberate choice rather than an inherited default, and a consumer who wants a container to stay down after a host reboot has no input for it in this slice.
+- Reading a started container can take up to ten seconds longer while the provider waits for it to report an address. The wait is bounded and non-fatal, and no toolkit output depends on its result.
 - Module and mock-provider tests establish the public contract, but cannot alone establish the provider's in-place and replacement behavior.
 - The `qemu_guest_agent` role does not apply to containers, and no container-specific Ansible role is introduced.
 
@@ -65,6 +71,9 @@ Normal public validation remains credential-free and does not claim successful c
 - **Bootstrap with a password:** rejected. Key-based bootstrap is sufficient, and a password would be sensitive state the toolkit does not need.
 - **Make DNS servers optional:** rejected. The Proxmox fallback would silently copy node-specific resolvers into a reusable component's result.
 - **Include mount points, bind mounts, device passthrough, or ID mapping:** deferred. Each introduces storage or host-access ownership decisions beyond the smallest useful slice.
+- **Leave `start_on_boot` unset:** rejected. The provider would still start every container with its host, so the operational default would be real but invisible, decided by a provider default rather than by this capability and absent from its contract checks.
+- **Declare start-on-boot off:** rejected. A container that does not return after a host reboot is the more surprising default for the reusable capability this slice describes.
+- **Expose start-on-boot as a consumer input now:** deferred. The demonstrated need is a container that comes back after a host reboot; an override belongs with startup ordering when something needs either.
 - **Include VLAN tags, multiple interfaces, DHCP, or IPv6:** deferred. The VM decisions for those capabilities do not transfer, because Proxmox configures container networking itself rather than through cloud-init.
 
 ## Sources
@@ -82,6 +91,12 @@ Normal public validation remains credential-free and does not claim successful c
 - [`bpg/proxmox` v0.111.1 container DNS, hostname, and network updates requiring reboot](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L3832-L4051)
 - [`bpg/proxmox` v0.111.1 container reboot after update](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L4162-L4174)
 - [`bpg/proxmox` v0.111.1 container destroy with forced stop](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L4204-L4236)
+- [`bpg/proxmox` v0.111.1 container `start_on_boot` default](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L98)
+- [`bpg/proxmox` v0.111.1 container `start_on_boot` schema](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L1072-L1078)
+- [`bpg/proxmox` v0.111.1 container create request sends `start_on_boot`](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L2180-L2207)
+- [`bpg/proxmox` v0.111.1 container read waits for network interfaces](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L3477-L3509)
+- [`bpg/proxmox` v0.111.1 omitted wait-for-IP block selects waiting for any address](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L4259-L4283)
+- [`bpg/proxmox` v0.111.1 container network-interface wait behaviour](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmox/nodes/containers/containers.go#L174-L218)
 - [Proxmox container create applies keys, network, hostname, and DNS through the setup plugin](https://github.com/proxmox/pve-container/blob/1c0488315a1df22a9bba635a81e7543b5ce664b7/src/PVE/LXC/Setup/Base.pm#L718-L736)
 - [Proxmox `unmanaged` setup plugin no-ops](https://github.com/proxmox/pve-container/blob/1c0488315a1df22a9bba635a81e7543b5ce664b7/src/PVE/LXC/Setup/Unmanaged.pm#L19-L85)
 - [Proxmox container DNS host fallback](https://github.com/proxmox/pve-container/blob/1c0488315a1df22a9bba635a81e7543b5ce664b7/src/PVE/LXC/Setup/Base.pm#L33-L54)

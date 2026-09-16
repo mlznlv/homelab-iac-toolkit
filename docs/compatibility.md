@@ -34,6 +34,8 @@ The first reusable LXC capability, `proxmox-linux-container`, targets the same P
 
 Its lifecycle contract is that network, DNS, name, memory, CPU, and nesting changes and root-filesystem growth preserve the container, while template, datastore, node, and identifier changes and root-filesystem shrinking replace it. A bootstrap-key change preserves it too, but only because the module declines to act on one: the provider would otherwise force replacement. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted; a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans replacement for a change the contract preserves is blocked pending Architecture review.
 
+Two further behaviours of the pinned build belong to this contract. Containers start again when their host boots, because the module declares start-on-boot rather than inheriting the provider's default. And reading a started container that has an interface waits up to ten seconds for it to report an address, warning rather than failing on timeout; that wait is the provider's, and no toolkit output depends on what it returns.
+
 ### Container template contract
 
 When implemented, the `proxmox-linux-container` module will require a consumer-supplied Proxmox container template that:
@@ -82,7 +84,7 @@ The first slice requires public, credential-free static and contract validation 
 
 The approved VLAN expansion additionally requires credential-free module evidence for its default, accepted and rejected values, provider-field mapping, use of the existing single network device and module resource address, unchanged static-network and `connection` interfaces, and explicit exclusions. Module or mock-provider tests establish that module contract, not the provider's in-place lifecycle behavior; the separate provider-level evidence gate above establishes the no-replacement claim.
 
-The approved LXC capability requires credential-free module evidence for its required inputs and validation, template-based creation, Debian operating-system type, unprivileged mode, nesting default and override, single static network interface, password-free bootstrap keys, root-filesystem inputs, `connection` output, and exclusions. Its replacement and in-place claims rest on the separate provider-level evidence gate above, not on those tests.
+The approved LXC capability requires credential-free module evidence for its required inputs and validation, template-based creation, Debian operating-system type, unprivileged mode, nesting default and override, the explicit start-on-boot declaration, single static network interface, password-free bootstrap keys, root-filesystem inputs, `connection` output, and exclusions. Its replacement and in-place claims rest on the separate provider-level evidence gate above, not on those tests.
 
 This evidence does not demonstrate:
 
@@ -94,6 +96,7 @@ This evidence does not demonstrate:
 - that adding or removing the channel behaves as described on a running VM;
 - successful VLAN application or update, suitable VLAN-aware bridge configuration, upstream switching or routing, guest reachability, uninterrupted SSH, or zero-downtime VLAN changes;
 - successful container creation, template compatibility, in-container network, DNS, or key configuration, sufficiency of the nesting setting, container reboot, shutdown, forced stop, or destroy behavior;
+- that a container starts after a host reboot, or that one reports an address within the bounded wait the provider's read path performs;
 - a consumer's checkout-acquisition mechanism; or
 - compatibility with a live consumer environment.
 
