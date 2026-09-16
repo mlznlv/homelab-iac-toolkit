@@ -27,13 +27,19 @@ It is a new OpenTofu module at `tofu/modules/proxmox-linux-container/`, separate
 
 The container is created from a template volume that already exists on Proxmox storage; the consumer acquires and maintains the template. The module declares the Debian operating-system type, always creates an unprivileged container, and enables nesting by default with a consumer override; it exposes no other container feature.
 
-The consumer supplies the container name, which Proxmox keeps as the container's hostname and which must therefore be a valid DNS name, and an optional identifier, node, template, root-filesystem datastore and size, CPU cores, and dedicated memory. The container has exactly one network interface on one consumer-selected bridge, with a required static IPv4 CIDR, gateway, and at least one DNS server. Root's SSH public keys are required creation-time bootstrap; no password is set.
+The consumer supplies the container name, which the module sets as the provider's `initialization.hostname` and which must therefore be a valid DNS name, and an optional identifier, node, template, root-filesystem datastore and size, CPU cores, and dedicated memory. A port value, defaulting to `22`, is published in `connection` as metadata and configures nothing, as the VM module's `ssh_port` does. The container has exactly one network interface on one consumer-selected bridge, with a required static IPv4 CIDR, gateway, and at least one DNS server. Root's SSH public keys are required creation-time bootstrap; no password is set.
 
 OpenTofu owns the container resource, its network interface, and its root filesystem. The consumer owns the node, storage, bridge, addresses, sizing, identifiers, template, private keys, and all configuration inside the container after creation. Bootstrap keys give OpenTofu no continuing ownership of root's authorized keys, users, or SSH configuration.
 
 The module exposes a required, non-sensitive `connection` output of `host`, `user`, and `port`: the declared IPv4 address without its prefix, `root`, and a port metadata value defaulting to `22`. It neither waits for nor publishes a provider-reported container address.
 
-Network, DNS, and name changes, enabling or disabling nesting, and root-filesystem growth update the container in place. Template, datastore, node, and identifier changes and root-filesystem shrinking replace it and are documented as destructive. A later change to the bootstrap keys must not replace the container. The module exposes no timeout or destroy-policy input, so the provider's own defaults govern the shutdown destroy allows before it forces a stop. Before implementation can be accepted, its pull request records provider-level evidence for these behaviors from the exact locked provider build, separately from module or mock-provider contract tests.
+Network, DNS, and name changes and root-filesystem growth update the container in place, restarting a running container. Changing dedicated memory also updates in place and restarts it; changing CPU cores updates in place without a restart. Enabling or disabling nesting updates the configuration in place, but the provider requests no restart for it, so it takes effect only when the container next starts, and the module documents that rather than implying the change is live.
+
+Template, datastore, node, and identifier changes and root-filesystem shrinking replace the container and are documented as destructive. A size decrease cannot be rejected before apply, because module validation cannot see the prior size; it reaches the consumer as a planned replacement, which plan review is the control for.
+
+The pinned provider treats root's bootstrap keys as replacement-forcing, so leaving that behaviour exposed would make key rotation destroy the container. The module therefore ignores changes to the bootstrap key attribute on its own resource: a later key change produces no plan at all rather than a replacement, and rotating root's keys is guest configuration.
+
+The module exposes no timeout or destroy-policy input. Destroy asks Proxmox to shut the container down with forcing already enabled and a timeout five seconds shorter than the provider's delete timeout, so under the defaults the guest gets 55 seconds before Proxmox stops it. Before implementation can be accepted, its pull request records provider-level evidence for these behaviors from the exact locked provider build, separately from module or mock-provider contract tests.
 
 Normal public validation remains credential-free and does not claim successful container creation, template compatibility, in-container configuration, reachability, or reboot, shutdown, forced-stop, or destroy behavior. Exact inputs, examples, and validation implementation remain in their owning component and validation sources rather than this ADR.
 
@@ -42,10 +48,10 @@ Normal public validation remains credential-free and does not claim successful c
 - Consumers gain a container capability without changing the VM module, its interface, or its consumers.
 - A consumer must supply a Debian container template with an SSH server that accepts root public-key login; template acquisition stays consumer-owned.
 - Replacement-forcing changes destroy the container and its root filesystem. The module documents them, and plan review remains the consumer's control.
-- Updating bootstrap keys through OpenTofu has no effect on an existing container; rotating root's keys is guest configuration.
-- A network, DNS, or name change reboots a running container on the pinned provider, so an interruption is expected.
-- Nesting is on by default, which trades a broader container profile for systemd guests that behave as Proxmox expects.
-- Destroy follows the provider's default timeouts, so a consumer who needs a longer shutdown or a different destroy policy has no input for it in this slice.
+- Because the module ignores later changes to the bootstrap keys, editing them produces no plan, not even a no-op diff. A consumer who expects OpenTofu to rotate root's keys will see nothing happen, which is the intended bootstrap-only semantics but must be documented plainly.
+- A network, DNS, name, or dedicated-memory change reboots a running container on the pinned provider, so an interruption is expected. A CPU-cores change does not.
+- Nesting is on by default, which trades a broader container profile for systemd guests that behave as Proxmox expects. Changing it later is not live: the container keeps running with its previous profile until it is restarted.
+- Destroy follows the provider's default timeouts, so a consumer who needs a longer graceful shutdown than 55 seconds has no input for it in this slice.
 - Module and mock-provider tests establish the public contract, but cannot alone establish the provider's in-place and replacement behavior.
 - The `qemu_guest_agent` role does not apply to containers, and no container-specific Ansible role is introduced.
 
@@ -65,7 +71,11 @@ Normal public validation remains credential-free and does not claim successful c
 
 - [`bpg/proxmox` v0.111.1 container `unmanaged` operating-system default](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L91)
 - [`bpg/proxmox` v0.111.1 container bootstrap account replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L642-L676)
-- [`bpg/proxmox` v0.111.1 container template replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L995-L1013)
+- [`bpg/proxmox` v0.111.1 container template replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L993-L1006)
+- [`bpg/proxmox` v0.111.1 container hostname must be a valid DNS name](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L569-L575)
+- [`bpg/proxmox` v0.111.1 container memory change requires a reboot](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L3867-L3886)
+- [`bpg/proxmox` v0.111.1 container CPU change without a reboot](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L3603-L3633)
+- [`bpg/proxmox` v0.111.1 container features change without a reboot](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L3728-L3735)
 - [`bpg/proxmox` v0.111.1 container root-filesystem datastore replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L408-L414)
 - [`bpg/proxmox` v0.111.1 container unprivileged default and replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L1152-L1158)
 - [`bpg/proxmox` v0.111.1 container root-filesystem shrink replacement](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L1182-L1228)

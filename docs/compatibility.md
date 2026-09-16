@@ -32,11 +32,11 @@ This provider-level lifecycle evidence is distinct from runtime compatibility. I
 
 The first reusable LXC capability, `proxmox-linux-container`, targets the same PVE 9.x major and `bpg/proxmox` provider line as the VM module, through the `proxmox_virtual_environment_container` resource. It selects no other provider line or resource family.
 
-Its lifecycle contract is that network, DNS, name, and bootstrap-key changes and root-filesystem growth preserve the container, while template, datastore, node, and identifier changes and root-filesystem shrinking replace it. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted; a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans replacement for a change the contract preserves is blocked pending Architecture review.
+Its lifecycle contract is that network, DNS, name, memory, CPU, and nesting changes and root-filesystem growth preserve the container, while template, datastore, node, and identifier changes and root-filesystem shrinking replace it. A bootstrap-key change preserves it too, but only because the module declines to act on one: the provider would otherwise force replacement. As for VLAN, that contract is backed by provider-level evidence for the exact locked build recorded before implementation is accepted; a build merely allowed by the version constraint does not acquire it until reviewed, and a provider that plans replacement for a change the contract preserves is blocked pending Architecture review.
 
-## Container template contract
+### Container template contract
 
-The `proxmox-linux-container` module requires a consumer-supplied Proxmox container template that:
+When implemented, the `proxmox-linux-container` module will require a consumer-supplied Proxmox container template that:
 
 - is a Debian root filesystem that Proxmox recognizes and configures through its Debian operating-system type;
 - starts under an init system compatible with an unprivileged container and the nesting setting the consumer chooses; and
