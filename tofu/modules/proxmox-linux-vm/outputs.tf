@@ -11,6 +11,11 @@ output "connection" {
   }
 }
 
+output "mac_addresses" {
+  description = "MAC address of every network attachment, in slot order: the primary attachment's first, then each additional attachment's. A declared address is reported as given; the others are the ones Proxmox assigned."
+  value       = proxmox_virtual_environment_vm.this.network_device[*].mac_address
+}
+
 output "vm_id" {
   description = "Identifier of the created VM, whether it was supplied or assigned by Proxmox."
   value       = proxmox_virtual_environment_vm.this.vm_id

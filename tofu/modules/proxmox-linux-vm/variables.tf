@@ -63,7 +63,7 @@ variable "memory_mib" {
 }
 
 variable "network_bridge" {
-  description = "Proxmox network bridge to attach the VM's single network device to, such as vmbr0."
+  description = "Proxmox network bridge to attach the VM's primary network device, net0, to, such as vmbr0."
   type        = string
 
   validation {
@@ -170,12 +170,63 @@ variable "ssh_port" {
 }
 
 variable "network_vlan_id" {
-  description = "Access VLAN tag for the VM's single network device, a whole number from 1 to 4094. Null, the default, leaves the device untagged and still attached. The bridge's configuration, upstream switching and routing, and a static address that belongs on the chosen VLAN are the consumer's. Changing the tag of an existing VM interrupts the guest's network link."
+  description = "Access VLAN tag for the VM's primary network device, a whole number from 1 to 4094. Null, the default, leaves the device untagged and still attached. The bridge's configuration, upstream switching and routing, and a static address that belongs on the chosen VLAN are the consumer's. Changing the tag of an existing VM interrupts the guest's network link."
   type        = number
   default     = null
 
   validation {
     condition     = var.network_vlan_id == null || (var.network_vlan_id == floor(var.network_vlan_id) && var.network_vlan_id >= 1 && var.network_vlan_id <= 4094)
     error_message = "The network_vlan_id must be null for an untagged device, or a whole number in the VLAN range 1 to 4094."
+  }
+}
+
+variable "additional_network_attachments" {
+  description = "Network attachments after the primary one, in slot order: the first is net1, the next net2, and so on, with the same index for its cloud-init IP configuration. At most seven, for eight attachments in total. Each needs a bridge and may declare an access VLAN tag from 1 to 4094, a static IPv4 address in CIDR notation, and a MAC address; only the primary attachment has a gateway. An attachment's identity is its position, so removing or reordering any but the last re-maps every later slot. See the README before changing an existing VM."
+  type = list(object({
+    bridge            = string
+    vlan_id           = optional(number)
+    ipv4_address_cidr = optional(string)
+    mac_address       = optional(string)
+  }))
+  default  = []
+  nullable = false
+
+  validation {
+    condition     = length(var.additional_network_attachments) <= 7
+    error_message = "At most seven additional network attachments are supported, for eight in total with the primary attachment."
+  }
+
+  validation {
+    condition = alltrue([
+      for attachment in var.additional_network_attachments :
+      can(regex("^[a-zA-Z][a-zA-Z0-9._-]{0,14}$", attachment.bridge))
+    ])
+    error_message = "Every additional network attachment must be an object whose bridge is a Linux interface name: a letter followed by at most 14 letters, digits, dots, hyphens, or underscores."
+  }
+
+  validation {
+    condition = alltrue([
+      for attachment in var.additional_network_attachments :
+      try(attachment.vlan_id == null || (attachment.vlan_id == floor(attachment.vlan_id) && attachment.vlan_id >= 1 && attachment.vlan_id <= 4094), false)
+    ])
+    error_message = "An additional network attachment's vlan_id must be null for an untagged device, or a whole number in the VLAN range 1 to 4094."
+  }
+
+  validation {
+    condition = alltrue([
+      for attachment in var.additional_network_attachments :
+      try(attachment.ipv4_address_cidr == null || can(cidrnetmask(attachment.ipv4_address_cidr)), false)
+    ])
+    error_message = "An additional network attachment's ipv4_address_cidr must be null or an IPv4 address with a prefix length, such as 198.51.100.10/24."
+  }
+
+  # Proxmox refuses a MAC address with the group bit, the lowest bit of the
+  # first octet, set.
+  validation {
+    condition = alltrue([
+      for attachment in var.additional_network_attachments :
+      try(attachment.mac_address == null || (can(regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$", attachment.mac_address)) && parseint(substr(attachment.mac_address, 0, 2), 16) % 2 == 0), false)
+    ])
+    error_message = "An additional network attachment's mac_address must be null or a unicast MAC address written as six colon-separated hexadecimal octets, such as 00:00:5E:00:53:01."
   }
 }

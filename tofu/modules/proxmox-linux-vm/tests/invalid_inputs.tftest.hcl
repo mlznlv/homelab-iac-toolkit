@@ -216,3 +216,141 @@ run "a_vlan_identifier_above_the_vlan_range_is_rejected" {
 
   expect_failures = [var.network_vlan_id]
 }
+
+# Additional attachments. The MAC addresses come from the ranges RFC 7042
+# reserves for documentation.
+
+run "more_than_eight_attachments_in_total_are_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [for slot in range(1, 9) : { bridge = "vmbr${slot}" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "an_additional_attachment_that_is_null_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [null]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "an_additional_attachment_without_a_bridge_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = null }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "an_additional_bridge_that_is_not_an_interface_name_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1 and another" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "an_additional_vlan_identifier_of_zero_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", vlan_id = 0 }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "a_fractional_additional_vlan_identifier_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", vlan_id = 1.5 }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "an_additional_vlan_identifier_above_the_vlan_range_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", vlan_id = 4095 }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "an_additional_address_without_a_prefix_length_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", ipv4_address_cidr = "198.51.100.10" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "an_additional_ipv6_address_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", ipv4_address_cidr = "2001:db8::10/64" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+# Duplicates are compared by address, whatever prefix length each carries.
+run "two_additional_attachments_with_the_same_address_are_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", ipv4_address_cidr = "198.51.100.10/24" },
+      { bridge = "vmbr2", ipv4_address_cidr = "198.51.100.10/25" },
+    ]
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "an_additional_attachment_with_the_primary_address_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", ipv4_address_cidr = "192.0.2.10/24" }]
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "a_malformed_mac_address_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", mac_address = "00-00-5E-00-53-01" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+# Proxmox refuses a MAC address with the group bit set, so the module does too.
+run "a_multicast_mac_address_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", mac_address = "01:00:5E:90:10:01" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
