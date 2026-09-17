@@ -166,3 +166,240 @@ run "a_vlan_tag_leaves_the_network_and_connection_contracts_unchanged" {
     error_message = "A VLAN tag must not change the connection output."
   }
 }
+
+# These runs show additional attachments reaching the device and cloud-init
+# lists at the declared positions. They do not show that Proxmox plugs or
+# unplugs a device, that a guest configures an interface, or that the provider
+# changes any of it in place: that is provider behaviour, which a mock cannot
+# exercise. The MAC addresses come from the range RFC 7042 reserves for
+# documentation.
+
+run "additional_attachments_take_the_next_slots_in_declared_order" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr2" },
+      { bridge = "vmbr1" },
+    ]
+  }
+
+  # The declared order is deliberately not alphabetical, so a module that
+  # sorted its attachments would fail here.
+  assert {
+    condition     = [for device in proxmox_virtual_environment_vm.this.network_device : device.bridge] == ["vmbr0", "vmbr2", "vmbr1"]
+    error_message = "The primary attachment must be net0, followed by each additional attachment in the declared order."
+  }
+}
+
+run "an_additional_attachment_maps_its_bridge_vlan_address_and_mac" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      {
+        bridge            = "vmbr1"
+        vlan_id           = 4094
+        ipv4_address_cidr = "198.51.100.10/24"
+        mac_address       = "00:00:5E:00:53:01"
+      },
+    ]
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[1].bridge == "vmbr1"
+    error_message = "The additional attachment's bridge must reach net1."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[1].vlan_id == 4094
+    error_message = "The additional attachment's VLAN must reach net1."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[1].mac_address == "00:00:5E:00:53:01"
+    error_message = "The additional attachment's declared MAC address must reach net1 as given."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv4[0].address == "198.51.100.10/24"
+    error_message = "The additional attachment's address must reach cloud-init IP configuration 1."
+  }
+}
+
+run "an_additional_attachment_is_untagged_and_keeps_an_assigned_mac_unless_declared" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1" },
+    ]
+  }
+
+  # The mock applies no provider defaults, so unset values plan as null here.
+  # The real provider plans an unset tag as untagged, and an unset MAC address
+  # as the one Proxmox assigns.
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[1].vlan_id == null
+    error_message = "An additional attachment without vlan_id must leave its device's tag unset."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[1].mac_address == null
+    error_message = "An additional attachment without mac_address must leave its device's MAC address to Proxmox."
+  }
+}
+
+run "only_the_primary_attachment_carries_a_gateway" {
+  command = plan
+
+  # gateway is not an attribute of an additional attachment. OpenTofu drops an
+  # attribute the type does not declare, so this proves it goes nowhere.
+  variables {
+    additional_network_attachments = [
+      {
+        bridge            = "vmbr1"
+        ipv4_address_cidr = "198.51.100.10/24"
+        gateway           = "198.51.100.1"
+      },
+    ]
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == "192.0.2.1"
+    error_message = "The primary attachment must keep its declared gateway."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv4[0].gateway == null
+    error_message = "An additional attachment must never carry a gateway."
+  }
+}
+
+run "an_addressless_attachment_after_the_last_addressed_slot_declares_no_ip_configuration" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", ipv4_address_cidr = "198.51.100.10/24" },
+      { bridge = "vmbr2" },
+    ]
+  }
+
+  # The provider reads back cloud-init IP configurations only up to the last
+  # one Proxmox holds, so a trailing empty entry would never match its state.
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.network_device) == 3
+    error_message = "The addressless attachment must still be attached, at net2."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config) == 2
+    error_message = "No cloud-init IP configuration may be declared after the last addressed slot."
+  }
+}
+
+run "an_addressless_attachment_before_an_addressed_one_keeps_its_slot_empty" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1" },
+      { bridge = "vmbr2", ipv4_address_cidr = "203.0.113.10/24" },
+    ]
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config) == 3
+    error_message = "The addressed attachment at net2 must keep IP configuration index 2."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv4) == 0 && length(proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv6) == 0
+    error_message = "The addressless attachment's IP configuration entry must declare nothing."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[2].ipv4[0].address == "203.0.113.10/24"
+    error_message = "The addressed attachment's address must reach IP configuration 2, not 1."
+  }
+}
+
+run "eight_attachments_in_total_are_accepted" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      for slot in range(1, 8) : {
+        bridge            = "vmbr${slot}"
+        ipv4_address_cidr = "198.51.100.${slot}/24"
+      }
+    ]
+  }
+
+  assert {
+    condition     = [for device in proxmox_virtual_environment_vm.this.network_device : device.bridge] == [for slot in range(8) : "vmbr${slot}"]
+    error_message = "All eight attachments must be attached, each at its own slot."
+  }
+
+  assert {
+    condition     = [for config in proxmox_virtual_environment_vm.this.initialization[0].ip_config : config.ipv4[0].address] == concat(["192.0.2.10/24"], [for slot in range(1, 8) : "198.51.100.${slot}/24"])
+    error_message = "All eight attachments must reach cloud-init, each at its own IP configuration index."
+  }
+}
+
+run "additional_attachments_leave_the_primary_and_connection_contracts_unchanged" {
+  command = plan
+
+  variables {
+    network_vlan_id = 42
+    additional_network_attachments = [
+      { bridge = "vmbr1", vlan_id = 4094, ipv4_address_cidr = "198.51.100.10/24" },
+    ]
+  }
+
+  # Without this, the run would pass just as well if the attachment never
+  # arrived.
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.network_device) == 2
+    error_message = "The additional attachment must be attached for this run to show that it leaves the primary unchanged."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[0].bridge == "vmbr0" && proxmox_virtual_environment_vm.this.network_device[0].vlan_id == 42 && proxmox_virtual_environment_vm.this.network_device[0].mac_address == null
+    error_message = "An additional attachment must not change the primary attachment's device."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.10/24" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == "192.0.2.1"
+    error_message = "An additional attachment must not change the primary attachment's address or gateway."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].dns[0].servers == tolist(["192.0.2.53"])
+    error_message = "An additional attachment must not change the declared DNS servers."
+  }
+
+  assert {
+    condition     = output.connection == { host = "192.0.2.10", user = "fictional", port = 22 }
+    error_message = "An additional attachment must not change the connection output."
+  }
+}
+
+# The output needs applied values, so this run applies against the mock. It
+# creates nothing. The mock does not assign MAC addresses the way Proxmox does,
+# so an undeclared one is null here.
+run "the_mac_output_reports_every_attachment_in_slot_order" {
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", mac_address = "00:00:5E:00:53:02" },
+      { bridge = "vmbr2" },
+      { bridge = "vmbr3", mac_address = "00:00:5e:00:53:01" },
+    ]
+  }
+
+  assert {
+    condition     = output.mac_addresses == tolist([proxmox_virtual_environment_vm.this.network_device[0].mac_address, "00:00:5E:00:53:02", null, "00:00:5e:00:53:01"])
+    error_message = "mac_addresses must list the primary and every additional attachment's MAC address, in slot order."
+  }
+}

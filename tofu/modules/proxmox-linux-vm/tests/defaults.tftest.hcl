@@ -66,7 +66,7 @@ run "one_full_clone_of_the_declared_template" {
 
   assert {
     condition     = length(proxmox_virtual_environment_vm.this.network_device) == 1
-    error_message = "The module attaches exactly one network device."
+    error_message = "Without additional attachments, the module attaches exactly one network device."
   }
 
   assert {
@@ -150,6 +150,25 @@ run "the_network_device_is_untagged_by_default" {
   assert {
     condition     = proxmox_virtual_environment_vm.this.network_device[0].enabled != false && proxmox_virtual_environment_vm.this.network_device[0].disconnected != true
     error_message = "An untagged device must not be disabled or disconnected."
+  }
+}
+
+run "only_the_primary_attachment_exists_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.network_device) == 1
+    error_message = "With no additional_network_attachments, the VM must have only the primary network device."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config) == 1
+    error_message = "With no additional_network_attachments, only the primary attachment may declare a cloud-init IP configuration."
+  }
+
+  assert {
+    condition     = length(output.mac_addresses) == 1
+    error_message = "With no additional_network_attachments, mac_addresses must report only the primary attachment."
   }
 }
 
