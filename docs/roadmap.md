@@ -3,10 +3,10 @@
 ## Current state
 
 - **Current phase:** M6 — Broader Proxmox infrastructure
-- **Milestone state:** M1 through M5 are complete. The first M6 expansion is accepted through ADR 0009.
-- **Implementation state:** Optional VLAN tagging on the existing Linux VM module is the current execution focus.
-- **Current blocker:** None at milestone level. Additional VM data disks remain independently blocked in Issue #80.
-- **Next action:** Implement the accepted optional VLAN capability through one focused Developer Issue.
+- **Milestone state:** M1 through M5 are complete. The first M6 VLAN increment is merged, and Architecture for multiple VM attachments, DHCP, IPv6 and LXC is accepted.
+- **Implementation state:** Multiple VM attachments and the first LXC capability are the next independent implementation slices. DHCP and IPv6 follow their networking dependencies.
+- **Current blocker:** None for the next implementation slices. Additional VM data disks remain independently blocked in Issue #80.
+- **Next action:** Implement focused M6 Issues derived from the accepted Architecture, with provider lifecycle evidence reviewed before merge.
 
 ## Milestone sequence
 
@@ -295,13 +295,13 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 ## Near-term Developer work
 
-Near-term Developer work implements optional VLAN tagging on the existing Linux VM module through one focused GitHub Issue derived from ADR 0009. Issue-level scope, dependencies and execution state live in GitHub.
+Near-term Developer work implements the accepted multiple-attachment and LXC capabilities. DHCP follows multiple attachments, and IPv6 follows DHCP. Issue-level scope, dependencies and execution state live in GitHub.
 
 ## Deferred from current execution
 
-The following remains outside the current VLAN increment. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
+The following remains outside current executable work. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
 
-- Proxmox expansion beyond optional VLAN tagging, including additional VM data disks while Issue #80 remains blocked, and Ansible expansion beyond the first validated slice.
+- Additional VM data disks while Issue #80 remains blocked, other Proxmox expansion without demonstrated reusable need, and Ansible expansion beyond the first validated slice.
 - Generic dotfiles integration.
 - Live Proxmox testing outside an approved isolated path.
 - Stable 1.0 compatibility commitment.
