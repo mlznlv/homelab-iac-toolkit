@@ -2,9 +2,9 @@
 # template. Provider configuration and state remain consumer-owned.
 
 resource "proxmox_virtual_environment_container" "this" {
-  node_name    = var.node_name
-  vm_id        = var.container_id
-  unprivileged = true
+  node_name     = var.node_name
+  vm_id         = var.container_id
+  unprivileged  = true
   start_on_boot = true
 
   features {
