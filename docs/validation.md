@@ -109,13 +109,16 @@ python3 ansible/roles/qemu_guest_agent/tests/check-role-contract.py
 
 ansible-lint warns that this repository's `.yamllint` does not match the settings it would choose. That is expected: YAML here is linted by the check above, with the repository's own configuration.
 
-Format, initialise and validate the module, then run its contract tests. The lock is read only, so a provider no longer matching the committed `.terraform.lock.hcl` fails rather than being replaced silently. This step needs network access.
+Format, initialise and validate each module, then run its contract tests. The lock is read only, so a provider no longer matching the committed `.terraform.lock.hcl` fails rather than being replaced silently. This step needs network access.
 
 ```sh
 tofu fmt -check -recursive tofu/
 tofu -chdir=tofu/modules/proxmox-linux-vm init -input=false -backend=false -lockfile=readonly
 tofu -chdir=tofu/modules/proxmox-linux-vm validate
 tofu -chdir=tofu/modules/proxmox-linux-vm test
+tofu -chdir=tofu/modules/proxmox-linux-container init -input=false -backend=false -lockfile=readonly
+tofu -chdir=tofu/modules/proxmox-linux-container validate
+tofu -chdir=tofu/modules/proxmox-linux-container test
 ```
 
 Check that the module's `connection` output composes into ordinary Ansible inventory. Ansible reads the committed fixture back and the three published values must survive unchanged; that the output composes into exactly that document is asserted by the module's `tests/composition.tftest.hcl`.
@@ -160,7 +163,7 @@ None of the above reads OpenTofu state, generates inventory, contacts Proxmox, o
 | 10 | `validate:stop-hook` | `scripts/check-stop-hook.sh` |
 | 11 | `validate:secrets` | gitleaks |
 | 12 | `validate:ansible` | `ansible-playbook --syntax-check`, ansible-lint, the role contract check |
-| 13 | `validate:tofu` | `tofu fmt`, `tofu init`, `tofu validate`, `tofu test` |
+| 13 | `validate:tofu` | `tofu fmt`, then locked `tofu init`, `tofu validate`, and `tofu test` for each module |
 | 14 | `validate:composition` | `ansible-inventory`, `jq` |
 | 15 | `validate:example` | `tofu fmt`, the example's fixture check, the example contract check |
 | 16 | `validate:links` | lychee |

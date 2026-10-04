@@ -192,7 +192,7 @@ tasks:
         and (.fictional_guests.hosts == ["fictional-vm"])'
 
   validate:tofu:
-    desc: 'Components: check the OpenTofu module and run its contract tests. Needs public network access.'
+    desc: 'Components: check the OpenTofu modules and run their contract tests. Needs public network access.'
     cmds:
       # Formatting covers the test files too, which tofu fmt understands.
       - tofu fmt -check -recursive tofu/
@@ -202,9 +202,12 @@ tasks:
       # configure: the module declares none, and consumers own their own.
       - tofu -chdir=tofu/modules/proxmox-linux-vm init -input=false -backend=false -lockfile=readonly
       - tofu -chdir=tofu/modules/proxmox-linux-vm validate
+      - tofu -chdir=tofu/modules/proxmox-linux-vm test
+      - tofu -chdir=tofu/modules/proxmox-linux-container init -input=false -backend=false -lockfile=readonly
+      - tofu -chdir=tofu/modules/proxmox-linux-container validate
       # The tests mock the provider, so they contact no Proxmox endpoint, need
       # no credentials, and create nothing.
-      - tofu -chdir=tofu/modules/proxmox-linux-vm test
+      - tofu -chdir=tofu/modules/proxmox-linux-container test
 
   validate:example:
     desc: 'Components: check the separate-repository consumer example. Needs public network access.'
