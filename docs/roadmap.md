@@ -3,10 +3,10 @@
 ## Current state
 
 - **Current phase:** M6 — Broader Proxmox infrastructure
-- **Milestone state:** M1 through M5 are complete. VLAN is merged and ADRs 0010–0013 are accepted; the multiple-attachment lifecycle requires further Architecture review.
-- **Implementation state:** LXC [#99](https://github.com/mlznlv/homelab-iac-toolkit/issues/99) is Ready and independent. Multiple attachments [#98](https://github.com/mlznlv/homelab-iac-toolkit/issues/98) are Blocked; DHCP [#100](https://github.com/mlznlv/homelab-iac-toolkit/issues/100) follows #98, and IPv6 [#101](https://github.com/mlznlv/homelab-iac-toolkit/issues/101) follows #100.
-- **Current blocker:** Networking awaits Architecture [#103](https://github.com/mlznlv/homelab-iac-toolkit/issues/103). Additional VM data disks remain independently blocked in [#80](https://github.com/mlznlv/homelab-iac-toolkit/issues/80).
-- **Next action:** Complete LXC provider-lifecycle evidence and final Architecture review; resolve #103 before resuming the networking chain.
+- **Milestone state:** M1 through M5 are complete. VLAN is merged. The multiple-attachment lifecycle is accepted through [ADR 0014](decisions/0014-additional-attachment-retirement-lifecycle.md), which supersedes ADR 0011; LXC, DHCP and IPv6 Architecture remain accepted.
+- **Implementation state:** Multiple attachments [#98](https://github.com/mlznlv/homelab-iac-toolkit/issues/98) and LXC [#99](https://github.com/mlznlv/homelab-iac-toolkit/issues/99) are Ready and independent. DHCP [#100](https://github.com/mlznlv/homelab-iac-toolkit/issues/100) follows #98, and IPv6 [#101](https://github.com/mlznlv/homelab-iac-toolkit/issues/101) follows #100.
+- **Current blocker:** None for #98 or #99 implementation. DHCP and IPv6 await their implementation dependencies. Additional VM data disks remain independently blocked in [#80](https://github.com/mlznlv/homelab-iac-toolkit/issues/80).
+- **Next action:** Complete the multiple-attachment and LXC Issues, including provider-lifecycle evidence and final Architecture review before implementation merge.
 
 ## Milestone sequence
 
@@ -295,7 +295,7 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 ## Near-term Developer work
 
-LXC #99 can proceed independently. Multiple attachments #98 await Architecture #103; DHCP #100 follows #98, and IPv6 #101 follows #100. Issue-level specifications and execution state live in GitHub.
+Multiple attachments #98 and LXC #99 can proceed independently under accepted Architecture. DHCP #100 follows #98, and IPv6 #101 follows #100. Issue-level specifications and execution state live in GitHub.
 
 ## Deferred from current execution
 
