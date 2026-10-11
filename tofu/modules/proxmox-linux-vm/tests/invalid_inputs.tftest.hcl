@@ -355,6 +355,17 @@ run "an_additional_address_with_a_prefix_above_32_is_rejected" {
   expect_failures = [var.additional_network_attachments]
 }
 
+# Proxmox accepts a prefix length from 8 to 32.
+run "an_additional_address_with_a_prefix_below_8_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", ipv4_address_cidr = "198.51.100.10/7" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
 # Duplicates are compared by address, whatever prefix length each carries.
 run "two_additional_attachments_with_the_same_address_are_rejected" {
   command = plan

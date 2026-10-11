@@ -183,7 +183,7 @@ The addresses are from [RFC 5737](https://www.rfc-editor.org/info/rfc5737/) and 
 | Attribute | Meaning |
 | --- | --- |
 | `vlan_id` | Access VLAN tag, `1` to `4094`, with the same rules as [`network_vlan_id`](#vlan-tagging). Null leaves the device untagged. |
-| `ipv4_address_cidr` | Static IPv4 address with a prefix length. Null gives the attachment no cloud-init IP configuration of its own. |
+| `ipv4_address_cidr` | Static IPv4 address in dotted decimal with a prefix length from 8 to 32. Null gives the attachment no cloud-init IP configuration of its own. |
 | `mac_address` | Unicast MAC address written as six colon-separated hexadecimal octets, used as given. Null lets Proxmox assign one. |
 
 Declared MAC addresses must differ from one another, whatever letter case each is written in. That is a rule about what you declare in one configuration, and nothing more. The module does not compare a declared address with one a device already holds, whether Proxmox assigned it or the device kept it after you stopped declaring it, so declaring an address another device of the same VM has is not caught. It promises nothing about uniqueness on your network either.

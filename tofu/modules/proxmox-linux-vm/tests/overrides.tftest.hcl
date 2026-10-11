@@ -394,7 +394,7 @@ run "an_additional_address_may_use_the_octet_and_prefix_limits" {
   variables {
     additional_network_attachments = [
       { bridge = "vmbr1", ipv4_address_cidr = "203.0.113.255/32" },
-      { bridge = "vmbr2", ipv4_address_cidr = "198.51.100.0/0" },
+      { bridge = "vmbr2", ipv4_address_cidr = "198.51.100.0/8" },
     ]
   }
 
@@ -404,8 +404,8 @@ run "an_additional_address_may_use_the_octet_and_prefix_limits" {
   }
 
   assert {
-    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[2].ipv4[0].address == "198.51.100.0/0"
-    error_message = "An octet of 0 and a prefix length of 0 must be accepted and reach cloud-init IP configuration 2 as given."
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[2].ipv4[0].address == "198.51.100.0/8"
+    error_message = "An octet of 0 and a prefix length of 8 must be accepted and reach cloud-init IP configuration 2 as given."
   }
 }
 

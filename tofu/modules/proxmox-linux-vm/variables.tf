@@ -215,14 +215,15 @@ variable "additional_network_attachments" {
     error_message = "An additional network attachment's vlan_id must be null for an untagged device, or a whole number in the VLAN range 1 to 4094."
   }
 
-  # Dotted decimal only, because cidrnetmask() also accepts an IPv4-mapped
-  # IPv6 address and octets with leading zeros, which Proxmox does not.
+  # Written out to Proxmox's own rule rather than delegated to cidrnetmask(),
+  # which also accepts an IPv4-mapped IPv6 address, octets with leading zeros,
+  # and prefix lengths below 8, none of which Proxmox does.
   validation {
     condition = alltrue([
       for attachment in var.additional_network_attachments :
-      try(attachment.ipv4_address_cidr == null ? true : can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])/([0-9]|[12][0-9]|3[0-2])$", attachment.ipv4_address_cidr)), false)
+      try(attachment.ipv4_address_cidr == null ? true : can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])/([89]|[12][0-9]|3[0-2])$", attachment.ipv4_address_cidr)), false)
     ])
-    error_message = "An additional network attachment's ipv4_address_cidr must be null or an IPv4 address in dotted decimal, without leading zeros, with a prefix length from 0 to 32, such as 198.51.100.10/24."
+    error_message = "An additional network attachment's ipv4_address_cidr must be null or an IPv4 address in dotted decimal, without leading zeros, with a prefix length from 8 to 32, such as 198.51.100.10/24."
   }
 
   # Proxmox refuses a MAC address with the group bit, the lowest bit of the
