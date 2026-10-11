@@ -1,5 +1,13 @@
 # Contract evidence for the default container behavior.
-# The provider is mocked: these tests create nothing and prove no live behavior.
+#
+# The provider is mocked, so these runs need no Proxmox endpoint, credential,
+# or network access and create nothing. They prove what the module asks the
+# provider for and what it publishes as outputs. They prove nothing about a
+# live Proxmox VE, a template, a container start, SSH, or a destroy.
+
+# Every value below is fictional or reserved for documentation. The SSH key is
+# a throwaway public key generated for these fixtures; nothing holds its
+# private half.
 
 mock_provider "proxmox" {}
 
@@ -110,6 +118,73 @@ run "network_dns_and_key_only_bootstrap_are_declared" {
   }
 }
 
+run "the_container_is_created_from_the_template_not_cloned" {
+  command = plan
+
+  assert {
+    condition     = length(proxmox_virtual_environment_container.this.clone) == 0
+    error_message = "The container must be created from the declared template, never cloned from another container."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_container.this.operating_system) == 1
+    error_message = "The module must declare exactly one operating-system block carrying the template."
+  }
+}
+
+# The mock applies no provider defaults, so an argument the module leaves unset
+# plans as null and a block it does not declare plans as an empty list. Each
+# assertion below is therefore about what the module declares, which is the
+# claim: the provider's own defaults for these are not this module's to prove.
+run "nothing_outside_the_first_capability_is_declared" {
+  command = plan
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.network_interface[0].vlan_id == null
+    error_message = "The single interface must carry no VLAN tag."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_container.this.initialization[0].ip_config) == 1 && length(proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv6) == 0
+    error_message = "The module must declare one static IPv4 configuration and no IPv6 configuration."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].address != "dhcp"
+    error_message = "Addressing must be the declared static IPv4 CIDR rather than DHCP."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_container.this.mount_point) == 0 && length(proxmox_virtual_environment_container.this.device_passthrough) == 0 && length(proxmox_virtual_environment_container.this.idmap) == 0
+    error_message = "The module must declare no mount point, device passthrough, or ID mapping."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.features[0].keyctl == null && proxmox_virtual_environment_container.this.features[0].fuse == null && proxmox_virtual_environment_container.this.features[0].mknod == null && proxmox_virtual_environment_container.this.features[0].mount == null
+    error_message = "Nesting is the only container feature the module may declare."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_container.this.startup) == 0 && proxmox_virtual_environment_container.this.protection == null && proxmox_virtual_environment_container.this.pool_id == null
+    error_message = "The module must declare no startup ordering, protection flag, or pool."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.timeout_create == null && proxmox_virtual_environment_container.this.timeout_update == null && proxmox_virtual_environment_container.this.timeout_delete == null
+    error_message = "The module must expose no timeout or destroy-policy setting."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_container.this.wait_for_ip) == 0
+    error_message = "The module must not configure the provider's wait for a reported address."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.template == null && proxmox_virtual_environment_container.this.started == null
+    error_message = "The module must not turn the container into a template or manage its power state."
+  }
+}
+
 run "connection_output_is_declared_metadata" {
   command = plan
 
@@ -121,5 +196,31 @@ run "connection_output_is_declared_metadata" {
   assert {
     condition     = output.container_name == "fictional-container.example.invalid"
     error_message = "The container_name output must preserve the declared hostname."
+  }
+}
+
+# The provider reports the addresses a started container holds. The override
+# makes it report one the consumer never declared, on an apply the mock
+# performs, and the published host must still be the declared address.
+run "connection_host_ignores_provider_reported_addressing" {
+  command = apply
+
+  override_resource {
+    target = proxmox_virtual_environment_container.this
+    values = {
+      ipv4 = {
+        veth0 = "198.51.100.99"
+      }
+    }
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.ipv4["veth0"] == "198.51.100.99"
+    error_message = "The fixture must make the provider report an address other than the declared one."
+  }
+
+  assert {
+    condition     = output.connection.host == "192.0.2.20"
+    error_message = "connection.host must stay the declared address whatever the provider reports."
   }
 }

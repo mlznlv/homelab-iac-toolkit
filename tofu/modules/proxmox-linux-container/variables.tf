@@ -6,8 +6,8 @@ variable "name" {
   type        = string
 
   validation {
-    condition     = can(regex("^[a-zA-Z0-9]([a-zA-Z0-9.-]{0,251}[a-zA-Z0-9])?$", var.name)) && !can(regex("\\.\\.", var.name))
-    error_message = "The name must be a non-empty DNS name of at most 253 characters, without whitespace or consecutive dots."
+    condition     = can(regex("^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$", var.name)) && length(var.name) <= 253
+    error_message = "The name must be a DNS name of at most 253 characters: dot-separated labels of letters, digits, and inner hyphens, each at most 63 characters."
   }
 }
 
@@ -149,12 +149,16 @@ variable "nesting_enabled" {
   description = "Whether to enable the Proxmox nesting feature. It defaults to true for systemd-based Debian guests; a later change takes effect on the next container start."
   type        = bool
   default     = true
+
+  # The provider's own default is false, so a null must not reach the resource.
+  nullable = false
 }
 
 variable "ssh_port" {
   description = "TCP port to publish in the connection output. This is metadata only; the module does not configure the container's SSH service."
   type        = number
   default     = 22
+  nullable    = false
 
   validation {
     condition     = var.ssh_port == floor(var.ssh_port) && var.ssh_port >= 1 && var.ssh_port <= 65535

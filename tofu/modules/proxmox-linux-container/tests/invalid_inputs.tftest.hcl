@@ -1,4 +1,9 @@
-# Evidence that locally decidable invalid input fails before apply.
+# Evidence that locally decidable invalid input fails early, before anything
+# is planned against a provider.
+#
+# Each run supplies one invalid value and expects that variable's own
+# validation to reject it. The provider is mocked and nothing is created.
+# Every value below is fictional or reserved for documentation.
 
 mock_provider "proxmox" {}
 
@@ -104,5 +109,153 @@ run "container_identifier_below_range_is_rejected" {
 run "port_outside_tcp_range_is_rejected" {
   command = plan
   variables { ssh_port = 70000 }
+  expect_failures = [var.ssh_port]
+}
+
+# A DNS name is dot-separated labels, each of letters, digits, and inner
+# hyphens. The provider and Proxmox both reject the shapes below, so the module
+# rejects them first, with its own message.
+run "empty_hostname_is_rejected" {
+  command = plan
+  variables { name = "" }
+  expect_failures = [var.name]
+}
+
+run "hostname_label_starting_with_a_hyphen_is_rejected" {
+  command = plan
+  variables { name = "fictional.-container.example.invalid" }
+  expect_failures = [var.name]
+}
+
+run "hostname_label_ending_with_a_hyphen_is_rejected" {
+  command = plan
+  variables { name = "fictional-.example.invalid" }
+  expect_failures = [var.name]
+}
+
+run "hostname_with_a_trailing_dot_is_rejected" {
+  command = plan
+  variables { name = "fictional-container.example.invalid." }
+  expect_failures = [var.name]
+}
+
+run "hostname_with_an_empty_label_is_rejected" {
+  command = plan
+  variables { name = "fictional..example.invalid" }
+  expect_failures = [var.name]
+}
+
+run "hostname_with_an_underscore_is_rejected" {
+  command = plan
+  variables { name = "fictional_container.example.invalid" }
+  expect_failures = [var.name]
+}
+
+run "hostname_label_longer_than_63_characters_is_rejected" {
+  command = plan
+  variables { name = "a123456789012345678901234567890123456789012345678901234567890123.example.invalid" }
+  expect_failures = [var.name]
+}
+
+run "hostname_longer_than_253_characters_is_rejected" {
+  command = plan
+  variables {
+    name = join(".", [for index in range(26) : "fictional"], ["example.invalid"])
+  }
+  expect_failures = [var.name]
+}
+
+run "node_name_with_whitespace_is_rejected" {
+  command = plan
+  variables { node_name = "fictional node" }
+  expect_failures = [var.node_name]
+}
+
+run "template_identifier_with_whitespace_is_rejected" {
+  command = plan
+  variables { template_file_id = "fictional-storage:vztmpl/debian 13.tar.zst" }
+  expect_failures = [var.template_file_id]
+}
+
+run "datastore_identifier_with_whitespace_is_rejected" {
+  command = plan
+  variables { datastore_id = "fictional datastore" }
+  expect_failures = [var.datastore_id]
+}
+
+run "fractional_root_filesystem_size_is_rejected" {
+  command = plan
+  variables { root_filesystem_size_gb = 16.5 }
+  expect_failures = [var.root_filesystem_size_gb]
+}
+
+run "negative_root_filesystem_size_is_rejected" {
+  command = plan
+  variables { root_filesystem_size_gb = -16 }
+  expect_failures = [var.root_filesystem_size_gb]
+}
+
+run "zero_cpu_count_is_rejected" {
+  command = plan
+  variables { cpu_cores = 0 }
+  expect_failures = [var.cpu_cores]
+}
+
+run "fractional_memory_is_rejected" {
+  command = plan
+  variables { memory_mib = 2048.5 }
+  expect_failures = [var.memory_mib]
+}
+
+run "address_given_as_dhcp_is_rejected" {
+  command = plan
+  variables { ipv4_address_cidr = "dhcp" }
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "gateway_that_is_not_an_ipv4_address_is_rejected" {
+  command = plan
+  variables { ipv4_gateway = "gateway.example.invalid" }
+  expect_failures = [var.ipv4_gateway]
+}
+
+run "ipv6_dns_server_is_rejected" {
+  command = plan
+  variables { dns_servers = ["192.0.2.53", "2001:db8::53"] }
+  expect_failures = [var.dns_servers]
+}
+
+run "one_non_key_among_valid_keys_is_rejected" {
+  command = plan
+  variables {
+    ssh_public_keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid",
+      "fictional-nonsense",
+    ]
+  }
+  expect_failures = [var.ssh_public_keys]
+}
+
+run "container_identifier_above_range_is_rejected" {
+  command = plan
+  variables { container_id = 1000000000 }
+  expect_failures = [var.container_id]
+}
+
+run "fractional_container_identifier_is_rejected" {
+  command = plan
+  variables { container_id = 250.5 }
+  expect_failures = [var.container_id]
+}
+
+run "port_zero_is_rejected" {
+  command = plan
+  variables { ssh_port = 0 }
+  expect_failures = [var.ssh_port]
+}
+
+run "fractional_port_is_rejected" {
+  command = plan
+  variables { ssh_port = 22.5 }
   expect_failures = [var.ssh_port]
 }

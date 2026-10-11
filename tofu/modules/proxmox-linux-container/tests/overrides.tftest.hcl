@@ -1,4 +1,7 @@
 # Contract evidence for supported consumer overrides.
+#
+# The provider is mocked: these runs create nothing and prove no live behavior.
+# Every value below is fictional or reserved for documentation.
 
 mock_provider "proxmox" {}
 
@@ -58,5 +61,34 @@ run "ssh_port_changes_connection_metadata_only" {
   assert {
     condition     = proxmox_virtual_environment_container.this.initialization[0].hostname == "fictional-container.example.invalid"
     error_message = "Changing connection metadata must not change container initialization."
+  }
+}
+
+# A null is not a third spelling of "off": the provider's own default for
+# nesting is false, so a null that reached the resource would silently turn the
+# documented default around.
+run "a_null_nesting_value_keeps_the_default" {
+  command = plan
+
+  variables {
+    nesting_enabled = null
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.features[0].nesting == true
+    error_message = "A null nesting_enabled must leave nesting enabled, not fall through to the provider's default."
+  }
+}
+
+run "a_null_ssh_port_keeps_the_default" {
+  command = plan
+
+  variables {
+    ssh_port = null
+  }
+
+  assert {
+    condition     = output.connection.port == 22
+    error_message = "A null ssh_port must publish the default port 22."
   }
 }
