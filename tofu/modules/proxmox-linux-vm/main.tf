@@ -22,7 +22,7 @@ locals {
     for cidr in concat(
       [var.ipv4_address_cidr],
       [for attachment in var.additional_network_attachments : attachment.ipv4_address_cidr if attachment.ipv4_address_cidr != null],
-    ) : try(cidrhost("${split("/", cidr)[0]}/32", 0), cidr)
+    ) : cidrhost("${split("/", cidr)[0]}/32", 0)
   ]
 }
 
@@ -111,8 +111,13 @@ resource "proxmox_virtual_environment_vm" "this" {
 
     # Only the primary attachment has a gateway, so the guest never receives
     # more than one default route.
+    # A for expression rather than slice(), which cannot take a list that is
+    # not known until apply.
     dynamic "ip_config" {
-      for_each = slice(var.additional_network_attachments, 0, local.additional_ip_config_count)
+      for_each = [
+        for index, attachment in var.additional_network_attachments : attachment
+        if index < local.additional_ip_config_count
+      ]
 
       content {
         dynamic "ipv4" {

@@ -386,6 +386,29 @@ run "additional_attachments_leave_the_primary_and_connection_contracts_unchanged
   }
 }
 
+# The address rule is written out rather than delegated, so its limits are
+# pinned: the highest octet and both ends of the prefix range are accepted.
+run "an_additional_address_may_use_the_octet_and_prefix_limits" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", ipv4_address_cidr = "203.0.113.255/32" },
+      { bridge = "vmbr2", ipv4_address_cidr = "198.51.100.0/0" },
+    ]
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv4[0].address == "203.0.113.255/32"
+    error_message = "An octet of 255 and a prefix length of 32 must be accepted and reach cloud-init IP configuration 1 as given."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[2].ipv4[0].address == "198.51.100.0/0"
+    error_message = "An octet of 0 and a prefix length of 0 must be accepted and reach cloud-init IP configuration 2 as given."
+  }
+}
+
 # Uniqueness is a rule about declared MAC addresses only. Attachments that
 # leave the choice to Proxmox are not duplicates of one another, and declared
 # addresses that differ in any octet are accepted.

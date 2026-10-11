@@ -80,7 +80,7 @@ Optional:
 | `network_vlan_id` | `number` | `null` | Access VLAN tag for the primary network device, `1` to `4094`. Null leaves it untagged. See [VLAN tagging](#vlan-tagging). |
 | `additional_network_attachments` | `list(object)` | `[]` | Up to seven more network attachments, `net1` onwards, in the order given. On an existing VM they can be added and changed, not removed or reordered. See [Additional network attachments](#additional-network-attachments). |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, an additional address that is not dotted-decimal IPv4, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, and so on.
 
 ## Outputs
 
@@ -186,9 +186,9 @@ The addresses are from [RFC 5737](https://www.rfc-editor.org/info/rfc5737/) and 
 | `ipv4_address_cidr` | Static IPv4 address with a prefix length. Null gives the attachment no cloud-init IP configuration of its own. |
 | `mac_address` | Unicast MAC address written as six colon-separated hexadecimal octets, used as given. Null lets Proxmox assign one. |
 
-Declared MAC addresses must differ from one another, whatever letter case each is written in. That is a rule about what you declare: the module cannot know an address Proxmox assigns, and promises nothing about uniqueness on your network.
+Declared MAC addresses must differ from one another, whatever letter case each is written in. That is a rule about what you declare in one configuration, and nothing more. The module does not compare a declared address with one a device already holds, whether Proxmox assigned it or the device kept it after you stopped declaring it, so declaring an address another device of the same VM has is not caught. It promises nothing about uniqueness on your network either.
 
-There is no gateway. Only the primary attachment has one, so the guest never receives a second default route, and routing between attachments is guest configuration. OpenTofu ignores a key the type does not declare, so a `gateway` written on an additional attachment does nothing.
+There is no gateway. Only the primary attachment has one, so the guest never receives a second default route, and routing between attachments is guest configuration. OpenTofu ignores a key the type does not declare, without an error. A `gateway` written on an additional attachment does nothing, and neither does a misspelled attribute name: `vlan` for `vlan_id` leaves the device untagged, with no diagnostic. Check the plan for the tag, address, and MAC address you meant.
 
 As with VLAN tags, the module sets the Proxmox side of each attachment and nothing more. It does not check that an address belongs on its bridge or VLAN, and it does not configure interfaces inside the guest.
 
@@ -208,7 +208,7 @@ Once a VM exists, these are the supported changes. With the provider build this 
 | --- | --- |
 | Add an attachment after the last one, with or without an address | A new device. |
 | Change an attachment's `bridge` or `vlan_id` | The same device, with the link interruption described for [VLAN changes](#vlan-tagging). |
-| Change a declared `mac_address`, or declare one where Proxmox assigned it | A different device: Proxmox unplugs the old one and plugs in one with the new address. |
+| Change a declared `mac_address`, or declare one where Proxmox assigned it | A different device: Proxmox unplugs the old one and plugs in one with the new address. Writing the same address in a different letter case plans as a change too. |
 | Stop declaring a `mac_address` | Nothing. The device keeps the address it has, and the plan shows no change. |
 | Change an attachment's address to another address | The slot's cloud-init address changes, with the reboot described below. |
 | Give an address to an attachment that has none | The slot gains a cloud-init address, with the reboot described below. |

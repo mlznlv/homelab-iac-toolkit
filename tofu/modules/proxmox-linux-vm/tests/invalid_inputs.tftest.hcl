@@ -1,8 +1,10 @@
 # Evidence that locally decidable invalid input fails early, before anything
 # is planned against a provider.
 #
-# Each run supplies one invalid value and expects that variable's own
-# validation to reject it. The provider is mocked and nothing is created.
+# Each run supplies one invalid value and expects the rule that owns it to
+# reject it: that variable's own validation, or, where a rule spans the primary
+# and the additional attachments, the resource's precondition. The provider is
+# mocked and nothing is created.
 
 # Every value below is fictional or reserved for documentation. The SSH key is
 # a throwaway public key generated for these fixtures; nothing holds its
@@ -305,6 +307,49 @@ run "an_additional_ipv6_address_is_rejected" {
 
   variables {
     additional_network_attachments = [{ bridge = "vmbr1", ipv4_address_cidr = "2001:db8::10/64" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+# cidrnetmask() accepts an IPv4-mapped IPv6 address, so the rule does not rest
+# on it.
+run "an_additional_ipv4_mapped_ipv6_address_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", ipv4_address_cidr = "::ffff:198.51.100.10/120" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+# Proxmox refuses an octet written with a leading zero, so the module does too.
+run "an_additional_address_with_a_leading_zero_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", ipv4_address_cidr = "198.51.100.010/24" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "an_additional_address_with_an_octet_above_255_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", ipv4_address_cidr = "198.51.100.256/24" }]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+run "an_additional_address_with_a_prefix_above_32_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [{ bridge = "vmbr1", ipv4_address_cidr = "198.51.100.10/33" }]
   }
 
   expect_failures = [var.additional_network_attachments]

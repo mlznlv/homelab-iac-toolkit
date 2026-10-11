@@ -204,20 +204,25 @@ variable "additional_network_attachments" {
     error_message = "Every additional network attachment must be an object whose bridge is a Linux interface name: a letter followed by at most 14 letters, digits, dots, hyphens, or underscores."
   }
 
+  # The checks below choose with a conditional rather than `||`, so that a
+  # null never reaches a function that refuses one. OpenTofu evaluates both
+  # sides of `||` before 1.10, and only the chosen side of a conditional.
   validation {
     condition = alltrue([
       for attachment in var.additional_network_attachments :
-      try(attachment.vlan_id == null || (attachment.vlan_id == floor(attachment.vlan_id) && attachment.vlan_id >= 1 && attachment.vlan_id <= 4094), false)
+      try(attachment.vlan_id == null ? true : (attachment.vlan_id == floor(attachment.vlan_id) && attachment.vlan_id >= 1 && attachment.vlan_id <= 4094), false)
     ])
     error_message = "An additional network attachment's vlan_id must be null for an untagged device, or a whole number in the VLAN range 1 to 4094."
   }
 
+  # Dotted decimal only, because cidrnetmask() also accepts an IPv4-mapped
+  # IPv6 address and octets with leading zeros, which Proxmox does not.
   validation {
     condition = alltrue([
       for attachment in var.additional_network_attachments :
-      try(attachment.ipv4_address_cidr == null || can(cidrnetmask(attachment.ipv4_address_cidr)), false)
+      try(attachment.ipv4_address_cidr == null ? true : can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])/([0-9]|[12][0-9]|3[0-2])$", attachment.ipv4_address_cidr)), false)
     ])
-    error_message = "An additional network attachment's ipv4_address_cidr must be null or an IPv4 address with a prefix length, such as 198.51.100.10/24."
+    error_message = "An additional network attachment's ipv4_address_cidr must be null or an IPv4 address in dotted decimal, without leading zeros, with a prefix length from 0 to 32, such as 198.51.100.10/24."
   }
 
   # Proxmox refuses a MAC address with the group bit, the lowest bit of the
@@ -225,7 +230,7 @@ variable "additional_network_attachments" {
   validation {
     condition = alltrue([
       for attachment in var.additional_network_attachments :
-      try(attachment.mac_address == null || (can(regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$", attachment.mac_address)) && parseint(substr(attachment.mac_address, 0, 2), 16) % 2 == 0), false)
+      try(attachment.mac_address == null ? true : (can(regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$", attachment.mac_address)) && parseint(substr(attachment.mac_address, 0, 2), 16) % 2 == 0), false)
     ])
     error_message = "An additional network attachment's mac_address must be null or a unicast MAC address written as six colon-separated hexadecimal octets, such as 00:00:5E:00:53:01."
   }

@@ -12,7 +12,7 @@ output "connection" {
 }
 
 output "mac_addresses" {
-  description = "MAC address of every network attachment, in slot order: the primary attachment's first, then each additional attachment's. A declared address is reported as given; the others are the ones Proxmox assigned."
+  description = "MAC address of every network attachment, in slot order: the primary attachment's first, then each additional attachment's. A declared address is reported as given; the others are the ones Proxmox assigned. In the plan that adds an attachment without a declared MAC address, its entry is null rather than known after apply: the assigned address appears once that apply has run."
   value       = proxmox_virtual_environment_vm.this.network_device[*].mac_address
 }
 
