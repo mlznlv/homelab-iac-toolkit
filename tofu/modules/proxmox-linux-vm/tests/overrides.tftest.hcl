@@ -649,3 +649,79 @@ run "a_primary_mac_address_reaches_the_primary_network_device_in_dhcp_mode" {
     error_message = "A primary MAC address must leave the DHCP mode as declared."
   }
 }
+
+# These runs show the primary attachment's DHCP mode and MAC address alongside
+# additional attachments, which stay static or addressless whatever the
+# primary does.
+
+run "dhcp_on_the_primary_leaves_additional_attachments_static" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+    connection_host   = "fictional-vm.example.invalid"
+    additional_network_attachments = [
+      { bridge = "vmbr1", ipv4_address_cidr = "198.51.100.10/24" },
+    ]
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config) == 2
+    error_message = "A DHCP primary and one addressed additional attachment must declare exactly two IP configurations."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "dhcp" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == null
+    error_message = "The primary IP configuration must request DHCP, with no gateway."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv4[0].address == "198.51.100.10/24" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv4[0].gateway == null
+    error_message = "An additional attachment must keep its declared static address, with no gateway, when the primary uses DHCP."
+  }
+
+  assert {
+    condition     = output.connection == { host = "fictional-vm.example.invalid", user = "fictional", port = 22 }
+    error_message = "connection must stay primary-only: additional attachments never supply its host."
+  }
+}
+
+# ipv4_mode is not an attribute of an additional attachment. OpenTofu drops an
+# attribute the type does not declare, so this proves it goes nowhere.
+run "an_ipv4_mode_on_an_additional_attachment_goes_nowhere" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", ipv4_mode = "dhcp" },
+    ]
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.network_device) == 2
+    error_message = "The additional attachment must still be attached."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config) == 1 && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.10/24"
+    error_message = "An ipv4_mode on an additional attachment must declare no IP configuration for it and leave the primary static."
+  }
+}
+
+# The output needs applied values, so this run applies against the mock. It
+# creates nothing.
+run "the_mac_output_reports_a_declared_primary_mac_address_first" {
+  variables {
+    network_mac_address = "00:00:5E:00:53:01"
+    additional_network_attachments = [
+      { bridge = "vmbr1", mac_address = "00:00:5E:00:53:02" },
+    ]
+  }
+
+  assert {
+    condition     = output.mac_addresses == tolist(["00:00:5E:00:53:01", "00:00:5E:00:53:02"])
+    error_message = "mac_addresses must report the declared primary MAC address first, then each additional attachment's."
+  }
+}

@@ -688,3 +688,65 @@ run "a_primary_mac_address_that_is_not_hexadecimal_is_rejected" {
 
   expect_failures = [var.network_mac_address]
 }
+
+# DHCP is a mode of the primary attachment only. An additional attachment's
+# address is static or absent.
+run "dhcp_is_not_accepted_on_an_additional_attachment" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", ipv4_address_cidr = "dhcp" },
+    ]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+# The primary declares no address in DHCP mode, but the additional addresses
+# are still compared with one another.
+run "duplicate_additional_addresses_are_rejected_when_the_primary_uses_dhcp" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+    connection_host   = "fictional-vm.example.invalid"
+    additional_network_attachments = [
+      { bridge = "vmbr1", ipv4_address_cidr = "198.51.100.10/24" },
+      { bridge = "vmbr2", ipv4_address_cidr = "198.51.100.10/25" },
+    ]
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+# The declared primary MAC address joins the additional attachments' in one
+# comparison, so the two inputs cannot name one address twice.
+run "an_additional_attachment_declaring_the_primary_mac_address_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "00:00:5E:00:53:01"
+    additional_network_attachments = [
+      { bridge = "vmbr1", mac_address = "00:00:5E:00:53:02" },
+      { bridge = "vmbr2", mac_address = "00:00:5E:00:53:01" },
+    ]
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "the_primary_mac_address_is_compared_without_regard_to_letter_case" {
+  command = plan
+
+  variables {
+    network_mac_address = "00:00:5E:00:53:0A"
+    additional_network_attachments = [
+      { bridge = "vmbr1", mac_address = "00:00:5e:00:53:0a" },
+    ]
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}

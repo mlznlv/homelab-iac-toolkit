@@ -25,6 +25,13 @@ locals {
       [for attachment in var.additional_network_attachments : attachment.ipv4_address_cidr if attachment.ipv4_address_cidr != null],
     ) : cidrhost("${split("/", cidr)[0]}/32", 0)
   ]
+
+  # Every declared MAC address, the primary's first. An address Proxmox
+  # assigns is unknown here, so nothing is claimed about it.
+  declared_mac_addresses = concat(
+    var.network_mac_address == null ? [] : [var.network_mac_address],
+    [for attachment in var.additional_network_attachments : attachment.mac_address if try(attachment.mac_address != null, false)],
+  )
 }
 
 resource "proxmox_virtual_environment_vm" "this" {
@@ -153,6 +160,11 @@ resource "proxmox_virtual_environment_vm" "this" {
     precondition {
       condition     = length(distinct(local.declared_ipv4_addresses)) == length(local.declared_ipv4_addresses)
       error_message = "Every network attachment must have a different IPv4 address. The primary ipv4_address_cidr and each additional attachment's ipv4_address_cidr are compared without their prefix lengths."
+    }
+
+    precondition {
+      condition     = length(distinct([for mac in local.declared_mac_addresses : lower(mac)])) == length(local.declared_mac_addresses)
+      error_message = "Every declared MAC address must be different. The primary network_mac_address and each additional attachment's mac_address are compared without regard to letter case."
     }
 
     precondition {

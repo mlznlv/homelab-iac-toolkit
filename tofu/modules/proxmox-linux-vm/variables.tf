@@ -237,7 +237,7 @@ variable "network_mac_address" {
 }
 
 variable "additional_network_attachments" {
-  description = "Network attachments after the primary one, in slot order: the first is net1, the next net2, and so on, with the same index for its cloud-init IP configuration. At most seven, for eight attachments in total. Each needs a bridge and may declare an access VLAN tag from 1 to 4094, a static IPv4 address in CIDR notation, and a MAC address; only the primary attachment has a gateway. Declared MAC addresses must differ from one another. An attachment's identity is its position: on an existing VM, attachments can be added after the last one and changed in place, and removing one, removing its address, or reordering them is not supported. See the README before changing an existing VM."
+  description = "Network attachments after the primary one, in slot order: the first is net1, the next net2, and so on, with the same index for its cloud-init IP configuration. At most seven, for eight attachments in total. Each needs a bridge and may declare an access VLAN tag from 1 to 4094, a static IPv4 address in CIDR notation, and a MAC address; only the primary attachment has a gateway. Declared MAC addresses must differ from one another and from network_mac_address. An attachment's identity is its position: on an existing VM, attachments can be added after the last one and changed in place, and removing one, removing its address, or reordering them is not supported. See the README before changing an existing VM."
   type = list(object({
     bridge            = string
     vlan_id           = optional(number)
