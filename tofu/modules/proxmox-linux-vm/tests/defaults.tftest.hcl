@@ -153,6 +153,22 @@ run "the_network_device_is_untagged_by_default" {
   }
 }
 
+run "ipv6_is_absent_by_default" {
+  command = plan
+
+  # The mock applies no provider defaults, so an undeclared block is an empty
+  # list here. The real provider plans the same absence as its empty default.
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6) == 0
+    error_message = "With no ipv6_address_cidr, the IP configuration must declare no IPv6 block."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config) == 1
+    error_message = "Leaving IPv6 out must still declare exactly one IP configuration."
+  }
+}
+
 run "connection_output_is_derived_from_the_declared_values" {
   command = plan
 

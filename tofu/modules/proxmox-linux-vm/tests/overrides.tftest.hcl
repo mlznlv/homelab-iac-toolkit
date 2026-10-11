@@ -166,3 +166,130 @@ run "a_vlan_tag_leaves_the_network_and_connection_contracts_unchanged" {
     error_message = "A VLAN tag must not change the connection output."
   }
 }
+
+# These runs show static IPv6 reaching the existing IP configuration beside the
+# static IPv4 one. They do not show that Proxmox or a guest applies it, or that
+# the provider changes it in place: that is provider behaviour, which a mock
+# cannot exercise.
+
+run "a_static_ipv6_address_is_added_beside_the_ipv4_configuration" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/64"
+    error_message = "ipv6_address_cidr must reach the IPv6 address of the existing IP configuration."
+  }
+
+  # The mock applies no provider defaults, so an unset gateway plans as null
+  # here. The real provider plans it as its empty default and sends nothing.
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].gateway == null
+    error_message = "With no ipv6_gateway, the IPv6 gateway must be left unset."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.10/24" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == "192.0.2.1"
+    error_message = "IPv6 must be added beside the declared static IPv4 address and gateway, not in place of them."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config) == 1 && length(proxmox_virtual_environment_vm.this.network_device) == 1
+    error_message = "IPv6 must be added to the existing IP configuration, without another IP configuration or network device."
+  }
+}
+
+run "a_global_ipv6_gateway_reaches_the_ip_configuration" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "2001:db8::1"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/64" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].gateway == "2001:db8::1"
+    error_message = "ipv6_gateway must reach the IPv6 gateway beside the declared IPv6 address."
+  }
+}
+
+run "a_link_local_ipv6_gateway_reaches_the_ip_configuration" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "fe80::1"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].gateway == "fe80::1"
+    error_message = "A link-local ipv6_gateway must be accepted and reach the IPv6 gateway."
+  }
+}
+
+run "the_longest_ipv6_prefix_length_is_accepted" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/128"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/128"
+    error_message = "A /128 IPv6 address, the longest prefix, must be accepted."
+  }
+}
+
+run "the_shortest_ipv6_prefix_length_is_accepted" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/8"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/8"
+    error_message = "A /8 IPv6 address, the shortest prefix Proxmox accepts, must be accepted."
+  }
+}
+
+run "ipv6_never_becomes_the_connection_host" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "2001:db8::1"
+  }
+
+  # Without this, the run would pass just as well if IPv6 never arrived.
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/64"
+    error_message = "IPv6 must be declared for this run to show that it leaves the connection output unchanged."
+  }
+
+  assert {
+    condition     = output.connection == { host = "192.0.2.10", user = "fictional", port = 22 }
+    error_message = "A declared IPv6 address must not change the connection output: host stays the declared IPv4 address."
+  }
+}
+
+run "ipv6_dns_servers_are_accepted_beside_ipv4_ones" {
+  command = plan
+
+  variables {
+    dns_servers = ["2001:db8::53", "192.0.2.53"]
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].dns[0].servers == tolist(["2001:db8::53", "192.0.2.53"])
+    error_message = "IPv6 and IPv4 DNS servers must both reach cloud-init in the declared order."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6) == 0
+    error_message = "An IPv6 DNS server must not declare IPv6 addressing."
+  }
+}

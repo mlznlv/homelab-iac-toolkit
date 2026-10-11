@@ -73,7 +73,7 @@ variable "network_bridge" {
 }
 
 variable "ipv4_address_cidr" {
-  description = "Static IPv4 address for the VM in CIDR notation, such as 192.0.2.10/24. DHCP and IPv6 are out of scope for this module."
+  description = "Static IPv4 address for the VM in CIDR notation, such as 192.0.2.10/24. It is required even when ipv6_address_cidr is set. DHCP is out of scope for this module."
   type        = string
 
   validation {
@@ -93,7 +93,7 @@ variable "ipv4_gateway" {
 }
 
 variable "dns_servers" {
-  description = "IPv4 DNS servers for the guest, in order of preference."
+  description = "DNS servers for the guest, IPv4 or IPv6 addresses, in order of preference."
   type        = list(string)
 
   validation {
@@ -101,9 +101,14 @@ variable "dns_servers" {
     error_message = "At least one DNS server is required."
   }
 
+  # An IPv6 server is recognised by its canonical form, which keeps its colons
+  # only for a genuine IPv6 address.
   validation {
-    condition     = alltrue([for server in var.dns_servers : can(cidrnetmask("${server}/32"))])
-    error_message = "Every DNS server must be a bare IPv4 address, such as 192.0.2.53."
+    condition = alltrue([
+      for server in var.dns_servers :
+      can(cidrnetmask("${server}/32")) || try(strcontains(cidrhost("${server}/128", 0), ":"), false)
+    ])
+    error_message = "Every DNS server must be a bare IPv4 or IPv6 address, such as 192.0.2.53 or 2001:db8::53."
   }
 }
 
@@ -177,5 +182,35 @@ variable "network_vlan_id" {
   validation {
     condition     = var.network_vlan_id == null || (var.network_vlan_id == floor(var.network_vlan_id) && var.network_vlan_id >= 1 && var.network_vlan_id <= 4094)
     error_message = "The network_vlan_id must be null for an untagged device, or a whole number in the VLAN range 1 to 4094."
+  }
+}
+
+variable "ipv6_address_cidr" {
+  description = "Static IPv6 address for the VM's network device in CIDR notation, with a prefix length from 8 to 128, such as 2001:db8::10/64. Null, the default, declares no IPv6. It is added beside the required IPv4 addressing, never replaces it, and never becomes the connection output's host. Only static addressing is supported, so Proxmox's auto, dhcp, and manual forms are rejected. Prefix allocation, address uniqueness, routing, router advertisements, and upstream IPv6 service are the consumer's. Adding, changing, or removing it reboots a running VM; see the README."
+  type        = string
+  default     = null
+
+  # Proxmox accepts prefix lengths from 8 to 128. The address part must keep a
+  # colon in its canonical form, which rejects IPv4 and IPv4-mapped values.
+  validation {
+    condition = var.ipv6_address_cidr == null || try(
+      can(regex("^[0-9A-Fa-f:.]+/([89]|[1-9][0-9]|1[01][0-9]|12[0-8])$", var.ipv6_address_cidr)) &&
+      strcontains(cidrhost("${split("/", var.ipv6_address_cidr)[0]}/128", 0), ":"),
+      false
+    )
+    error_message = "The ipv6_address_cidr must be null or an IPv6 address with a prefix length from 8 to 128, such as 2001:db8::10/64. Only static IPv6 is supported, so auto, dhcp, and manual are rejected."
+  }
+}
+
+variable "ipv6_gateway" {
+  description = "IPv6 default gateway for the VM, without a prefix length: a global address such as 2001:db8::1, or a link-local one such as fe80::1. It requires ipv6_address_cidr. Null, the default, declares none, and the module then makes no claim about where the guest's IPv6 default route comes from."
+  type        = string
+  default     = null
+
+  # Appending a prefix length fails for a value that already carries one or a
+  # zone, and the canonical form keeps a colon only for a genuine IPv6 address.
+  validation {
+    condition     = var.ipv6_gateway == null || try(strcontains(cidrhost("${var.ipv6_gateway}/128", 0), ":"), false)
+    error_message = "The ipv6_gateway must be null or a bare IPv6 address without a prefix length, such as 2001:db8::1 or fe80::1."
   }
 }

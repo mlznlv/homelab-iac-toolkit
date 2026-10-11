@@ -72,6 +72,20 @@ resource "proxmox_virtual_environment_vm" "this" {
         address = var.ipv4_address_cidr
         gateway = var.ipv4_gateway
       }
+
+      # IPv6 is optional, static, and added beside the IPv4 configuration
+      # rather than in place of it. A null address declares no ipv6 block,
+      # which the provider plans as its empty default, so a configuration
+      # without IPv6 plans exactly as before. A null gateway is the provider's
+      # empty default too, and is never sent to Proxmox.
+      dynamic "ipv6" {
+        for_each = var.ipv6_address_cidr == null ? [] : [var.ipv6_address_cidr]
+
+        content {
+          address = ipv6.value
+          gateway = var.ipv6_gateway
+        }
+      }
     }
 
     dns {
@@ -81,6 +95,17 @@ resource "proxmox_virtual_environment_vm" "this" {
     user_account {
       username = var.username
       keys     = var.ssh_public_keys
+    }
+  }
+
+  lifecycle {
+    # The two IPv6 inputs are separate variables, and OpenTofu 1.6, the oldest
+    # version this module supports, does not let one variable's validation
+    # refer to another. The pairing is checked here instead, still at plan
+    # time.
+    precondition {
+      condition     = var.ipv6_gateway == null || var.ipv6_address_cidr != null
+      error_message = "An ipv6_gateway needs an ipv6_address_cidr: Proxmox accepts an IPv6 gateway only alongside an IPv6 address."
     }
   }
 }
