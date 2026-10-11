@@ -3,10 +3,10 @@
 ## Current state
 
 - **Current phase:** M6 — Broader Proxmox infrastructure
-- **Milestone state:** M1 through M5 are complete. The first M6 VLAN increment is merged, and Architecture for multiple VM attachments, DHCP, IPv6 and LXC is accepted.
-- **Implementation state:** Multiple VM attachments and the first LXC capability are the next independent implementation slices. DHCP and IPv6 follow their networking dependencies.
-- **Current blocker:** None for the next implementation slices. Additional VM data disks remain independently blocked in Issue #80.
-- **Next action:** Implement focused M6 Issues derived from the accepted Architecture, with provider lifecycle evidence reviewed before merge.
+- **Milestone state:** M1 through M5 are complete. VLAN is merged and ADRs 0010–0013 are accepted; the multiple-attachment lifecycle requires further Architecture review.
+- **Implementation state:** LXC [#99](https://github.com/mlznlv/homelab-iac-toolkit/issues/99) is Ready and independent. Multiple attachments [#98](https://github.com/mlznlv/homelab-iac-toolkit/issues/98) are Blocked; DHCP [#100](https://github.com/mlznlv/homelab-iac-toolkit/issues/100) follows #98, and IPv6 [#101](https://github.com/mlznlv/homelab-iac-toolkit/issues/101) follows #100.
+- **Current blocker:** Networking awaits Architecture [#103](https://github.com/mlznlv/homelab-iac-toolkit/issues/103). Additional VM data disks remain independently blocked in [#80](https://github.com/mlznlv/homelab-iac-toolkit/issues/80).
+- **Next action:** Complete LXC provider-lifecycle evidence and final Architecture review; resolve #103 before resuming the networking chain.
 
 ## Milestone sequence
 
@@ -295,7 +295,7 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 ## Near-term Developer work
 
-Near-term Developer work implements the accepted multiple-attachment and LXC capabilities. DHCP follows multiple attachments, and IPv6 follows DHCP. Issue-level scope, dependencies and execution state live in GitHub.
+LXC #99 can proceed independently. Multiple attachments #98 await Architecture #103; DHCP #100 follows #98, and IPv6 #101 follows #100. Issue-level specifications and execution state live in GitHub.
 
 ## Deferred from current execution
 
