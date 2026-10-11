@@ -40,6 +40,15 @@ Work is tracked in GitHub Issues and delivered in focused pull requests. Follow 
 
 A pull request cites the specification it closes or the authority it acts under, stays inside it, and introduces no secrets, private deployment data or generated state. Unrelated changes are grounds for rejection, however small and however tempting: an opportunistic ignore rule or drive-by fix belongs in its own Issue and its own pull request.
 
+## Working habits
+
+Four habits keep a change here small, reviewable and correct. They are adapted from the [Karpathy-inspired Claude Code guidelines](https://github.com/multica-ai/andrej-karpathy-skills), which set out the failure each one prevents. They are conduct, not authority: where one seems to pull against a document above, the document is right. They favour care over speed, so use judgment on a trivial edit.
+
+- **Think before coding.** State the assumptions a change rests on. Where an Issue, an ADR or the roadmap can be read two ways, or reads as wrong against the source it cites, stop and raise it rather than choosing quietly. A silent choice here usually turns out to be an Architecture decision made inside a pull request.
+- **Simplicity first.** Write the least that satisfies the specification: no input, option, abstraction or error path the Issue does not ask for. Each capability's Architecture names what was deliberately deferred; leave it deferred.
+- **Surgical changes.** Every changed line traces to the linked Issue. Match the surrounding style, remove only what your own change made unused, and report an unrelated problem instead of fixing it in passing, which [the workflow above](#contribution-workflow) rejects.
+- **Goal-driven execution.** Take the Issue's acceptance criteria as the definition of done and turn each into a check. Write the failing test before the fix, watch a new test fail against the behaviour it guards, and finish with the run [Local validation](docs/validation.md) describes, reported from its real output.
+
 ## Optional Claude Code configuration
 
 The committed `.claude/` directory is optional, non-authoritative assistance. It defines no project behavior and is not enforcement: `.gitignore`, the validation configuration and CI are the controls that apply to every contributor whatever tools they use, and removing `.claude/` must leave the repository fully usable.
