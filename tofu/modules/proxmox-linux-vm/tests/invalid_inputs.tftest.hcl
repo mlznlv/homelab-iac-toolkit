@@ -354,3 +354,50 @@ run "a_multicast_mac_address_is_rejected" {
 
   expect_failures = [var.additional_network_attachments]
 }
+
+# Two attachments declaring one MAC address would give the guest two devices it
+# cannot tell apart, so the module refuses it before Proxmox is asked.
+run "two_additional_attachments_declaring_the_same_mac_address_are_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", mac_address = "00:00:5E:00:53:01" },
+      { bridge = "vmbr2", mac_address = "00:00:5E:00:53:01" },
+    ]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+# Letter case is not part of a MAC address, so it cannot make two declarations
+# of one address differ.
+run "duplicate_mac_addresses_are_compared_without_regard_to_letter_case" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", mac_address = "00:00:5E:00:53:0A" },
+      { bridge = "vmbr2", mac_address = "00:00:5e:00:53:0a" },
+    ]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+# The duplicates need not be neighbours, and an attachment that declares no MAC
+# address between them changes nothing.
+run "a_duplicate_mac_address_is_rejected_wherever_it_appears_in_the_list" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", mac_address = "00:00:5E:00:53:01" },
+      { bridge = "vmbr2" },
+      { bridge = "vmbr3", mac_address = "00:00:5E:00:53:02" },
+      { bridge = "vmbr4", mac_address = "00:00:5e:00:53:01" },
+    ]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}

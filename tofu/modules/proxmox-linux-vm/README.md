@@ -78,9 +78,9 @@ Optional:
 | `stop_on_destroy` | `bool` | `true` | Whether destroy stops the VM instead of asking the guest to shut down. |
 | `ssh_port` | `number` | `22` | Port published in the `connection` output. Metadata only. |
 | `network_vlan_id` | `number` | `null` | Access VLAN tag for the primary network device, `1` to `4094`. Null leaves it untagged. See [VLAN tagging](#vlan-tagging). |
-| `additional_network_attachments` | `list(object)` | `[]` | Up to seven more network attachments, `net1` onwards, in the order given. See [Additional network attachments](#additional-network-attachments). |
+| `additional_network_attachments` | `list(object)` | `[]` | Up to seven more network attachments, `net1` onwards, in the order given. On an existing VM they can be added and changed, not removed or reordered. See [Additional network attachments](#additional-network-attachments). |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, and so on.
 
 ## Outputs
 
@@ -158,6 +158,8 @@ That in-place behaviour is evidenced for the provider build this repository lock
 
 `additional_network_attachments` adds network attachments after the primary one. The primary attachment is the one the inputs above describe: it is always `net0` and cloud-init IP configuration `0`, and it keeps every input, default, and output it had. Leave the list empty, the default, and the VM plans exactly as before.
 
+**Additional attachments can be added and changed on an existing VM, but not taken away.** Read [Changing attachments on an existing VM](#changing-attachments-on-an-existing-vm) and [What is not supported](#what-is-not-supported) before you declare any, because an attachment you add is one you keep.
+
 ```hcl
 module "fictional_vm" {
   # ...the other inputs shown in Usage...
@@ -184,6 +186,8 @@ The addresses are from [RFC 5737](https://www.rfc-editor.org/info/rfc5737/) and 
 | `ipv4_address_cidr` | Static IPv4 address with a prefix length. Null gives the attachment no cloud-init IP configuration of its own. |
 | `mac_address` | Unicast MAC address written as six colon-separated hexadecimal octets, used as given. Null lets Proxmox assign one. |
 
+Declared MAC addresses must differ from one another, whatever letter case each is written in. That is a rule about what you declare: the module cannot know an address Proxmox assigns, and promises nothing about uniqueness on your network.
+
 There is no gateway. Only the primary attachment has one, so the guest never receives a second default route, and routing between attachments is guest configuration. OpenTofu ignores a key the type does not declare, so a `gateway` written on an additional attachment does nothing.
 
 As with VLAN tags, the module sets the Proxmox side of each attachment and nothing more. It does not check that an address belongs on its bridge or VLAN, and it does not configure interfaces inside the guest.
@@ -194,33 +198,51 @@ An attachment is its position in the list. The first entry is `net1` with cloud-
 
 The guest recognizes an interface by its MAC address: the network data Proxmox generates for cloud-init matches each addressed interface to the MAC address of the device in its slot, and names it `eth` followed by the slot number. `mac_addresses` reports every attachment's MAC address in slot order, `net0` first. In the plan that adds an attachment without `mac_address`, its entry reads `null` rather than a value known after apply; the address Proxmox assigns appears once that apply has run, so read it from a later plan or apply.
 
+An attachment without an address declares no cloud-init IP configuration of its own. That says what this module declares for the slot, not what the VM holds there. Proxmox copies a template's own `ipconfig` entries into every clone, and an entry an earlier address left at a slot stays there, so a device at that slot can still boot with an address you never declared for it. A plan that proposes removing a cloud-init IP configuration you did not declare is showing you one of those. Whether your template carries such entries is yours to know. Nor is an addressless attachment a statement about the guest: what a template's own image does with an interface that cloud-init says nothing about belongs to the template, and to you.
+
 ### Changing attachments on an existing VM
 
-No attachment change replaces the VM. With the provider build this repository locks, each of these plans the VM as `update in-place`:
+Once a VM exists, these are the supported changes. With the provider build this repository locks, none replaces the VM: each plans as `update in-place`, or as no change where the table says so, leaves the primary attachment and its MAC address as they are, and settles, so that once it is applied the next plan proposes nothing.
 
 | Change | What the guest sees |
 | --- | --- |
-| Add an attachment after the last one | A new device. |
-| Remove the last attachment | Its device disappears. |
+| Add an attachment after the last one, with or without an address | A new device. |
 | Change an attachment's `bridge` or `vlan_id` | The same device, with the link interruption described for [VLAN changes](#vlan-tagging). |
 | Change a declared `mac_address`, or declare one where Proxmox assigned it | A different device: Proxmox unplugs the old one and plugs in one with the new address. |
 | Stop declaring a `mac_address` | Nothing. The device keeps the address it has, and the plan shows no change. |
-| Remove or reorder any attachment but the last | Every later slot is re-mapped, as described below. |
+| Change an attachment's address to another address | The slot's cloud-init address changes, with the reboot described below. |
+| Give an address to an attachment that has none | The slot gains a cloud-init address, with the reboot described below. |
 
-**Removing or reordering any attachment but the last re-maps every later slot.** When an entry leaves the middle of the list, each later slot takes the next entry's bridge, VLAN, address, and declared MAC address, and the last slot is removed. A MAC address that Proxmox assigned stays with its slot rather than with its entry: remove the first of two attachments that declare no MAC address, and `net1` keeps its MAC address while taking the second attachment's bridge, VLAN, and address. A declared MAC address moves with its entry, so the device in that slot is replaced. Either way, every later interface changes identity or network. The module cannot warn you, because input validation cannot see what the VM had before. If later interfaces must stay stable, remove attachments from the end.
+Existing attachments keep their order, and the list may grow but not shrink.
 
-**Changing any attachment's address reboots the VM.** This covers adding, changing, or removing an address, adding or removing an addressed attachment, a re-map that moves an address, and the primary attachment's own `ipv4_address_cidr`. Each changes the cloud-init data, and with the locked provider's defaults that rebuilds the cloud-init drive and reboots a running VM. The changed data also gives the VM a new cloud-init instance identifier, so on that boot cloud-init treats the guest as a new instance. It re-applies network configuration and, unless your template's cloud-init configuration says otherwise, deletes and regenerates the guest's SSH host keys. Expect the reboot, and expect host-key verification to change. Adding or removing an attachment without an address at the end of the list leaves the cloud-init data unchanged.
+**Changing any attachment's address reboots the VM.** This covers adding an addressed attachment, changing an address, giving an address to an attachment that had none, and the primary attachment's own `ipv4_address_cidr`. Each changes the cloud-init data, and with the locked provider's defaults that rebuilds the cloud-init drive and reboots a running VM. The changed data also gives the VM a new cloud-init instance identifier, so on that boot cloud-init treats the guest as a new instance. It re-applies network configuration and, unless your template's cloud-init configuration says otherwise, deletes and regenerates the guest's SSH host keys. Expect the reboot, and expect host-key verification to change. Adding an attachment without an address leaves the cloud-init data unchanged.
 
-### Removing an address leaves it in Proxmox
+### What is not supported
 
-The provider sends Proxmox only the IP configurations that declare something, and never deletes one. When you remove an addressed attachment, or remove the address from an attachment, the retired `ipconfig` entry stays in the VM's configuration in Proxmox. Two things follow.
+**Removing an attachment, removing an attachment's address, reordering attachments, clearing the list, and removing an attachment to add it back are not supported.** That holds for every additional attachment, including the last one and one that never had an address.
 
-- **The retired address can reach another device.** Proxmox generates cloud-init network data for every slot that still has an IP configuration, and matches it to whichever device is in that slot now. An attachment later placed in the slot, or moved into it by a re-map, can boot with the retired address. An attachment without an address is guaranteed no cloud-init configuration only in a slot that has never had one.
-- **The plan does not settle.** OpenTofu reads the retired entry back, finds that your configuration does not declare it, and plans an in-place update to remove it again on every plan. Applying that update removes nothing, and it rebuilds the cloud-init drive and reboots a running VM each time. The plan settles only after the retired entry has been removed from the VM's configuration in Proxmox, which this module does not do.
+The module cannot stop you. Input validation sees only the configuration you give it now, not the order, count, or addresses the VM had before, so an unsupported change is not rejected: it plans as an ordinary `update in-place`. That plan is not evidence that the change is safe. Reading the plan before you apply is the control, and it is yours.
 
-Read the plan before you apply. If it shows the VM being replaced for an attachment change, do not apply it: that is not the behaviour this module relies on. If it shows a cloud-init IP configuration being removed when you changed no address, you are looking at a retired entry.
+Two behaviours of the locked provider are the reason.
 
-That behaviour is evidenced for the provider build this repository locks, `bpg/proxmox` v0.111.1, at provider level: its source, and credential-free plans made with that build for each change in the table, the re-map with assigned and declared MAC addresses, and the retired entry being read back. It has not been observed against a real Proxmox VE. Nothing here shows that a device is plugged or unplugged successfully, that a guest names, configures, or brings up an interface, that cloud-init re-applies configuration or regenerates host keys on your template, or that anything is reachable or routed through any attachment. [Compatibility](../../../docs/compatibility.md#multiple-network-attachments) records that boundary, and your root module's own lock decides which provider build you run.
+- **Position is identity, so removing or reordering re-maps slots.** When an entry leaves the middle of the list, or entries change places, each affected slot takes another entry's bridge, VLAN, address, and declared MAC address. A MAC address Proxmox assigned stays with its slot rather than with its entry; a declared one moves with its entry, so the device in that slot is replaced. Either way, an interface the guest knew becomes a different one.
+- **A retired address is never removed.** The provider sends Proxmox only the IP configurations that declare something, and never deletes one. When an addressed attachment or an address goes away, its `ipconfig` entry stays in the VM's configuration. Proxmox still generates cloud-init network data for that slot and matches it to whichever device is there now, so a later device can boot with the retired address. The provider also reads the entry back, so every later plan proposes the same in-place update to remove it. Applying that update removes nothing, and it rebuilds the cloud-init drive and reboots a running VM each time.
+
+Some of these changes would settle, such as removing a last attachment whose slot never held an address, or exchanging two attachments that both have one. Which ones do depends on what each slot has held, which the module cannot see and you would have to reconstruct. None of them is supported.
+
+If a plan shows a network device being removed, attachments changing places, or a cloud-init IP configuration being removed, it is one of these changes: do not apply it. Applying it again is not a way out, and neither is hiding the difference or the reboot. If you need fewer attachments or a different order, keep the slots you have, wait for a provider build that is shown to clear retired entries, or plan a deliberate, reviewed replacement of the VM. A replacement destroys the existing VM and everything on its disks.
+
+If a plan shows the VM being replaced for any attachment change, do not apply it either: that is not the behaviour this module relies on. Check which provider build your root module's lock selects, because only the build named below has been evaluated.
+
+### Where this is evidenced
+
+All of the above is for the provider build this repository locks, `bpg/proxmox` v0.111.1, at provider level. Three kinds of evidence stand behind it, and they are not the same thing.
+
+- **Plans.** Credential-free plans made with that build, with refresh disabled, against synthetic prior states: declaring attachments at creation, every supported change in the table, and every unsupported change named above.
+- **Modelled read-back.** Each change was then planned again against a state modelled on the provider's read path. That is what "settles" and "never settles" rest on. No apply and no refresh was run.
+- **Source.** That an update sends each existing device's MAC address back to Proxmox, sends only the IP configurations that declare something and deletes none, that a read returns every one Proxmox holds, and that an initialization change rebuilds the cloud-init drive and reboots, are read from the provider's source. That Proxmox assigns a MAC address only to a device without one, copies a template's `ipconfig` entries into a clone, and matches cloud-init network data by slot and MAC address is read from Proxmox's.
+
+None of it has been observed against a real Proxmox VE. Nothing here shows that a device is plugged or unplugged successfully, that a device keeps its MAC address at run time, that a guest names, configures, or brings up an interface, that cloud-init re-applies configuration or regenerates host keys on your template, or that anything is reachable or routed through any attachment. [Compatibility](../../../docs/compatibility.md#multiple-network-attachments) records that boundary, and your root module's own lock decides which provider build you run.
 
 ## Limitations
 
@@ -230,6 +252,7 @@ This module is one VM, cloned once, addressed statically. It does not do:
 - disk resizing, extra disks, or any disk management — the clone inherits the template's layout;
 - linked clones, or cloning from a template on another node;
 - DHCP, IPv6, VLAN trunks, or more than eight network attachments;
+- removing, reordering, or taking the address from an additional attachment on an existing VM;
 - a gateway or routes on any attachment but the primary, NIC models, firewall, MTU, rate, queue, or link-state settings;
 - VLAN creation, bridge configuration or discovery, or network configuration inside the guest;
 - guest packages, services, users, authorized keys, or SSH configuration after cloud-init;
@@ -239,8 +262,8 @@ This module is one VM, cloned once, addressed statically. It does not do:
 
 Formatting, `tofu validate`, and a set of contract tests under [`tests/`](tests) that run against a **mocked** provider: no Proxmox endpoint, no credentials, nothing created. Run them with `task validate:tofu`, or directly as [Local validation](../../../docs/validation.md) describes.
 
-They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, the guest-agent channel attached by default and absent when it is turned off, waiting for an agent-reported address disabled in both cases, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation, the network device left untagged by default and tagged with `1` and `4094` without gaining a second device or changing the addressing or `connection` output, no additional attachment by default, additional attachments in the declared order from `net1` with their own bridge, tag, address, and MAC address, no gateway on any of them, an empty IP configuration for an addressless attachment before an addressed one and none after the last addressed one, eight attachments accepted, `mac_addresses` in slot order, and the primary attachment and `connection` output unchanged by them — and that bad input fails at plan time.
+They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, the guest-agent channel attached by default and absent when it is turned off, waiting for an agent-reported address disabled in both cases, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation, the network device left untagged by default and tagged with `1` and `4094` without gaining a second device or changing the addressing or `connection` output, no additional attachment by default, additional attachments in the declared order from `net1` with their own bridge, tag, address, and MAC address, no gateway on any of them, an empty IP configuration for an addressless attachment before an addressed one and none after the last addressed one, eight attachments accepted, undeclared and distinct declared MAC addresses accepted together, `mac_addresses` in slot order, and the primary attachment and `connection` output unchanged by them — and that bad input fails at plan time, including one MAC address declared twice in either letter case.
 
-They prove nothing about a real Proxmox VE. No clone, boot, cloud-init run, SSH connection, shutdown, stop, destroy, VLAN change, attachment change, or guest agent has been exercised. Nor can a mocked provider show that a tag or attachment change is made in place; [VLAN tagging](#vlan-tagging) and [Additional network attachments](#additional-network-attachments) say where that evidence comes from. [Compatibility](../../../docs/compatibility.md) records what this evidence does and does not cover.
+They prove nothing about a real Proxmox VE. No clone, boot, cloud-init run, SSH connection, shutdown, stop, destroy, VLAN change, attachment change, or guest agent has been exercised. Nor can a mocked provider show that a tag or attachment change is made in place, or that a plan settles afterwards; [VLAN tagging](#vlan-tagging) and [Additional network attachments](#where-this-is-evidenced) say where that evidence comes from. [Compatibility](../../../docs/compatibility.md) records what this evidence does and does not cover.
 
 `.terraform.lock.hcl` is committed so those checks resolve the same provider build every time, verified against recorded hashes, on Linux and macOS. It governs this repository's own validation. Your root module has its own lock file; this one does not constrain it.

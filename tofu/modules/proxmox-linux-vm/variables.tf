@@ -181,7 +181,7 @@ variable "network_vlan_id" {
 }
 
 variable "additional_network_attachments" {
-  description = "Network attachments after the primary one, in slot order: the first is net1, the next net2, and so on, with the same index for its cloud-init IP configuration. At most seven, for eight attachments in total. Each needs a bridge and may declare an access VLAN tag from 1 to 4094, a static IPv4 address in CIDR notation, and a MAC address; only the primary attachment has a gateway. An attachment's identity is its position, so removing or reordering any but the last re-maps every later slot. See the README before changing an existing VM."
+  description = "Network attachments after the primary one, in slot order: the first is net1, the next net2, and so on, with the same index for its cloud-init IP configuration. At most seven, for eight attachments in total. Each needs a bridge and may declare an access VLAN tag from 1 to 4094, a static IPv4 address in CIDR notation, and a MAC address; only the primary attachment has a gateway. Declared MAC addresses must differ from one another. An attachment's identity is its position: on an existing VM, attachments can be added after the last one and changed in place, and removing one, removing its address, or reordering them is not supported. See the README before changing an existing VM."
   type = list(object({
     bridge            = string
     vlan_id           = optional(number)
@@ -228,5 +228,19 @@ variable "additional_network_attachments" {
       try(attachment.mac_address == null || (can(regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$", attachment.mac_address)) && parseint(substr(attachment.mac_address, 0, 2), 16) % 2 == 0), false)
     ])
     error_message = "An additional network attachment's mac_address must be null or a unicast MAC address written as six colon-separated hexadecimal octets, such as 00:00:5E:00:53:01."
+  }
+
+  # Only declared addresses are compared, and without regard to letter case,
+  # which is not part of a MAC address. An address Proxmox assigns is unknown
+  # here, so nothing is claimed about it.
+  validation {
+    condition = length(distinct([
+      for attachment in var.additional_network_attachments : lower(attachment.mac_address)
+      if try(attachment.mac_address != null, false)
+      ])) == length([
+      for attachment in var.additional_network_attachments : attachment.mac_address
+      if try(attachment.mac_address != null, false)
+    ])
+    error_message = "Every additional network attachment that declares a mac_address must declare a different one. MAC addresses are compared without regard to letter case."
   }
 }

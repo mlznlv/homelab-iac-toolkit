@@ -386,6 +386,37 @@ run "additional_attachments_leave_the_primary_and_connection_contracts_unchanged
   }
 }
 
+# Uniqueness is a rule about declared MAC addresses only. Attachments that
+# leave the choice to Proxmox are not duplicates of one another, and declared
+# addresses that differ in any octet are accepted.
+run "undeclared_and_distinct_mac_addresses_are_accepted_together" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1" },
+      { bridge = "vmbr2", mac_address = "00:00:5E:00:53:01" },
+      { bridge = "vmbr3" },
+      { bridge = "vmbr4", mac_address = "00:00:5E:00:53:02" },
+    ]
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.network_device) == 5
+    error_message = "Two undeclared and two distinct declared MAC addresses must all be accepted."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[1].mac_address == null && proxmox_virtual_environment_vm.this.network_device[3].mac_address == null
+    error_message = "An attachment that declares no MAC address must leave its device's MAC address to Proxmox."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[2].mac_address == "00:00:5E:00:53:01" && proxmox_virtual_environment_vm.this.network_device[4].mac_address == "00:00:5E:00:53:02"
+    error_message = "Each declared MAC address must reach its own slot as given."
+  }
+}
+
 # The output needs applied values, so this run applies against the mock. It
 # creates nothing. The mock does not assign MAC addresses the way Proxmox does,
 # so an undeclared one is null here.
