@@ -96,10 +96,10 @@ jobs:
         with:
           python-packages: 'true'
 
-      # This job installs the provider the OpenTofu module and the consumer
+      # This job installs the provider the OpenTofu modules and the consumer
       # example declare, which is the only network access it needs. It contacts
-      # no Proxmox endpoint and no guest, and holds no credential: both sets of
-      # OpenTofu tests mock the provider, the role's checks read what it
+      # no Proxmox endpoint and no guest, and holds no credential: every set of
+      # OpenTofu tests mocks the provider, the role's checks read what it
       # declares, and the example is checked against a temporary stand-in
       # checkout rather than an acquired one.
       - name: Check the components, their composition, and the consumer example

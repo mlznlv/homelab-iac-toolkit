@@ -44,6 +44,11 @@ run "a_container_identifier_can_be_supplied" {
     condition     = proxmox_virtual_environment_container.this.vm_id == 250
     error_message = "A declared container_id must reach vm_id."
   }
+
+  assert {
+    condition     = output.container_id == 250
+    error_message = "The container_id output must publish the container's identifier."
+  }
 }
 
 run "ssh_port_changes_connection_metadata_only" {
@@ -58,9 +63,17 @@ run "ssh_port_changes_connection_metadata_only" {
     error_message = "connection.port must carry the declared metadata port."
   }
 
+  # A mock cannot show that nothing is planned for the container: the
+  # provider-level plan recorded with the implementation does that. This pins
+  # the declared values the port could most plausibly have reached.
   assert {
-    condition     = proxmox_virtual_environment_container.this.initialization[0].hostname == "fictional-container.example.invalid"
-    error_message = "Changing connection metadata must not change container initialization."
+    condition     = proxmox_virtual_environment_container.this.initialization[0].hostname == "fictional-container.example.invalid" && proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.20/24" && length(proxmox_virtual_environment_container.this.network_interface) == 1
+    error_message = "Changing connection metadata must not change the container's hostname, addressing, or interface."
+  }
+
+  assert {
+    condition     = output.connection.host == "192.0.2.20" && output.connection.user == "root"
+    error_message = "Changing the port must leave the published host and user as they were."
   }
 }
 
@@ -90,5 +103,65 @@ run "a_null_ssh_port_keeps_the_default" {
   assert {
     condition     = output.connection.port == 22
     error_message = "A null ssh_port must publish the default port 22."
+  }
+}
+
+# Rejections alone would not notice a rule that had become too strict, so each
+# range is also exercised at its limits.
+run "the_lower_limit_of_each_range_is_accepted" {
+  command = plan
+
+  variables {
+    name                    = "a"
+    container_id            = 100
+    root_filesystem_size_gb = 1
+    cpu_cores               = 1
+    memory_mib              = 16
+    ipv4_address_cidr       = "192.0.2.0/0"
+    ssh_port                = 1
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].hostname == "a" && proxmox_virtual_environment_container.this.vm_id == 100
+    error_message = "A one-character name and the lowest identifier must be accepted."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.disk[0].size == 1 && proxmox_virtual_environment_container.this.cpu[0].cores == 1 && proxmox_virtual_environment_container.this.memory[0].dedicated == 16
+    error_message = "The smallest root filesystem, core count, and memory must be accepted."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.0/0" && output.connection.port == 1
+    error_message = "An octet and prefix length of 0 and port 1 must be accepted."
+  }
+}
+
+run "the_upper_limit_of_each_range_is_accepted" {
+  command = plan
+
+  variables {
+    name              = "a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.b012345678901234567890123456789012345678901234567890123456789"
+    container_id      = 999999999
+    cpu_cores         = 128
+    ipv4_address_cidr = "203.0.113.255/32"
+    ipv4_gateway      = "203.0.113.255"
+    dns_servers       = ["203.0.113.255"]
+    ssh_port          = 65535
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_container.this.initialization[0].hostname) == 253
+    error_message = "A 253-character name made of 63-character labels must be accepted."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.vm_id == 999999999 && proxmox_virtual_environment_container.this.cpu[0].cores == 128
+    error_message = "The highest identifier and core count must be accepted."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].address == "203.0.113.255/32" && proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].gateway == "203.0.113.255" && output.connection.port == 65535
+    error_message = "An octet of 255, a prefix length of 32, and port 65535 must be accepted."
   }
 }

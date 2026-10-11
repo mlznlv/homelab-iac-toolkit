@@ -196,17 +196,18 @@ tasks:
     cmds:
       # Formatting covers the test files too, which tofu fmt understands.
       - tofu fmt -check -recursive tofu/
-      # init installs the provider the module declares. The lock file is read
+      # init installs the provider each module declares. Each lock file is read
       # only, so a provider that no longer matches the committed lock fails
       # here instead of being silently replaced. There is no backend to
-      # configure: the module declares none, and consumers own their own.
+      # configure: the modules declare none, and consumers own their own.
+      #
+      # The tests mock the provider, so they contact no Proxmox endpoint, need
+      # no credentials, and create nothing.
       - tofu -chdir=tofu/modules/proxmox-linux-vm init -input=false -backend=false -lockfile=readonly
       - tofu -chdir=tofu/modules/proxmox-linux-vm validate
       - tofu -chdir=tofu/modules/proxmox-linux-vm test
       - tofu -chdir=tofu/modules/proxmox-linux-container init -input=false -backend=false -lockfile=readonly
       - tofu -chdir=tofu/modules/proxmox-linux-container validate
-      # The tests mock the provider, so they contact no Proxmox endpoint, need
-      # no credentials, and create nothing.
       - tofu -chdir=tofu/modules/proxmox-linux-container test
 
   validate:example:

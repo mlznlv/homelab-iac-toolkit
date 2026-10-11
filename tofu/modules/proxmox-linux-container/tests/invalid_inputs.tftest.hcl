@@ -259,3 +259,77 @@ run "fractional_port_is_rejected" {
   variables { ssh_port = 22.5 }
   expect_failures = [var.ssh_port]
 }
+
+# Proxmox gives a container no less than 16 MiB, and the provider refuses
+# fewer, so the module says so first.
+run "memory_below_the_container_minimum_is_rejected" {
+  command = plan
+  variables { memory_mib = 15 }
+  expect_failures = [var.memory_mib]
+}
+
+# The provider accepts at most 128 cores for a container.
+run "cpu_count_above_the_provider_maximum_is_rejected" {
+  command = plan
+  variables { cpu_cores = 129 }
+  expect_failures = [var.cpu_cores]
+}
+
+# cidrnetmask() accepts an IPv4-mapped IPv6 address and octets with leading
+# zeros. Proxmox accepts neither, so the address rules do not rest on it.
+run "ipv4_mapped_ipv6_address_is_rejected" {
+  command = plan
+  variables { ipv4_address_cidr = "::ffff:192.0.2.20/120" }
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "address_with_a_leading_zero_is_rejected" {
+  command = plan
+  variables { ipv4_address_cidr = "192.0.2.020/24" }
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "address_with_an_octet_above_255_is_rejected" {
+  command = plan
+  variables { ipv4_address_cidr = "192.0.2.256/24" }
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "address_with_a_prefix_above_32_is_rejected" {
+  command = plan
+  variables { ipv4_address_cidr = "192.0.2.20/33" }
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "gateway_with_a_leading_zero_is_rejected" {
+  command = plan
+  variables { ipv4_gateway = "192.0.2.01" }
+  expect_failures = [var.ipv4_gateway]
+}
+
+run "ipv4_mapped_ipv6_gateway_is_rejected" {
+  command = plan
+  variables { ipv4_gateway = "::ffff:192.0.2.1" }
+  expect_failures = [var.ipv4_gateway]
+}
+
+run "dns_server_with_a_leading_zero_is_rejected" {
+  command = plan
+  variables { dns_servers = ["192.0.2.053"] }
+  expect_failures = [var.dns_servers]
+}
+
+# One entry is one key. A second line would reach Proxmox as it stands.
+run "key_entry_spanning_two_lines_is_rejected" {
+  command = plan
+  variables {
+    ssh_public_keys = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid\nfictional-nonsense"]
+  }
+  expect_failures = [var.ssh_public_keys]
+}
+
+run "key_with_more_padding_than_base64_allows_is_rejected" {
+  command = plan
+  variables { ssh_public_keys = ["ssh-ed25519 AAAA=== fictional@example.invalid"] }
+  expect_failures = [var.ssh_public_keys]
+}

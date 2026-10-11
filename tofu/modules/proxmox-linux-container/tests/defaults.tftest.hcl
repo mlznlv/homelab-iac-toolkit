@@ -199,19 +199,27 @@ run "connection_output_is_declared_metadata" {
   }
 }
 
-# The provider reports the addresses a started container holds. The override
-# makes it report one the consumer never declared, on an apply the mock
-# performs, and the published host must still be the declared address.
-run "connection_host_ignores_provider_reported_addressing" {
+# The provider reports the addresses a started container holds and the
+# identifier Proxmox assigned. The override makes it report an address the
+# consumer never declared and an identifier nobody supplied, on an apply the
+# mock performs. The published host must still be the declared address, and
+# the published identifier must be the container's own.
+run "outputs_after_creation_use_the_declared_host_and_the_assigned_identifier" {
   command = apply
 
   override_resource {
     target = proxmox_virtual_environment_container.this
     values = {
+      vm_id = 250
       ipv4 = {
         veth0 = "198.51.100.99"
       }
     }
+  }
+
+  assert {
+    condition     = output.container_id == 250
+    error_message = "With no container_id supplied, the container_id output must publish the identifier the container was given."
   }
 
   assert {

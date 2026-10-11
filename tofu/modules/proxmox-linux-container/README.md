@@ -59,13 +59,13 @@ Required:
 | `template_file_id` | `string` | Identifier of the existing Debian container template volume, in `datastore:path` form. |
 | `datastore_id` | `string` | Datastore for the root filesystem. |
 | `root_filesystem_size_gb` | `number` | Root filesystem size, in gigabytes. |
-| `cpu_cores` | `number` | CPU cores. |
-| `memory_mib` | `number` | Dedicated memory, in MiB. |
+| `cpu_cores` | `number` | CPU cores, from 1 to 128. |
+| `memory_mib` | `number` | Dedicated memory, in MiB. At least 16. |
 | `network_bridge` | `string` | Bridge for the container's single interface, such as `vmbr0`. |
 | `ipv4_address_cidr` | `string` | Static IPv4 address with a prefix length, such as `192.0.2.20/24`. |
 | `ipv4_gateway` | `string` | IPv4 default gateway, without a prefix length. |
 | `dns_servers` | `list(string)` | IPv4 DNS servers, in order of preference. At least one. |
-| `ssh_public_keys` | `list(string)` | OpenSSH **public** keys installed for root when the container is created. At least one. |
+| `ssh_public_keys` | `list(string)` | OpenSSH **public** keys installed for root when the container is created. At least one, each a single line. |
 
 Optional:
 
@@ -75,9 +75,9 @@ Optional:
 | `nesting_enabled` | `bool` | `true` | Whether to enable the Proxmox nesting feature. See [Nesting](#nesting). |
 | `ssh_port` | `number` | `22` | Port published in the `connection` output. Metadata only. |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: a name that is not a DNS name, an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, a size that is not a whole number of at least one, an identifier outside Proxmox's range, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: a name that is not a DNS name, an address without a prefix length, an IPv6 address in any spelling, an octet written with a leading zero, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, an entry that is not one OpenSSH public key on one line, a size that is not a whole number within its range, an identifier outside Proxmox's range, and so on.
 
-DNS servers are required rather than optional. Without one, Proxmox copies the node's own resolver configuration into the container, and a node's resolvers are not something a reusable module should adopt for you silently.
+DNS servers are required rather than optional. Without one, Proxmox copies the node's own name servers into the container, and a node's resolvers are not something a reusable module should adopt for you silently. **The node's search domain is still copied.** Proxmox falls back to the node for the name servers and the search domain separately, and this module has no search-domain input, so a container's `/etc/resolv.conf` gets your name servers and the `search` line of whichever node created it. This is read from Proxmox's source and has not been exercised.
 
 ## Outputs
 
@@ -101,6 +101,8 @@ Four things are fixed or defaulted because the provider's own defaults would giv
 - **Nesting is on unless you turn it off.** See below.
 
 Root gets the SSH public keys you declare and no password.
+
+One provider default is left as it is: swap. The module declares dedicated memory only, and the provider then creates the container with no swap, where Proxmox's own default is 512 MiB. Size `memory_mib` with that in mind.
 
 ### Nesting
 

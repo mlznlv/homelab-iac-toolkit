@@ -121,7 +121,7 @@ tofu -chdir=tofu/modules/proxmox-linux-container validate
 tofu -chdir=tofu/modules/proxmox-linux-container test
 ```
 
-Check that the module's `connection` output composes into ordinary Ansible inventory. Ansible reads the committed fixture back and the three published values must survive unchanged; that the output composes into exactly that document is asserted by the module's `tests/composition.tftest.hcl`.
+Check that the VM module's `connection` output composes into ordinary Ansible inventory. Ansible reads the committed fixture back and the three published values must survive unchanged; that the output composes into exactly that document is asserted by that module's `tests/composition.tftest.hcl`.
 
 ```sh
 ansible-inventory --inventory tofu/modules/proxmox-linux-vm/tests/composition-inventory.yml --list \
