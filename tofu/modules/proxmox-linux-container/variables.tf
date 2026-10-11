@@ -87,12 +87,13 @@ variable "ipv4_address_cidr" {
   description = "Static IPv4 address for the container in CIDR notation."
   type        = string
 
-  # Dotted decimal only, because cidrnetmask() also accepts an IPv4-mapped
-  # IPv6 address and octets with leading zeros, which Proxmox does not. The
-  # gateway and DNS server rules below are written out for the same reason.
+  # Written out to Proxmox's own rule rather than delegated to cidrnetmask(),
+  # which also accepts an IPv4-mapped IPv6 address, octets with leading zeros,
+  # and prefix lengths below 8, none of which Proxmox does. The gateway and DNS
+  # server rules below are written out for the same reason.
   validation {
-    condition     = can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])/([0-9]|[12][0-9]|3[0-2])$", var.ipv4_address_cidr))
-    error_message = "The ipv4_address_cidr must be an IPv4 address in dotted decimal, without leading zeros, with a prefix length from 0 to 32, such as 192.0.2.20/24."
+    condition     = can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])/([89]|[12][0-9]|3[0-2])$", var.ipv4_address_cidr))
+    error_message = "The ipv4_address_cidr must be an IPv4 address in dotted decimal, without leading zeros, with a prefix length from 8 to 32, such as 192.0.2.20/24."
   }
 }
 

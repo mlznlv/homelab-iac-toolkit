@@ -62,7 +62,7 @@ Required:
 | `cpu_cores` | `number` | CPU cores, from 1 to 128. |
 | `memory_mib` | `number` | Dedicated memory, in MiB. At least 16. |
 | `network_bridge` | `string` | Bridge for the container's single interface, such as `vmbr0`. |
-| `ipv4_address_cidr` | `string` | Static IPv4 address with a prefix length, such as `192.0.2.20/24`. |
+| `ipv4_address_cidr` | `string` | Static IPv4 address with a prefix length from 8 to 32, such as `192.0.2.20/24`. |
 | `ipv4_gateway` | `string` | IPv4 default gateway, without a prefix length. |
 | `dns_servers` | `list(string)` | IPv4 DNS servers, in order of preference. At least one. |
 | `ssh_public_keys` | `list(string)` | OpenSSH **public** keys installed for root when the container is created. At least one, each a single line. |

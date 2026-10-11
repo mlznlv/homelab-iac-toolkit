@@ -301,6 +301,13 @@ run "address_with_a_prefix_above_32_is_rejected" {
   expect_failures = [var.ipv4_address_cidr]
 }
 
+# Proxmox accepts a prefix length from 8 to 32.
+run "address_with_a_prefix_below_8_is_rejected" {
+  command = plan
+  variables { ipv4_address_cidr = "192.0.2.20/7" }
+  expect_failures = [var.ipv4_address_cidr]
+}
+
 run "gateway_with_a_leading_zero_is_rejected" {
   command = plan
   variables { ipv4_gateway = "192.0.2.01" }

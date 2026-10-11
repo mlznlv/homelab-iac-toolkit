@@ -117,7 +117,7 @@ run "the_lower_limit_of_each_range_is_accepted" {
     root_filesystem_size_gb = 1
     cpu_cores               = 1
     memory_mib              = 16
-    ipv4_address_cidr       = "192.0.2.0/0"
+    ipv4_address_cidr       = "192.0.2.0/8"
     ssh_port                = 1
   }
 
@@ -132,8 +132,8 @@ run "the_lower_limit_of_each_range_is_accepted" {
   }
 
   assert {
-    condition     = proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.0/0" && output.connection.port == 1
-    error_message = "An octet and prefix length of 0 and port 1 must be accepted."
+    condition     = proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.0/8" && output.connection.port == 1
+    error_message = "An octet of 0, a prefix length of 8, and port 1 must be accepted."
   }
 }
 
