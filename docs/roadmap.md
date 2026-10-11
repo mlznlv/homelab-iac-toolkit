@@ -3,10 +3,10 @@
 ## Current state
 
 - **Current phase:** M6 — Broader Proxmox infrastructure
-- **Milestone state:** M1 through M5 are complete. The first M6 expansion is accepted through ADR 0009.
-- **Implementation state:** Optional VLAN tagging on the existing Linux VM module is the current execution focus.
-- **Current blocker:** None at milestone level. Additional VM data disks remain independently blocked in Issue #80.
-- **Next action:** Implement the accepted optional VLAN capability through one focused Developer Issue.
+- **Milestone state:** M1 through M5 are complete. VLAN is merged and ADRs 0010–0013 are accepted; the multiple-attachment lifecycle requires further Architecture review.
+- **Implementation state:** LXC [#99](https://github.com/mlznlv/homelab-iac-toolkit/issues/99) is Ready and independent. Multiple attachments [#98](https://github.com/mlznlv/homelab-iac-toolkit/issues/98) are Blocked; DHCP [#100](https://github.com/mlznlv/homelab-iac-toolkit/issues/100) follows #98, and IPv6 [#101](https://github.com/mlznlv/homelab-iac-toolkit/issues/101) follows #100.
+- **Current blocker:** Networking awaits Architecture [#103](https://github.com/mlznlv/homelab-iac-toolkit/issues/103). Additional VM data disks remain independently blocked in [#80](https://github.com/mlznlv/homelab-iac-toolkit/issues/80).
+- **Next action:** Complete LXC provider-lifecycle evidence and final Architecture review; resolve #103 before resuming the networking chain.
 
 ## Milestone sequence
 
@@ -295,13 +295,13 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 ## Near-term Developer work
 
-Near-term Developer work implements optional VLAN tagging on the existing Linux VM module through one focused GitHub Issue derived from ADR 0009. Issue-level scope, dependencies and execution state live in GitHub.
+LXC #99 can proceed independently. Multiple attachments #98 await Architecture #103; DHCP #100 follows #98, and IPv6 #101 follows #100. Issue-level specifications and execution state live in GitHub.
 
 ## Deferred from current execution
 
-The following remains outside the current VLAN increment. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
+The following remains outside current executable work. Later milestones describe intended outcomes only; implementation still requires accepted Architecture and focused Issues.
 
-- Proxmox expansion beyond optional VLAN tagging, including additional VM data disks while Issue #80 remains blocked, and Ansible expansion beyond the first validated slice.
+- Additional VM data disks while Issue #80 remains blocked, other Proxmox expansion without demonstrated reusable need, and Ansible expansion beyond the first validated slice.
 - Generic dotfiles integration.
 - Live Proxmox testing outside an approved isolated path.
 - Stable 1.0 compatibility commitment.
