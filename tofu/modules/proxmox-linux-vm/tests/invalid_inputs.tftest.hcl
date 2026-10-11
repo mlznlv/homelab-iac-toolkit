@@ -232,6 +232,20 @@ run "more_than_eight_attachments_in_total_are_rejected" {
   expect_failures = [var.additional_network_attachments]
 }
 
+# No additional attachments is written `[]`, or by leaving the input out. A null
+# is refused rather than read as `[]`: on a VM that already has attachments,
+# an empty list asks for all of them to be removed, which is not supported, and
+# a null handed down by a wrapping module should not become that request.
+run "a_null_in_place_of_the_attachment_list_is_rejected" {
+  command = plan
+
+  variables {
+    additional_network_attachments = null
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
 run "an_additional_attachment_that_is_null_is_rejected" {
   command = plan
 
