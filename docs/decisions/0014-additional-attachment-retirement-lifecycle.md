@@ -28,7 +28,7 @@ The supported lifecycle is append-and-update:
 
 Supported changes must preserve the VM resource and the primary `net0` configuration and MAC unless a separate accepted primary-attachment change is deliberately requested. Moving a logical interface to another slot is not identity-preserving.
 
-Removing any additional attachment, clearing the list after attachments exist, middle removal, reordering, removing an existing address, and removal followed by re-addition are outside the supported lifecycle. This uniform restriction also excludes retirement of an addressless attachment, although PR #102 records a convergent plan for addressless tail removal: the public contract does not require consumers to distinguish historical addressing cases before deciding whether retirement is supported.
+Removing any additional attachment, clearing the list after attachments exist, middle removal, reordering, removing an existing address, and removal followed by re-addition are outside the supported lifecycle. This uniform restriction also excludes retirement of an addressless attachment, although PR #102 records an in-place plan with unchanged cloud-init configuration for addressless tail removal: the public contract does not require consumers to distinguish historical addressing cases before deciding whether retirement is supported.
 
 This is a public usage contract, not a promise of plan-time historical validation. Current inputs cannot determine prior order, count, or address history. The module prominently documents unsupported transitions and recurring-diff/reboot risk; consumer review of configuration and `tofu plan` precedes explicit apply. It must not present a merely in-place retirement plan as supported or suggest repeated apply, ignored initialization differences, or disabled reboot as a remedy.
 
@@ -59,7 +59,7 @@ ADR 0011 is marked Superseded without rewriting its historical decision text. Th
 
 - **Ship removal as supported and document the repeated diff:** rejected. A known non-converging plan, coupled to repeated cloud-init rebuild/reboot behavior, is not an acceptable normal lifecycle contract.
 - **Automatically mutate Proxmox to delete retired `ipconfigN`:** rejected. It bypasses the provider and creates a second lifecycle owner.
-- **Remove static addressing from additional attachments entirely:** rejected for now. Stable-slot static addressing itself works and is already an accepted useful capability; the defect is retirement, not declaration or in-place change.
+- **Remove static addressing from additional attachments entirely:** rejected for now. Stable-slot static addressing has evidenced in-place planning and is already an accepted useful capability; the defect is retirement, not declaration or in-place change.
 - **Block the entire multi-attachment capability:** rejected. Append-and-update behavior has provider-level evidence and provides reusable value without depending on the broken retirement path.
 - **Support selected addressless removals:** deferred. A narrower exception needs its own reviewed history-sensitive contract; the uniform rule is easier to review safely.
 
