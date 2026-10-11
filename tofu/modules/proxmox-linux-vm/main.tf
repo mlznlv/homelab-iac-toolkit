@@ -29,7 +29,7 @@ resource "proxmox_virtual_environment_vm" "this" {
   # Waiting is disabled unconditionally rather than exposed: an attached
   # channel with no agent behind it is inert, but a provider that waits for one
   # would block every apply and refresh until its timeout expired. Addressing
-  # is the declared static configuration, never an agent-reported address.
+  # is the declared configuration, never an agent-reported address.
   agent {
     enabled = var.guest_agent_enabled
 
@@ -55,10 +55,12 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   # A null tag leaves vlan_id unset, which the provider plans as its untagged
   # default. The provider spells that default 0; the module does not accept 0,
-  # so null is the one way to say untagged.
+  # so null is the one way to say untagged. A null MAC address leaves the
+  # choice to Proxmox.
   network_device {
-    bridge  = var.network_bridge
-    vlan_id = var.network_vlan_id
+    bridge      = var.network_bridge
+    vlan_id     = var.network_vlan_id
+    mac_address = var.network_mac_address
   }
 
   # Bootstrap only. These values give the consumer a way in to the new guest;
@@ -67,9 +69,13 @@ resource "proxmox_virtual_environment_vm" "this" {
   initialization {
     datastore_id = var.datastore_id
 
+    # DHCP is declared explicitly rather than left out: Proxmox falls back to
+    # DHCP for an interface with no IP configuration, but the module keeps the
+    # primary configuration declared in both modes. The gateway is null in
+    # DHCP mode, so the provider sends none.
     ip_config {
       ipv4 {
-        address = var.ipv4_address_cidr
+        address = var.ipv4_mode == "dhcp" ? "dhcp" : var.ipv4_address_cidr
         gateway = var.ipv4_gateway
       }
     }
@@ -81,6 +87,25 @@ resource "proxmox_virtual_environment_vm" "this" {
     user_account {
       username = var.username
       keys     = var.ssh_public_keys
+    }
+  }
+
+  # Checks that span more than one input. They fail at plan time, before
+  # anything reaches Proxmox.
+  lifecycle {
+    precondition {
+      condition     = var.ipv4_mode != "static" || (var.ipv4_address_cidr != null && var.ipv4_gateway != null)
+      error_message = "Static IPv4 addressing, the default ipv4_mode, needs both ipv4_address_cidr and ipv4_gateway."
+    }
+
+    precondition {
+      condition     = var.ipv4_mode != "dhcp" || (var.ipv4_address_cidr == null && var.ipv4_gateway == null)
+      error_message = "With ipv4_mode = \"dhcp\", ipv4_address_cidr and ipv4_gateway must be null: the DHCP service supplies the address, and Proxmox expects no gateway alongside DHCP."
+    }
+
+    precondition {
+      condition     = var.ipv4_mode != "dhcp" || var.connection_host != null
+      error_message = "With ipv4_mode = \"dhcp\", connection_host is required, because the module cannot know the address the DHCP service will grant and never discovers one."
     }
   }
 }

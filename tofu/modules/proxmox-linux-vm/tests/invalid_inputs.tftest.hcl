@@ -216,3 +216,234 @@ run "a_vlan_identifier_above_the_vlan_range_is_rejected" {
 
   expect_failures = [var.network_vlan_id]
 }
+
+run "an_unknown_ipv4_mode_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode = "manual"
+  }
+
+  expect_failures = [var.ipv4_mode]
+}
+
+run "an_ipv4_mode_written_in_another_case_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode = "DHCP"
+  }
+
+  expect_failures = [var.ipv4_mode]
+}
+
+# DHCP is selected by the mode, never by smuggling Proxmox's literal into the
+# static address.
+run "dhcp_cannot_be_requested_through_the_static_address" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "dhcp"
+  }
+
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+# The rules below span more than one input, so they are the resource's
+# preconditions rather than a variable's validation. Each run breaks exactly
+# one of them.
+
+run "static_mode_without_an_address_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = null
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "static_mode_without_a_gateway_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_gateway = null
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "dhcp_with_a_declared_address_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode       = "dhcp"
+    ipv4_gateway    = null
+    connection_host = "fictional-vm.example.invalid"
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "dhcp_with_a_declared_gateway_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    connection_host   = "fictional-vm.example.invalid"
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "dhcp_without_a_connection_host_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "dhcp_without_dns_servers_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+    connection_host   = "fictional-vm.example.invalid"
+    dns_servers       = []
+  }
+
+  expect_failures = [var.dns_servers]
+}
+
+run "a_connection_host_with_a_scheme_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "ssh://fictional-vm.example.invalid"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_connection_host_with_a_port_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "fictional-vm.example.invalid:22"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_bracketed_ipv6_connection_host_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "[2001:db8::20]"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_connection_host_with_a_prefix_length_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "192.0.2.20/24"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_connection_host_that_is_a_mistyped_ipv4_address_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "192.0.2.300"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_connection_host_containing_whitespace_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "fictional vm"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "an_empty_connection_host_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = ""
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_malformed_connection_host_is_rejected_in_dhcp_mode" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+    connection_host   = "fictional_vm.example.invalid"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+# Proxmox refuses a MAC address with the group bit set, which marks a
+# multicast address.
+run "a_multicast_primary_mac_address_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "01:00:5E:00:53:01"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+run "a_primary_mac_address_with_other_separators_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "00-00-5E-00-53-01"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+run "a_primary_mac_address_with_too_few_octets_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "00:00:5E:00:53"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+run "a_primary_mac_address_that_is_not_hexadecimal_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "00:00:5E:00:53:ZZ"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
