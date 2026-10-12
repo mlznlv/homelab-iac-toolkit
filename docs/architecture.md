@@ -125,7 +125,7 @@ At acceptance, the first slice deferred template lifecycle, disk mutation, linke
 
 The canonical coordinated M4 workflow consumes the OpenTofu module and Ansible role through one consumer-owned toolkit checkout at one immutable full commit SHA, as accepted in [ADR 0007](decisions/0007-single-revision-consumer-contract.md). The consumer's source-controlled material must identify that revision exactly.
 
-The checkout mechanism and placement are consumer choices. A Git submodule pinned to the full SHA, vendored content with source and revision provenance recorded in source control, or another consumer-owned fetch mechanism whose source-controlled declaration reproduces the same full SHA can satisfy the contract. A path such as `vendor/homelab-iac-toolkit/` is a documentation convention, not a toolkit interface.
+The checkout mechanism and placement are consumer choices. A Git submodule pinned to the full SHA, vendored content with source and revision provenance recorded in source control, or another consumer-owned fetch mechanism whose source-controlled declaration reproduces the same full SHA can satisfy the contract. A path such as `vendor/proxmox-iac-toolkit/` is a documentation convention, not a toolkit interface.
 
 Both components resolve from that same checkout:
 
@@ -229,7 +229,7 @@ VLAN trunks, DHCP, IPv6, bridge discovery or management, network orchestration, 
 
 ### Blocked data-disk need
 
-Additional persistent VM data disks are a demonstrated consumer need, but the current supported provider path does not establish safe management of additional disks while preserving template-inherited disks. [The blocked Architecture record](https://github.com/mlznlv/homelab-iac-toolkit/issues/80) retains the exact provider evidence and unblock condition. The existing module must not be redesigned around the experimental cloned-VM resource family, and no future disk interface or migration mechanism is pre-designed while that blocker remains.
+Additional persistent VM data disks are a demonstrated consumer need, but the current supported provider path does not establish safe management of additional disks while preserving template-inherited disks. [The blocked Architecture record](https://github.com/mlznlv/proxmox-iac-toolkit/issues/80) retains the exact provider evidence and unblock condition. The existing module must not be redesigned around the experimental cloned-VM resource family, and no future disk interface or migration mechanism is pre-designed while that blocker remains.
 
 ## Multiple VM network attachments
 
@@ -285,7 +285,7 @@ Any supported change to an attachment's declared address, including appending an
 
 The pinned provider emits a cloud-init IP configuration only for attachments that declare one, and sends no deletion for one that disappears: its update request simply omits the empty entry. The retired `ipconfig` stays in the Proxmox VM configuration, and Proxmox's cloud-init generator emits network data for every slot that still has one, matched to the MAC address the device now in that slot carries.
 
-The read path returns the retired entry to state, so later plans again propose its removal. [PR #102](https://github.com/mlznlv/homelab-iac-toolkit/pull/102) demonstrates this with real-provider plans and synthetic states representing read-back, not live apply or refresh. The pinned update path requests cloud-init rebuild and reboot on every initialization difference. A repeated in-place plan is therefore a convergence defect with repeated disruptive-apply risk, not an acceptable supported-removal limitation.
+The read path returns the retired entry to state, so later plans again propose its removal. [PR #102](https://github.com/mlznlv/proxmox-iac-toolkit/pull/102) demonstrates this with real-provider plans and synthetic states representing read-back, not live apply or refresh. The pinned update path requests cloud-init rebuild and reboot on every initialization difference. A repeated in-place plan is therefore a convergence defect with repeated disruptive-apply risk, not an acceptable supported-removal limitation.
 
 Retirement and reordering remain unsupported under ADR 0014. Consumers must not repeat apply, ignore initialization differences, or disable reboot as a cleanup strategy. A consumer needing retirement preserves the current slots, waits for an evidenced provider fix, or designs an explicit reviewed VM rebuild/replacement outside the normal update contract. Replacement destroys the old VM and risks guest-data loss. The toolkit performs no direct Proxmox cleanup or automatic migration.
 

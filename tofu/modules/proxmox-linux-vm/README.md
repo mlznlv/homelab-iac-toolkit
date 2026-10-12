@@ -30,7 +30,7 @@ You supply, and continue to own:
 
 ```hcl
 module "fictional_vm" {
-  source = "git::https://github.com/mlznlv/homelab-iac-toolkit.git//tofu/modules/proxmox-linux-vm?ref=<commit>"
+  source = "git::https://github.com/mlznlv/proxmox-iac-toolkit.git//tofu/modules/proxmox-linux-vm?ref=<commit>"
 
   name         = "fictional-vm"
   node_name    = "fictional-node"

@@ -8,7 +8,7 @@ Supersedes [ADR 0010](0010-first-reusable-lxc-capability.md). Its historical dec
 
 ## Context
 
-The implementation evidence gate for the first LXC capability exposed three gaps in ADR 0010. The reviewed implementation in [PR #107](https://github.com/mlznlv/homelab-iac-toolkit/pull/107) was at commit `79fb02eadf9880358641ad7f5fa3dc3052a89b83`. It uses the supported `bpg/proxmox` line and locked v0.111.1 build, source revision `b22fe919fc34476b232191b69c8907f0c1aa5bea`. No provider upgrade is selected by this decision; executable constraints and locks remain authoritative.
+The implementation evidence gate for the first LXC capability exposed three gaps in ADR 0010. The reviewed implementation in [PR #107](https://github.com/mlznlv/proxmox-iac-toolkit/pull/107) was at commit `79fb02eadf9880358641ad7f5fa3dc3052a89b83`. It uses the supported `bpg/proxmox` line and locked v0.111.1 build, source revision `b22fe919fc34476b232191b69c8907f0c1aa5bea`. No provider upgrade is selected by this decision; executable constraints and locks remain authoritative.
 
 - **Shrink is not a working replacement contract.** The implementation author's refresh-disabled real-provider plan against synthetic prior state plans a root-filesystem decrease as an update with no replacement path. The provider intends replacement on its nested disk block, but its SDK v2.40.1 diff path does not propagate that flag to the changed size field when the block count is unchanged. The provider's update path then refuses the smaller size. Source intent alone did not establish the earlier replacement claim.
 - **Creation and later nesting changes have different authorization.** Creation sends nesting alone, only when enabled. A feature update also emits false non-nesting flags. The inspected Proxmox permission path treats absent-to-false flags as changes, which are restricted to the exact `root@pam` identity. A plan can show an update without establishing that the consumer can apply it.
@@ -54,7 +54,7 @@ This decision operates within [ADR 0001](0001-public-toolkit-private-deployment-
 
 ## Sources
 
-- [PR #107 exact-build plan report and three Architecture findings](https://github.com/mlznlv/homelab-iac-toolkit/pull/107#provider-level-lifecycle-evidence)
+- [PR #107 exact-build plan report and three Architecture findings](https://github.com/mlznlv/proxmox-iac-toolkit/pull/107#provider-level-lifecycle-evidence)
 - [Provider shrink replacement intent](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L1182-L1228)
 - [SDK v2.40.1 nested-block diff behavior](https://github.com/hashicorp/terraform-plugin-sdk/blob/e6c7dc42a51abcaf5b709a98720ba13ba0082021/helper/schema/schema.go#L1392-L1441)
 - [Provider shrink refusal, growth, and mount-option-only reboot flag](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/container/container.go#L3662-L3710)

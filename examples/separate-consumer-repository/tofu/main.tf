@@ -1,7 +1,7 @@
 # One VM, from the toolkit module in the checkout this repository pins.
 #
 # `source` is a local path, and it is the whole point of this example. It
-# reaches into `vendor/homelab-iac-toolkit/`, the checkout whose revision
+# reaches into `vendor/proxmox-iac-toolkit/`, the checkout whose revision
 # ../toolkit-revision.yml declares, so the module implementation used here is
 # the one that single commit selects. The Ansible configuration beside it
 # reaches the role in that same checkout, which is what keeps the two halves of
@@ -18,7 +18,7 @@
 # fixtures whose private half nobody holds. Replace all of them.
 
 module "guest" {
-  source = "../vendor/homelab-iac-toolkit/tofu/modules/proxmox-linux-vm"
+  source = "../vendor/proxmox-iac-toolkit/tofu/modules/proxmox-linux-vm"
 
   name         = "fictional-vm"
   node_name    = "fictional-node"

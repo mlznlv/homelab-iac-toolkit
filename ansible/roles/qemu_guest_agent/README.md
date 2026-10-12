@@ -49,7 +49,7 @@ The roles path can come from your `ansible.cfg`:
 
 ```ini
 [defaults]
-roles_path = ./vendor/homelab-iac-toolkit/ansible/roles
+roles_path = ./vendor/proxmox-iac-toolkit/ansible/roles
 ```
 
 or from the environment, which is how this repository's own checks do it:

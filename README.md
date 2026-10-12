@@ -1,4 +1,4 @@
-# Homelab IaC Toolkit
+# Proxmox IaC Toolkit
 
 A reusable, open-source infrastructure-as-code toolkit for Proxmox VE homelabs. It is intended to provide public building blocks that can be composed by a separate, private deployment repository.
 
