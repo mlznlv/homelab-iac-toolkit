@@ -172,16 +172,16 @@ tasks:
       - '{{.PYTHON_TOOL_PREFIX}}python3 ansible/roles/qemu_guest_agent/tests/check-role-contract.py'
 
   validate:composition:
-    desc: 'Components: check that the connection output composes into ordinary Ansible inventory.'
+    desc: 'Components: check that the VM module connection output composes into ordinary Ansible inventory.'
     preconditions:
       - sh: '{{.PYTHON_TOOL_PREFIX}}ansible-inventory --version >/dev/null 2>&1'
         msg: 'ansible-inventory runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
     cmds:
-      # Ansible reads the committed fixture back: the three values the module
-      # publishes, unchanged, in an inventory of the kind a consumer writes by
-      # hand. The other half of this evidence — that the connection output
-      # composes into exactly that document — is asserted by
-      # tests/composition.tftest.hcl, which validate:tofu runs.
+      # Ansible reads the committed fixture back: the three values the VM
+      # module publishes, unchanged, in an inventory of the kind a consumer
+      # writes by hand. The other half of this evidence — that the connection
+      # output composes into exactly that document — is asserted by that
+      # module's tests/composition.tftest.hcl, which validate:tofu runs.
       #
       # Nothing here reads OpenTofu state, generates inventory, or runs the
       # role: the composition stays the consumer's to perform.
@@ -192,19 +192,23 @@ tasks:
         and (.fictional_guests.hosts == ["fictional-vm"])'
 
   validate:tofu:
-    desc: 'Components: check the OpenTofu module and run its contract tests. Needs public network access.'
+    desc: 'Components: check the OpenTofu modules and run their contract tests. Needs public network access.'
     cmds:
       # Formatting covers the test files too, which tofu fmt understands.
       - tofu fmt -check -recursive tofu/
-      # init installs the provider the module declares. The lock file is read
+      # init installs the provider each module declares. Each lock file is read
       # only, so a provider that no longer matches the committed lock fails
       # here instead of being silently replaced. There is no backend to
-      # configure: the module declares none, and consumers own their own.
-      - tofu -chdir=tofu/modules/proxmox-linux-vm init -input=false -backend=false -lockfile=readonly
-      - tofu -chdir=tofu/modules/proxmox-linux-vm validate
+      # configure: the modules declare none, and consumers own their own.
+      #
       # The tests mock the provider, so they contact no Proxmox endpoint, need
       # no credentials, and create nothing.
+      - tofu -chdir=tofu/modules/proxmox-linux-vm init -input=false -backend=false -lockfile=readonly
+      - tofu -chdir=tofu/modules/proxmox-linux-vm validate
       - tofu -chdir=tofu/modules/proxmox-linux-vm test
+      - tofu -chdir=tofu/modules/proxmox-linux-container init -input=false -backend=false -lockfile=readonly
+      - tofu -chdir=tofu/modules/proxmox-linux-container validate
+      - tofu -chdir=tofu/modules/proxmox-linux-container test
 
   validate:example:
     desc: 'Components: check the separate-repository consumer example. Needs public network access.'
