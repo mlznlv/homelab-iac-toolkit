@@ -111,7 +111,7 @@ variable "ipv4_gateway" {
 }
 
 variable "dns_servers" {
-  description = "IPv4 DNS servers for the guest, in order of preference."
+  description = "DNS servers for the guest, IPv4 or IPv6 addresses, in order of preference."
   type        = list(string)
 
   validation {
@@ -119,9 +119,14 @@ variable "dns_servers" {
     error_message = "At least one DNS server is required."
   }
 
+  # An IPv6 server is recognised by its canonical form, which keeps its colons
+  # only for a genuine IPv6 address.
   validation {
-    condition     = alltrue([for server in var.dns_servers : can(cidrnetmask("${server}/32"))])
-    error_message = "Every DNS server must be a bare IPv4 address, such as 192.0.2.53."
+    condition = alltrue([
+      for server in var.dns_servers :
+      can(cidrnetmask("${server}/32")) || try(strcontains(cidrhost("${server}/128", 0), ":"), false)
+    ])
+    error_message = "Every DNS server must be a bare IPv4 or IPv6 address, such as 192.0.2.53 or 2001:db8::53."
   }
 }
 
@@ -318,5 +323,37 @@ variable "additional_network_attachments" {
       if try(attachment.mac_address != null, false)
     ])
     error_message = "Every additional network attachment that declares a mac_address must declare a different one. MAC addresses are compared without regard to letter case."
+  }
+}
+
+variable "ipv6_address_cidr" {
+  description = "Static IPv6 address for the VM's primary network device, net0, in CIDR notation, with a prefix length from 8 to 128, such as 2001:db8::10/64. Additional network attachments take no IPv6. Null, the default, declares no IPv6. It is added beside the primary attachment's IPv4 addressing, static or DHCP, never replaces it, and never becomes the connection output's host. Only static addressing is supported, so Proxmox's auto, dhcp, and manual forms are rejected. Prefix allocation, address uniqueness, routing, router advertisements, and upstream IPv6 service are the consumer's. Adding, changing, or removing it reboots a running VM; see the README."
+  type        = string
+  default     = null
+
+  # Proxmox accepts prefix lengths from 8 to 128. Parsing the address part as
+  # a /128 rejects IPv4, and requiring a colon in its canonical form rejects
+  # IPv4-mapped values, which name an IPv4 address in IPv6 notation.
+  validation {
+    condition = var.ipv6_address_cidr == null ? true : try(
+      can(regex("^[0-9A-Fa-f:.]+/([89]|[1-9][0-9]|1[01][0-9]|12[0-8])$", var.ipv6_address_cidr)) &&
+      strcontains(cidrhost("${split("/", var.ipv6_address_cidr)[0]}/128", 0), ":"),
+      false
+    )
+    error_message = "The ipv6_address_cidr must be null or an IPv6 address with a prefix length from 8 to 128, such as 2001:db8::10/64. Only static IPv6 is supported, so auto, dhcp, and manual are rejected."
+  }
+}
+
+variable "ipv6_gateway" {
+  description = "IPv6 default gateway for the VM, without a prefix length: a global address such as 2001:db8::1, or a link-local one such as fe80::1. It requires ipv6_address_cidr. Null, the default, declares none, and the module then makes no claim about where the guest's IPv6 default route comes from."
+  type        = string
+  default     = null
+
+  # Appending a /128 prefix length fails for IPv4 and for a value that already
+  # carries a prefix length or a zone, and requiring a colon in the canonical
+  # form rejects IPv4-mapped values.
+  validation {
+    condition     = var.ipv6_gateway == null ? true : try(strcontains(cidrhost("${var.ipv6_gateway}/128", 0), ":"), false)
+    error_message = "The ipv6_gateway must be null or a bare IPv6 address without a prefix length, such as 2001:db8::1 or fe80::1."
   }
 }

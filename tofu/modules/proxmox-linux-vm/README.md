@@ -1,6 +1,6 @@
 # `proxmox-linux-vm`
 
-An OpenTofu module that creates one Proxmox VE Linux VM as a full clone of a cloud-init template you already have, gives it static or DHCP IPv4 addressing, optional additional network attachments and a bootstrap account, and publishes where that account can be reached.
+An OpenTofu module that creates one Proxmox VE Linux VM as a full clone of a cloud-init template you already have, gives it static or DHCP IPv4 addressing with optional static IPv6 beside it, optional additional network attachments and a bootstrap account, and publishes where that account can be reached.
 
 It is deliberately small. It owns the VM's lifecycle in Proxmox and nothing else: it configures no provider, keeps no state, manages no disks, and stops caring about the guest's users, keys, and SSH configuration the moment cloud-init has run. Installing the guest agent afterwards belongs to Ansible, and composing the two is yours.
 
@@ -23,6 +23,7 @@ You supply, and continue to own:
 - if you tag a network device, the VLAN and everything that carries it: the bridge's configuration, upstream switching and routing, and addressing that belongs on that VLAN;
 - if you add network attachments, their bridges and networks, allocating their addresses, and any routing between them;
 - if you choose DHCP, the DHCP service with its scopes, reservations, and leases, and a connection host that keeps reaching the guest;
+- if you declare IPv6, the prefix it comes from and everything that makes it work: address uniqueness, routing, router advertisements, upstream IPv6 service, and a gateway that belongs on that network;
 - the private half of the SSH keys you authorize.
 
 ## Usage
@@ -66,7 +67,7 @@ Required:
 | `network_bridge` | `string` | Bridge for the VM's primary network device, `net0`, such as `vmbr0`. |
 | `ipv4_address_cidr` | `string` | Static IPv4 address with a prefix length, such as `192.0.2.10/24`. Required in static mode, the default; must be null with [DHCP](#dhcp-addressing). |
 | `ipv4_gateway` | `string` | IPv4 default gateway, without a prefix length. Required in static mode; must be null with DHCP. |
-| `dns_servers` | `list(string)` | IPv4 DNS servers, in order of preference. At least one. |
+| `dns_servers` | `list(string)` | IPv4 or IPv6 DNS servers, in order of preference. At least one. |
 | `username` | `string` | Bootstrap account cloud-init creates. |
 | `ssh_public_keys` | `list(string)` | OpenSSH **public** keys authorized for that account. At least one. |
 
@@ -83,14 +84,16 @@ Optional:
 | `connection_host` | `string` | `null` | Host published in the `connection` output: a hostname or an IPv4 or IPv6 address. Required with DHCP. Metadata only. |
 | `network_mac_address` | `string` | `null` | MAC address for the primary network device, `net0`. Null lets Proxmox assign one. |
 | `additional_network_attachments` | `list(object)` | `[]` | Up to seven more network attachments, `net1` onwards, in the order given. On an existing VM they can be added and changed, not removed or reordered. See [Additional network attachments](#additional-network-attachments). |
+| `ipv6_address_cidr` | `string` | `null` | Static IPv6 address with a prefix length from `8` to `128`, such as `2001:db8::10/64`, added to the primary attachment beside its IPv4 addressing. Null declares no IPv6. See [Static IPv6](#static-ipv6). |
+| `ipv6_gateway` | `string` | `null` | IPv6 default gateway, global or link-local, without a prefix length. Needs `ipv6_address_cidr`. |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, a null in place of the attachment list, an additional address that is not dotted-decimal IPv4, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, an addressing mode other than `static` or `dhcp`, a static configuration missing its address or gateway, a DHCP configuration that declares either or supplies no connection host, a connection host that is not a hostname or a plainly written IP address, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address in an IPv4 input or an IPv4 one in an IPv6 input, a gateway carrying a prefix, an IPv6 gateway without an IPv6 address, an IPv6 prefix length outside `8` to `128`, Proxmox's non-address IPv6 forms `auto`, `dhcp`, and `manual`, a DNS server that is not an IPv4 or IPv6 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, a null in place of the attachment list, an additional address that is not dotted-decimal IPv4, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, an addressing mode other than `static` or `dhcp`, a static configuration missing its address or gateway, a DHCP configuration that declares either or supplies no connection host, a connection host that is not a hostname or a plainly written IP address, and so on.
 
 ## Outputs
 
 | Name | Description |
 | --- | --- |
-| `connection` | `{ host, user, port }` — `connection_host` when you supply one, otherwise the declared IPv4 address without its prefix; the bootstrap username; and `ssh_port`. |
+| `connection` | `{ host, user, port }` — `connection_host` when you supply one, otherwise the declared IPv4 address without its prefix, never the declared IPv6 address; the bootstrap username; and `ssh_port`. |
 | `mac_addresses` | MAC address of every network attachment, in slot order: `net0` first. Declared ones as given, the rest as Proxmox assigned them. |
 | `vm_id` | Identifier of the created VM, supplied or assigned. |
 | `vm_name` | Name of the created VM. |
@@ -323,6 +326,47 @@ All of the above is for the provider build this repository locks, `bpg/proxmox` 
 
 None of it has been observed against a real Proxmox VE. Nothing here shows that a device is plugged or unplugged successfully, that a device keeps its MAC address at run time, that a guest names, configures, or brings up an interface, that cloud-init re-applies configuration or regenerates host keys on your template, or that anything is reachable or routed through any attachment. [Compatibility](../../../docs/compatibility.md#multiple-network-attachments) records that boundary, and your root module's own lock decides which provider build you run.
 
+## Static IPv6
+
+`ipv6_address_cidr` adds a static IPv6 address to the primary attachment's cloud-init IP configuration, beside its IPv4 configuration, static or [DHCP](#dhcp-addressing), rather than in place of it. Leave it `null`, the default, and the module declares no IPv6 and plans exactly as before. `ipv6_gateway` optionally adds an IPv6 default gateway, global or link-local; it needs the address.
+
+Additional attachments take no IPv6. Their entries have no IPv6 attribute, and like `gateway`, one written there does nothing, with no diagnostic.
+
+```hcl
+module "fictional_vm" {
+  # ...the other inputs shown in Usage...
+
+  ipv4_address_cidr = "192.0.2.10/24"
+  ipv4_gateway      = "192.0.2.1"
+
+  ipv6_address_cidr = "2001:db8::10/64"
+  ipv6_gateway      = "fe80::1"
+
+  dns_servers = ["2001:db8::53", "192.0.2.53"]
+}
+```
+
+The global IPv6 addresses come from the [RFC 3849](https://www.rfc-editor.org/info/rfc3849/) documentation prefix, `fe80::1` is a generic link-local address, and none of them names anything real. DNS servers may be IPv4, IPv6, or both, with or without IPv6 addressing, and at least one is still required.
+
+Only static IPv6 is supported. Proxmox also accepts `auto` for stateless autoconfiguration, `dhcp` for DHCPv6, and `manual` in the same field, but cloud-init's renderers do not give the first two one meaning, so the module rejects all three when you plan. If your network relies on either for guests, configure IPv6 inside the guest instead. IPv6-only addressing is not supported either: the primary attachment always has an IPv4 mode, static or DHCP.
+
+The declared IPv6 address never becomes `connection.host` on its own. That stays the declared static IPv4 address, or the `connection_host` you supply, which may be an IPv6 address or a name. Adding IPv6 to an existing VM therefore leaves your inventory as it was.
+
+The module puts the address and gateway into the cloud-init network data and nothing more. For IPv6 to work in the guest, you provide:
+
+- a template whose cloud-init renders a static IPv6 subnet and its gateway;
+- the prefix the address comes from, and an address no other host uses;
+- routing and upstream IPv6 service on the bridge's network, and router advertisements if you rely on them;
+- a gateway that is reachable on that network. When you leave the gateway out, the module makes no claim about where the guest's IPv6 default route comes from. Nothing checks that the address, gateway, and network agree.
+
+**Adding, changing, or removing IPv6 on an existing VM reboots it.** The VM is updated in place rather than replaced, but any change to its cloud-init configuration makes the provider rebuild the cloud-init drive and reboot a running VM. The next boot is a new cloud-init instance: it re-applies the network configuration, and unless your template turns that off it regenerates the guest's SSH host keys, so expect a host-key warning on your next connection. The same is true of a change to the DNS servers.
+
+**Removing the declared address is not a claim that the guest has no IPv6 afterwards.** It removes the address and gateway from the cloud-init network data. Addresses the guest configures for itself, such as link-local ones or those it derives from router advertisements, are outside the declaration.
+
+Read the plan before you apply. An IPv6-only change shows the VM as `update in-place`, with only `initialization` changing. If a plan shows the VM being replaced for an IPv6 change, do not apply it: that is not the behaviour this module relies on.
+
+That in-place behaviour is evidenced for the provider build this repository locks, `bpg/proxmox` v0.111.1, at provider level: its schema and source, and credential-free plans made with that build for adding IPv6 with and without a gateway, changing the address, prefix length, and gateway, adding and removing the gateway, and removing IPv6; for adding, changing, and removing it in DHCP mode and beside an additional attachment, whose configuration stayed as it was; and for switching the IPv4 mode with IPv6 declared. Each was followed by a plan from the state the provider's read would record afterwards, which showed no further change. It has not been observed against a real Proxmox VE, and nothing here shows that a guest configures the address, that the gateway or any route works, that the guest is reachable over IPv6, or that it has no other IPv6 addresses. [Compatibility](../../../docs/compatibility.md#static-ipv6-addressing) records that boundary, and that your own root module's lock decides which provider build you run.
+
 ## Limitations
 
 This module is one VM, cloned once, addressed as you declare. It does not do:
@@ -331,7 +375,7 @@ This module is one VM, cloned once, addressed as you declare. It does not do:
 - disk resizing, extra disks, or any disk management — the clone inherits the template's layout;
 - linked clones, or cloning from a template on another node;
 - DHCP on an additional attachment, DHCP service, scope, reservation, or name management, or discovering the address a guest was given;
-- IPv6, VLAN trunks, or more than eight network attachments;
+- IPv6 stateless autoconfiguration or DHCPv6, IPv6-only addressing, IPv6 on additional attachments, VLAN trunks, or more than eight network attachments;
 - removing, reordering, or taking the address from an additional attachment on an existing VM;
 - a gateway or routes on any attachment but the primary, NIC models, firewall, MTU, rate, queue, or link-state settings;
 - VLAN creation, bridge configuration or discovery, or network configuration inside the guest;
@@ -342,8 +386,8 @@ This module is one VM, cloned once, addressed as you declare. It does not do:
 
 Formatting, `tofu validate`, and a set of contract tests under [`tests/`](tests) that run against a **mocked** provider: no Proxmox endpoint, no credentials, nothing created. Run them with `task validate:tofu`, or directly as [Local validation](../../../docs/validation.md) describes.
 
-They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, the guest-agent channel attached by default and absent when it is turned off, waiting for an agent-reported address disabled in both cases, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation, the network device left untagged by default and tagged with `1` and `4094` without gaining a second device or changing the addressing or `connection` output, no additional attachment by default, additional attachments in the declared order from `net1` with their own bridge, tag, address, and MAC address, no gateway on any of them, an empty IP configuration for an addressless attachment before an addressed one and none after the last addressed one, eight attachments accepted, undeclared and distinct declared MAC addresses accepted together, `mac_addresses` in slot order, and the primary attachment and `connection` output unchanged by them, static as the default addressing mode, DHCP declared on the primary IP configuration with no address or gateway and the DNS servers kept, additional attachments left static beside it, the connection host published in either mode and the declared address otherwise, the primary MAC address absent by default and reaching `net0` as given in either mode, and reported first in `mac_addresses` — and that bad input fails at plan time, including a null in place of the attachment list, one MAC address declared twice in either letter case, on two additional attachments or on the primary and an additional one, and every rejected combination of mode, address, gateway, and connection host.
+They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, the guest-agent channel attached by default and absent when it is turned off, waiting for an agent-reported address disabled in both cases, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation, the network device left untagged by default and tagged with `1` and `4094` without gaining a second device or changing the addressing or `connection` output, no additional attachment by default, additional attachments in the declared order from `net1` with their own bridge, tag, address, and MAC address, no gateway on any of them, an empty IP configuration for an addressless attachment before an addressed one and none after the last addressed one, eight attachments accepted, undeclared and distinct declared MAC addresses accepted together, `mac_addresses` in slot order, and the primary attachment and `connection` output unchanged by them, static as the default addressing mode, DHCP declared on the primary IP configuration with no address or gateway and the DNS servers kept, additional attachments left static beside it, the connection host published in either mode and the declared address otherwise, the primary MAC address absent by default and reaching `net0` as given in either mode, and reported first in `mac_addresses`, IPv6 absent by default and, when declared, its address and global or link-local gateway reaching the primary IP configuration beside the static or DHCP IPv4 one without changing the `connection` output or reaching an additional attachment, a supplied IPv6 connection host published beside it, and IPv6 DNS servers accepted beside IPv4 ones — and that bad input fails at plan time, including a null in place of the attachment list, one MAC address declared twice in either letter case, on two additional attachments or on the primary and an additional one, and every rejected combination of mode, address, gateway, and connection host.
 
-They prove nothing about a real Proxmox VE. No clone, boot, cloud-init run, SSH connection, shutdown, stop, destroy, VLAN change, attachment change, DHCP lease, or guest agent has been exercised. Nor can a mocked provider show that a tag, attachment, addressing-mode, or MAC address change is made in place, or that a plan settles afterwards; [VLAN tagging](#vlan-tagging), [Additional network attachments](#where-this-is-evidenced), and [DHCP addressing](#where-the-dhcp-behaviour-is-evidenced) say where that evidence comes from. [Compatibility](../../../docs/compatibility.md) records what this evidence does and does not cover.
+They prove nothing about a real Proxmox VE. No clone, boot, cloud-init run, SSH connection, shutdown, stop, destroy, VLAN change, attachment change, DHCP lease, IPv6 change, or guest agent has been exercised. Nor can a mocked provider show that a tag, attachment, addressing-mode, MAC address, or IPv6 change is made in place, or that a plan settles afterwards; [VLAN tagging](#vlan-tagging), [Additional network attachments](#where-this-is-evidenced), [DHCP addressing](#where-the-dhcp-behaviour-is-evidenced), and [Static IPv6](#static-ipv6) say where that evidence comes from. [Compatibility](../../../docs/compatibility.md) records what this evidence does and does not cover.
 
 `.terraform.lock.hcl` is committed so those checks resolve the same provider build every time, verified against recorded hashes, on Linux and macOS. It governs this repository's own validation. Your root module has its own lock file; this one does not constrain it.

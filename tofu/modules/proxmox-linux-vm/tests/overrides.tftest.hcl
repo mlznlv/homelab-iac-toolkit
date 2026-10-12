@@ -725,3 +725,221 @@ run "the_mac_output_reports_a_declared_primary_mac_address_first" {
     error_message = "mac_addresses must report the declared primary MAC address first, then each additional attachment's."
   }
 }
+
+# These runs show static IPv6 reaching the primary IP configuration beside its
+# static or DHCP IPv4 one. They do not show that Proxmox or a guest applies it, or that
+# the provider changes it in place: that is provider behaviour, which a mock
+# cannot exercise.
+
+run "a_static_ipv6_address_is_added_beside_the_ipv4_configuration" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/64"
+    error_message = "ipv6_address_cidr must reach the IPv6 address of the existing IP configuration."
+  }
+
+  # The mock applies no provider defaults, so an unset gateway plans as null
+  # here. The real provider plans it as its empty default and sends nothing.
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].gateway == null
+    error_message = "With no ipv6_gateway, the IPv6 gateway must be left unset."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.10/24" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == "192.0.2.1"
+    error_message = "IPv6 must be added beside the declared static IPv4 address and gateway, not in place of them."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config) == 1 && length(proxmox_virtual_environment_vm.this.network_device) == 1
+    error_message = "IPv6 must be added to the existing IP configuration, without another IP configuration or network device."
+  }
+}
+
+
+run "a_global_ipv6_gateway_reaches_the_ip_configuration" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "2001:db8::1"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/64" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].gateway == "2001:db8::1"
+    error_message = "ipv6_gateway must reach the IPv6 gateway beside the declared IPv6 address."
+  }
+}
+
+
+run "a_link_local_ipv6_gateway_reaches_the_ip_configuration" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "fe80::1"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].gateway == "fe80::1"
+    error_message = "A link-local ipv6_gateway must be accepted and reach the IPv6 gateway."
+  }
+}
+
+
+run "the_longest_ipv6_prefix_length_is_accepted" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/128"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/128"
+    error_message = "A /128 IPv6 address, the longest prefix, must be accepted."
+  }
+}
+
+
+run "the_shortest_ipv6_prefix_length_is_accepted" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/8"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/8"
+    error_message = "A /8 IPv6 address, the shortest prefix Proxmox accepts, must be accepted."
+  }
+}
+
+
+run "ipv6_never_becomes_the_connection_host" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "2001:db8::1"
+  }
+
+  # Without this, the run would pass just as well if IPv6 never arrived.
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/64"
+    error_message = "IPv6 must be declared for this run to show that it leaves the connection output unchanged."
+  }
+
+  assert {
+    condition     = output.connection == { host = "192.0.2.10", user = "fictional", port = 22 }
+    error_message = "A declared IPv6 address must not change the connection output: host stays the declared IPv4 address."
+  }
+}
+
+
+run "a_static_ipv6_address_is_added_beside_dhcp_ipv4" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+    connection_host   = "fictional-vm.example.invalid"
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "2001:db8::1"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/64" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].gateway == "2001:db8::1"
+    error_message = "ipv6_address_cidr and ipv6_gateway must reach the primary IP configuration in DHCP mode too."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "dhcp" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == null
+    error_message = "IPv6 must be added beside the DHCP IPv4 configuration, not in place of it."
+  }
+
+  assert {
+    condition     = output.connection == { host = "fictional-vm.example.invalid", user = "fictional", port = 22 }
+    error_message = "In DHCP mode, connection must publish the supplied connection_host, never the declared IPv6 address."
+  }
+}
+
+# Choosing an IPv6 host is the consumer's, through connection_host; the module
+# never makes that choice from ipv6_address_cidr.
+run "a_supplied_ipv6_connection_host_is_published_beside_declared_ipv6" {
+  command = plan
+
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+    connection_host   = "2001:db8::10"
+  }
+
+  assert {
+    condition     = output.connection == { host = "2001:db8::10", user = "fictional", port = 22 }
+    error_message = "A supplied IPv6 connection_host must be published as connection.host."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.10/24" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/64"
+    error_message = "A connection_host is metadata only, and must not change the declared IPv4 or IPv6 addressing."
+  }
+}
+
+run "ipv6_dns_servers_are_accepted_beside_ipv4_ones" {
+  command = plan
+
+  variables {
+    dns_servers = ["2001:db8::53", "192.0.2.53"]
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].dns[0].servers == tolist(["2001:db8::53", "192.0.2.53"])
+    error_message = "IPv6 and IPv4 DNS servers must both reach cloud-init in the declared order."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6) == 0
+    error_message = "An IPv6 DNS server must not declare IPv6 addressing."
+  }
+}
+
+
+run "ipv6_stays_on_the_primary_attachment" {
+  command = plan
+
+  # IPv6 is not an attribute of an additional attachment. OpenTofu drops an
+  # attribute the type does not declare, so this proves it goes nowhere.
+  variables {
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "2001:db8::1"
+
+    additional_network_attachments = [
+      {
+        bridge            = "vmbr1"
+        ipv4_address_cidr = "198.51.100.10/24"
+        ipv6_address_cidr = "2001:db8:1::10/64"
+        ipv6_gateway      = "2001:db8:1::1"
+      },
+    ]
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6) == 1 && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].address == "2001:db8::10/64" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv6[0].gateway == "2001:db8::1"
+    error_message = "The primary attachment must carry exactly the declared IPv6 address and gateway."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv6) == 0
+    error_message = "An additional attachment must never carry IPv6."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv4[0].address == "198.51.100.10/24" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[1].ipv4[0].gateway == null
+    error_message = "Primary IPv6 must leave an additional attachment's IPv4 configuration as declared."
+  }
+}
