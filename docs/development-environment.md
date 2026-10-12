@@ -36,11 +36,11 @@ npx @devcontainers/cli up --workspace-folder .
 To build and use the image on its own, without the Dev Containers tooling:
 
 ```sh
-docker build --file .devcontainer/Dockerfile --tag homelab-iac-toolkit-dev .
+docker build --file .devcontainer/Dockerfile --tag proxmox-iac-toolkit-dev .
 docker run --rm --interactive --tty \
-  --volume "$PWD:/workspaces/homelab-iac-toolkit" \
-  --workdir /workspaces/homelab-iac-toolkit \
-  homelab-iac-toolkit-dev bash
+  --volume "$PWD:/workspaces/proxmox-iac-toolkit" \
+  --workdir /workspaces/proxmox-iac-toolkit \
+  proxmox-iac-toolkit-dev bash
 ```
 
 ## What the definition does not do

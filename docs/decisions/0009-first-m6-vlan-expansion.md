@@ -33,7 +33,7 @@ Normal public validation remains credential-free and does not claim successful l
 - A VLAN-tag change detaches and re-attaches the virtual link and signals link-down to the guest, so a link interruption is expected. Whether connectivity returns depends on consumer-owned bridge, VLAN, upstream switching, routing, and guest configuration.
 - Module and mock-provider tests can establish public input and resource-address structure, but cannot alone establish the provider's in-place lifecycle behavior.
 - Implementation acceptance and later provider upgrades require reviewable provider-level no-replacement evidence.
-- Additional VM data disks remain Architecture-blocked in [Issue #80](https://github.com/mlznlv/homelab-iac-toolkit/issues/80) until the supported provider preserves inherited disks and supplies predictable additional-disk lifecycle behavior.
+- Additional VM data disks remain Architecture-blocked in [Issue #80](https://github.com/mlznlv/proxmox-iac-toolkit/issues/80) until the supported provider preserves inherited disks and supplies predictable additional-disk lifecycle behavior.
 
 ## Alternatives considered
 

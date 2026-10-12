@@ -5,7 +5,7 @@
 // privileged host interfaces are declared here, because normal validation needs
 // none of them and nothing here is pointed at a deployment.
 {
-  "name": "homelab-iac-toolkit",
+  "name": "proxmox-iac-toolkit",
   "build": {
     "dockerfile": "Dockerfile",
     "context": ".."

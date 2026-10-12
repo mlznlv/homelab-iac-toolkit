@@ -6,7 +6,7 @@ Accepted
 
 ## Context
 
-[ADR 0011](0011-multiple-vm-network-attachments.md) accepted ordered additional VM network attachments with optional static IPv4 configuration. Implementation evidence in [PR #102](https://github.com/mlznlv/homelab-iac-toolkit/pull/102), reviewed under [Issue #103](https://github.com/mlznlv/homelab-iac-toolkit/issues/103), against the exact locked `bpg/proxmox` build, v0.111.1 at revision `b22fe919fc34476b232191b69c8907f0c1aa5bea`, exposed a lifecycle property that the earlier source review did not make safe enough for a public convergence claim.
+[ADR 0011](0011-multiple-vm-network-attachments.md) accepted ordered additional VM network attachments with optional static IPv4 configuration. Implementation evidence in [PR #102](https://github.com/mlznlv/proxmox-iac-toolkit/pull/102), reviewed under [Issue #103](https://github.com/mlznlv/proxmox-iac-toolkit/issues/103), against the exact locked `bpg/proxmox` build, v0.111.1 at revision `b22fe919fc34476b232191b69c8907f0c1aa5bea`, exposed a lifecycle property that the earlier source review did not make safe enough for a public convergence claim.
 
 The provider removes network-device slots that disappear from the planned device list, but it does not clear retired Proxmox `ipconfigN` entries when an attachment or its declared address disappears. A refresh reads the retired entry back, so a subsequent plan proposes removing it again. On the pinned provider, an initialization change rebuilds cloud-init and can reboot a running VM. Repeating plan/apply therefore does not converge for a retired addressed slot and can repeatedly trigger disruptive cloud-init work.
 
@@ -65,7 +65,7 @@ ADR 0011 is marked Superseded without rewriting its historical decision text. Th
 
 ## Sources
 
-- [PR #102 exact-provider plan matrix and synthetic-state method](https://github.com/mlznlv/homelab-iac-toolkit/pull/102)
+- [PR #102 exact-provider plan matrix and synthetic-state method](https://github.com/mlznlv/proxmox-iac-toolkit/pull/102)
 - [v0.111.1 non-empty IP configuration encoding](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmox/nodes/vms/custom_cloud_init.go#L80-L102)
 - [v0.111.1 IP configuration read-back](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L5060-L5131)
 - [v0.111.1 initialization rebuild/reboot flags](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L6592-L6684)

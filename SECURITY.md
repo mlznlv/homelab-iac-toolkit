@@ -30,7 +30,7 @@ itself, belongs with whoever operates that deployment.
 
 **This repository has no private reporting channel at present.** GitHub's
 private vulnerability reporting is not enabled here, so anything you send
-arrives in public. Open an [issue](https://github.com/mlznlv/homelab-iac-toolkit/issues)
+arrives in public. Open an [issue](https://github.com/mlznlv/proxmox-iac-toolkit/issues)
 and keep it publishable:
 
 - Do not include credentials, keys, decryption identities, private inventory,
