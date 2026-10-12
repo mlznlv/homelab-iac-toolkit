@@ -75,7 +75,7 @@ Then update the full SHA in your source control, and run the ordinary workflow: 
 
 ## Moving from `homelab-iac-toolkit`
 
-This repository was renamed from `homelab-iac-toolkit` to `proxmox-iac-toolkit`. Its commits and tags did not change, so the full SHA you record still names the same source, and nothing in the module or the role changed with the name. GitHub [redirects the old address](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository), but that redirect is GitHub's rather than something this toolkit provides, so update the places that name it:
+This repository was renamed from `homelab-iac-toolkit` to `proxmox-iac-toolkit`. Its commits and tags did not change, so the full SHA you record still names the same source, and nothing in the module or the role changed with the name. GitHub [redirects Git operations on the old address](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository), but that redirect is GitHub's rather than something this toolkit provides, so update the places that name it:
 
 - **A Git remote.** In a clone, run `git remote set-url origin https://github.com/mlznlv/proxmox-iac-toolkit.git`. For a submodule, `git submodule set-url <checkout> https://github.com/mlznlv/proxmox-iac-toolkit.git` rewrites `.gitmodules` and the submodule's remote together; commit the `.gitmodules` change.
 - **A remote module `source`.** Change the repository name in the address, keep the `ref` exactly as it is, and run `tofu init` to install the module again from the new address. Until you do, OpenTofu stops with `Module source has changed`. Resource addresses do not include the source, so nothing in state changes; read the plan as usual.
