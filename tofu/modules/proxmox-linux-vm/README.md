@@ -172,7 +172,7 @@ module "fictional_vm" {
 }
 ```
 
-The IPv6 addresses come from the [RFC 3849](https://www.rfc-editor.org/info/rfc3849/) documentation prefix and name nothing real. DNS servers may be IPv4, IPv6, or both, with or without IPv6 addressing, and at least one is still required.
+The global IPv6 addresses come from the [RFC 3849](https://www.rfc-editor.org/info/rfc3849/) documentation prefix, `fe80::1` is a generic link-local address, and none of them names anything real. DNS servers may be IPv4, IPv6, or both, with or without IPv6 addressing, and at least one is still required.
 
 Only static IPv6 is supported. Proxmox also accepts `auto` for stateless autoconfiguration, `dhcp` for DHCPv6, and `manual` in the same field, but cloud-init's renderers do not give the first two one meaning, so the module rejects all three when you plan. If your network relies on either for guests, configure IPv6 inside the guest instead. IPv6-only addressing is not supported either: the IPv4 inputs stay required.
 
@@ -187,7 +187,7 @@ The module puts the address and gateway into the cloud-init network data and not
 
 **Adding, changing, or removing IPv6 on an existing VM reboots it.** The VM is updated in place rather than replaced, but any change to its cloud-init configuration makes the provider rebuild the cloud-init drive and reboot a running VM. The next boot is a new cloud-init instance: it re-applies the network configuration, and unless your template turns that off it regenerates the guest's SSH host keys, so expect a host-key warning on your next connection. The same is true of a change to the DNS servers.
 
-**Removing the declared address does not remove IPv6 from the guest.** It removes the address and gateway from the cloud-init network data. Addresses the guest configures for itself, such as link-local ones or those it derives from router advertisements, are outside the declaration.
+**Removing the declared address is not a claim that the guest has no IPv6 afterwards.** It removes the address and gateway from the cloud-init network data. Addresses the guest configures for itself, such as link-local ones or those it derives from router advertisements, are outside the declaration.
 
 Read the plan before you apply. An IPv6-only change shows the VM as `update in-place`, with only `initialization` changing. If a plan shows the VM being replaced for an IPv6 change, do not apply it: that is not the behaviour this module relies on.
 

@@ -2,7 +2,8 @@
 # is planned against a provider.
 #
 # Each run supplies one invalid value and expects that variable's own
-# validation to reject it. The provider is mocked and nothing is created.
+# validation to reject it, except the last, whose rule spans two variables and
+# is the resource's precondition. The provider is mocked and nothing is created.
 
 # Every value below is fictional or reserved for documentation. The SSH key is
 # a throwaway public key generated for these fixtures; nothing holds its
@@ -314,7 +315,8 @@ run "an_ipv6_gateway_carrying_a_prefix_length_is_rejected" {
   command = plan
 
   variables {
-    ipv6_gateway = "2001:db8::1/64"
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "2001:db8::1/64"
   }
 
   expect_failures = [var.ipv6_gateway]
@@ -324,7 +326,8 @@ run "an_ipv4_address_in_the_ipv6_gateway_is_rejected" {
   command = plan
 
   variables {
-    ipv6_gateway = "192.0.2.1"
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "192.0.2.1"
   }
 
   expect_failures = [var.ipv6_gateway]
@@ -336,7 +339,8 @@ run "a_link_local_ipv6_gateway_with_a_zone_is_rejected" {
   command = plan
 
   variables {
-    ipv6_gateway = "fe80::1%eth0"
+    ipv6_address_cidr = "2001:db8::10/64"
+    ipv6_gateway      = "fe80::1%eth0"
   }
 
   expect_failures = [var.ipv6_gateway]
