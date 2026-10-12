@@ -84,7 +84,7 @@ Optional:
 | `network_mac_address` | `string` | `null` | MAC address for the primary network device, `net0`. Null lets Proxmox assign one. |
 | `additional_network_attachments` | `list(object)` | `[]` | Up to seven more network attachments, `net1` onwards, in the order given. On an existing VM they can be added and changed, not removed or reordered. See [Additional network attachments](#additional-network-attachments). |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, a null in place of the attachment list, an additional address that is not dotted-decimal IPv4, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, an addressing mode other than `static` or `dhcp`, a static configuration missing its address or gateway, a DHCP configuration that declares either or supplies no connection host, a connection host that is not a hostname or an IP address, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, a null in place of the attachment list, an additional address that is not dotted-decimal IPv4, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, an addressing mode other than `static` or `dhcp`, a static configuration missing its address or gateway, a DHCP configuration that declares either or supplies no connection host, a connection host that is not a hostname or a plainly written IP address, and so on.
 
 ## Outputs
 
@@ -203,7 +203,7 @@ The `connection` output keeps its `host`, `user`, and `port` shape in both modes
 | DHCP | set | `connection_host` |
 | DHCP | null | Rejected when you plan |
 
-It takes a hostname, such as `fictional-vm.example.invalid`, or an IPv4 or IPv6 address, written without a scheme, brackets, or port. It is declared metadata, the same as `ssh_port`. The module never resolves it, never checks that it reaches the guest, and never fills it in from a lease, a guest agent, a provider read, OpenTofu state, or generated inventory. In static mode it lets you publish a name instead of the address.
+It takes a hostname, such as `fictional-vm.example.invalid`, or an IPv4 or IPv6 address, written without a scheme, brackets, or port. An IPv4 address must be plain dotted decimal: `192.0.2.010` and `0x7f000001` are refused, because the resolver SSH and Ansible use would read them as octal and hexadecimal and reach `192.0.2.8` and `127.0.0.1`. It is declared metadata, the same as `ssh_port`. The module never resolves it, never checks that it reaches the guest, and never fills it in from a lease, a guest agent, a provider read, OpenTofu state, or generated inventory. In static mode it lets you publish a name instead of the address.
 
 ### The primary MAC address
 

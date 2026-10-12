@@ -193,26 +193,30 @@ variable "connection_host" {
   default     = null
 
   # A conditional rather than `||`, so that a null never reaches length(): older
-  # OpenTofu releases this module supports evaluate both sides of `||`. A name
-  # whose final label is all digits is rejected unless the whole value is an
-  # IPv4 address, so that a mistyped address such as 192.0.2.300 is not
-  # accepted as a hostname.
+  # OpenTofu releases this module supports evaluate both sides of `||`.
+  #
+  # Resolvers such as the one SSH and Ansible use read more than dotted decimal
+  # as an IPv4 address: 192.0.2.010 is 192.0.2.8, read as octal, and 0x7f000001
+  # is 127.0.0.1. So an IPv4 address is accepted only in plain dotted decimal
+  # without leading zeros, and a name whose final label is all digits or a 0x
+  # hexadecimal number is rejected, which also stops a mistyped address such as
+  # 192.0.2.300 passing as a hostname.
   validation {
     condition = var.connection_host == null ? true : (
-      can(cidrnetmask("${var.connection_host}/32")) ||
+      can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])$", var.connection_host)) ||
       can(cidrsubnet("${var.connection_host}/128", 0, 0)) ||
       (
         length(var.connection_host) <= 253 &&
         can(regex("^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.?$", var.connection_host)) &&
-        !can(regex("(^|\\.)[0-9]+\\.?$", var.connection_host))
+        !can(regex("(^|\\.)([0-9]+|0[xX][0-9A-Fa-f]*)\\.?$", var.connection_host))
       )
     )
-    error_message = "The connection_host must be null, a hostname such as fictional-vm.example.invalid, or an IPv4 or IPv6 address such as 192.0.2.10, with no scheme, brackets, or port."
+    error_message = "The connection_host must be null, a hostname such as fictional-vm.example.invalid, an IPv4 address in plain dotted decimal such as 192.0.2.10, or an IPv6 address, with no scheme, brackets, or port."
   }
 }
 
 variable "network_vlan_id" {
-  description = "Access VLAN tag for the VM's primary network device, a whole number from 1 to 4094. Null, the default, leaves the device untagged and still attached. The bridge's configuration, upstream switching and routing, and a static address that belongs on the chosen VLAN are the consumer's. Changing the tag of an existing VM interrupts the guest's network link."
+  description = "Access VLAN tag for the VM's primary network device, a whole number from 1 to 4094. Null, the default, leaves the device untagged and still attached. The bridge's configuration, upstream switching and routing, and a static address or DHCP service that belongs on the chosen VLAN are the consumer's. Changing the tag of an existing VM interrupts the guest's network link."
   type        = number
   default     = null
 
@@ -229,9 +233,10 @@ variable "network_mac_address" {
 
   # Proxmox refuses a MAC address with the group bit, the lowest bit of the
   # first octet, set. A conditional rather than `||`, so that a null never
-  # reaches substr().
+  # reaches substr(), and try() because older OpenTofu releases also evaluate
+  # both sides of `&&`, so parseint() sees a first octet the pattern rejected.
   validation {
-    condition     = var.network_mac_address == null ? true : (can(regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$", var.network_mac_address)) && parseint(substr(var.network_mac_address, 0, 2), 16) % 2 == 0)
+    condition     = var.network_mac_address == null ? true : try(can(regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$", var.network_mac_address)) && parseint(substr(var.network_mac_address, 0, 2), 16) % 2 == 0, false)
     error_message = "The network_mac_address must be null or a unicast MAC address written as six colon-separated hexadecimal octets, such as 00:00:5E:00:53:01."
   }
 }

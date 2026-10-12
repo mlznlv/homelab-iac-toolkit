@@ -506,7 +506,8 @@ run "dhcp_cannot_be_requested_through_the_static_address" {
 
 # The rules below span more than one input, so they are the resource's
 # preconditions rather than a variable's validation. Each run breaks exactly
-# one of them.
+# one of them. A run that leaves no host to publish also fails the connection
+# output's own precondition, which holds even when a plan leaves the VM out.
 
 run "static_mode_without_an_address_is_rejected" {
   command = plan
@@ -515,7 +516,7 @@ run "static_mode_without_an_address_is_rejected" {
     ipv4_address_cidr = null
   }
 
-  expect_failures = [proxmox_virtual_environment_vm.this]
+  expect_failures = [proxmox_virtual_environment_vm.this, output.connection]
 }
 
 run "static_mode_without_a_gateway_is_rejected" {
@@ -561,7 +562,7 @@ run "dhcp_without_a_connection_host_is_rejected" {
     ipv4_gateway      = null
   }
 
-  expect_failures = [proxmox_virtual_environment_vm.this]
+  expect_failures = [proxmox_virtual_environment_vm.this, output.connection]
 }
 
 run "dhcp_without_dns_servers_is_rejected" {
@@ -628,6 +629,29 @@ run "a_connection_host_that_is_a_mistyped_ipv4_address_is_rejected" {
   expect_failures = [var.connection_host]
 }
 
+# Resolvers read a leading zero as octal, so 192.0.2.010 would reach
+# 192.0.2.8, and a 0x label as hexadecimal, so 0x7f000001 would reach
+# 127.0.0.1. Neither is published as written.
+run "a_connection_host_with_a_leading_zero_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "192.0.2.010"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_hexadecimal_connection_host_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "0x7f000001"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
 run "a_connection_host_containing_whitespace_is_rejected" {
   command = plan
 
@@ -667,7 +691,7 @@ run "a_multicast_primary_mac_address_is_rejected" {
   command = plan
 
   variables {
-    network_mac_address = "01:00:5E:00:53:01"
+    network_mac_address = "01:00:5E:90:10:01"
   }
 
   expect_failures = [var.network_mac_address]
@@ -698,6 +722,28 @@ run "a_primary_mac_address_that_is_not_hexadecimal_is_rejected" {
 
   variables {
     network_mac_address = "00:00:5E:00:53:ZZ"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+# The group-bit check reads the first octet, so these reach it with nothing
+# it can parse. They must fail this rule, not raise a function error.
+run "a_primary_mac_address_whose_first_octet_is_not_hexadecimal_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "ZZ:00:5E:00:53:01"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+run "an_empty_primary_mac_address_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = ""
   }
 
   expect_failures = [var.network_mac_address]
