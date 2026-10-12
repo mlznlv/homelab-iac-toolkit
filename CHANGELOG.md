@@ -6,7 +6,9 @@ This file records consumer-facing change. It does not restate platform targets o
 
 ## Unreleased
 
-Nothing yet.
+### Changed
+
+- **The repository is now `proxmox-iac-toolkit`,** renamed from `homelab-iac-toolkit`. Commits and tags are unchanged, so the full SHA you record still names the same source, and no module, role, input, output or behaviour changed. The worked example's checkout convention is now `vendor/proxmox-iac-toolkit/`. Update any Git remote or module `source` that names the old repository, keeping the same commit, and either keep your checkout path or change every reference to it together. No state change is involved. [Using the toolkit](docs/consuming-the-toolkit.md#moving-from-homelab-iac-toolkit) has the commands.
 
 ## 0.1.0-alpha.1 - 2026-09-08
 

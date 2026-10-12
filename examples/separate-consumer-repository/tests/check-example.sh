@@ -3,7 +3,7 @@
 #
 # The example is written the way a separate repository writes one: its OpenTofu
 # module source and its Ansible roles_path both point into
-# vendor/homelab-iac-toolkit/, a checkout the consumer establishes. That
+# vendor/proxmox-iac-toolkit/, a checkout the consumer establishes. That
 # directory is deliberately absent from this repository. Establishing it is the
 # consumer's job, and an example that carried a submodule, a vendored copy, or
 # a fetch script merely so that CI could run would be teaching an acquisition
@@ -54,10 +54,10 @@ trap 'rm -rf "${fixture}"' EXIT
 consumer="${fixture}/consumer"
 mkdir -p "${consumer}" "${consumer}/vendor"
 cp -R "${example}/." "${consumer}/"
-ln -s "${toolkit}" "${consumer}/vendor/homelab-iac-toolkit"
+ln -s "${toolkit}" "${consumer}/vendor/proxmox-iac-toolkit"
 
 echo "Represented consumer repository: ${consumer}"
-echo "  vendor/homelab-iac-toolkit -> ${toolkit}"
+echo "  vendor/proxmox-iac-toolkit -> ${toolkit}"
 
 run() {
   echo

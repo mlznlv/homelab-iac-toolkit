@@ -20,6 +20,6 @@
 # an abbreviated SHA, a branch name, or a tag will not do, because none of them
 # is immutable.
 
-repository: https://github.com/mlznlv/homelab-iac-toolkit.git
+repository: https://github.com/mlznlv/proxmox-iac-toolkit.git
 revision: 0123456789abcdef0123456789abcdef01234567
-checkout_path: vendor/homelab-iac-toolkit
+checkout_path: vendor/proxmox-iac-toolkit

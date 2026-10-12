@@ -29,7 +29,7 @@ Everything environment-shaped, which is most of it:
 
 The toolkit owns the module and role interfaces and what they do internally. It does not acquire, update, synchronize, or choose your checkout, and neither OpenTofu, Ansible, nor Task does it on the toolkit's behalf.
 
-`vendor/homelab-iac-toolkit/` is a convention rather than a toolkit interface: nothing in the module or the role knows that path. It is not, however, free to change on its own. OpenTofu requires a module `source` to be a literal, so the example writes the path into `tofu/main.tf` and again into `ansible.cfg`. Putting your checkout somewhere else means editing both — and editing them **to the same place**, since two paths that disagree are exactly the silent drift this contract exists to prevent.
+`vendor/proxmox-iac-toolkit/` is a convention rather than a toolkit interface: nothing in the module or the role knows that path. It is not, however, free to change on its own. OpenTofu requires a module `source` to be a literal, so the example writes the path into `tofu/main.tf` and again into `ansible.cfg`. Putting your checkout somewhere else means editing both — and editing them **to the same place**, since two paths that disagree are exactly the silent drift this contract exists to prevent.
 
 ## The workflow
 
@@ -73,6 +73,14 @@ Before you move a pin, read three things for the version you are moving to:
 
 Then update the full SHA in your source control, and run the ordinary workflow: `tofu plan`, read the plan, apply explicitly. A changelog entry is never a reason to apply without reviewing the plan.
 
+## Moving from `homelab-iac-toolkit`
+
+This repository was renamed from `homelab-iac-toolkit` to `proxmox-iac-toolkit`. Its commits and tags did not change, so the full SHA you record still names the same source, and nothing in the module or the role changed with the name. GitHub [redirects the old address](https://docs.github.com/en/repositories/creating-and-managing-repositories/renaming-a-repository), but that redirect is GitHub's rather than something this toolkit provides, so update the places that name it:
+
+- **A Git remote.** In a clone, run `git remote set-url origin https://github.com/mlznlv/proxmox-iac-toolkit.git`. For a submodule, `git submodule set-url <checkout> https://github.com/mlznlv/proxmox-iac-toolkit.git` rewrites `.gitmodules` and the submodule's remote together; commit the `.gitmodules` change.
+- **A remote module `source`.** Change the repository name in the address, keep the `ref` exactly as it is, and run `tofu init` to install the module again from the new address. Until you do, OpenTofu stops with `Module source has changed`. Resource addresses do not include the source, so nothing in state changes; read the plan as usual.
+- **The checkout path.** The example's convention is now `vendor/proxmox-iac-toolkit/`. Where your checkout lives is yours, so you can keep `vendor/homelab-iac-toolkit/`. If you move it, change the module `source`, the `roles_path` and your recorded checkout path together, as [above](#what-you-own).
+
 ## Troubleshooting
 
 These are the failures the accepted workflow actually produces, with the output that identifies each. They are all contract-level and none of them requires a live environment to diagnose.
@@ -91,7 +99,7 @@ The directory  could not be read for module "guest" at main.tf:20.
 ### The role is not found
 
 ```text
-[ERROR]: The role 'qemu_guest_agent' was not found in: <consumer>/ansible/roles:<consumer>/vendor/homelab-iac-toolkit/ansible/roles:<consumer>/ansible
+[ERROR]: The role 'qemu_guest_agent' was not found in: <consumer>/ansible/roles:<consumer>/vendor/proxmox-iac-toolkit/ansible/roles:<consumer>/ansible
 ```
 
 **Read the search path in the error, because it distinguishes the two causes.** If your checkout path appears in the list, as above, then `ansible.cfg` was read and its `roles_path` is right, but nothing is at that path — the checkout is not established.

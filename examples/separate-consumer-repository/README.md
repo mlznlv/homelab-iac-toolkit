@@ -22,24 +22,24 @@ ansible/
   inventory.yml                 the connection values, mapped in by hand
   guest-agent.yml               the play that runs the role
 tests/                          this toolkit's own checks of this example
-vendor/homelab-iac-toolkit/     the checkout — you create this; see step 1
+vendor/proxmox-iac-toolkit/     the checkout — you create this; see step 1
 ```
 
 The two test directories are not the same thing. `tofu/tests/` asserts that `ansible/inventory.yml` is still the module's `connection` output mapped unchanged, which is a useful thing to keep once the values are yours: it catches an address edited in one file and not the other. The top-level `tests/` checks that this example still demonstrates the contract it documents, which is this repository's concern rather than yours — leave it behind.
 
-The one thing both `tofu/main.tf` and `ansible/ansible.cfg` have in common is `vendor/homelab-iac-toolkit/`. That is the contract: one directory, one commit, both components. Point them at two different checkouts and they can drift onto two different revisions of the toolkit without anything complaining.
+The one thing both `tofu/main.tf` and `ansible/ansible.cfg` have in common is `vendor/proxmox-iac-toolkit/`. That is the contract: one directory, one commit, both components. Point them at two different checkouts and they can drift onto two different revisions of the toolkit without anything complaining.
 
 ## What you supply
 
 This example contains neither the checkout nor anything environment-specific — not the Proxmox endpoint and credentials, the backend and state custody, the node, template, datastore, bridge, addresses, sizing, the SSH keys you authorize and their private halves, how Ansible authenticates, or the order you run things in. [Using the toolkit](../../docs/consuming-the-toolkit.md#what-you-own) lists what that ownership covers.
 
-How you obtain the checkout and where you put it are yours. `vendor/homelab-iac-toolkit/` is this example's convention, not a toolkit interface, and nothing in the toolkit acquires, updates, verifies, or synchronizes it.
+How you obtain the checkout and where you put it are yours. `vendor/proxmox-iac-toolkit/` is this example's convention, not a toolkit interface, and nothing in the toolkit acquires, updates, verifies, or synchronizes it.
 
 ## Getting started
 
 Nothing below is automated, and the ordering is deliberate: a human reviews a plan before anything is created, and a human writes the inventory afterwards.
 
-**1. Establish the checkout at the pinned revision.** Read `toolkit-revision.yml`, then obtain that commit into `vendor/homelab-iac-toolkit/` by whatever mechanism you have chosen. The revision recorded there is synthetic and names no commit; replace it with the full SHA you actually checked out. A full SHA is the point — a branch or a tag can move, and then the two components are no longer pinned together.
+**1. Establish the checkout at the pinned revision.** Read `toolkit-revision.yml`, then obtain that commit into `vendor/proxmox-iac-toolkit/` by whatever mechanism you have chosen. The revision recorded there is synthetic and names no commit; replace it with the full SHA you actually checked out. A full SHA is the point — a branch or a tag can move, and then the two components are no longer pinned together.
 
 **2. Review the configuration.** `tofu/main.tf` and `ansible/inventory.yml` are entirely fictional. Replace every value in them with yours before going further.
 
