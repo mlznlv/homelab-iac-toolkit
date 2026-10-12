@@ -17,13 +17,21 @@ locals {
   ]...)
 
   # Each declared IPv4 address without its prefix length, in canonical form,
-  # so that one address declared with two prefixes is still one address.
+  # so that one address declared with two prefixes is still one address. A
+  # primary attachment in DHCP mode declares none.
   declared_ipv4_addresses = [
     for cidr in concat(
-      [var.ipv4_address_cidr],
+      var.ipv4_address_cidr == null ? [] : [var.ipv4_address_cidr],
       [for attachment in var.additional_network_attachments : attachment.ipv4_address_cidr if attachment.ipv4_address_cidr != null],
     ) : cidrhost("${split("/", cidr)[0]}/32", 0)
   ]
+
+  # Every declared MAC address, the primary's first. An address Proxmox
+  # assigns is unknown here, so nothing is claimed about it.
+  declared_mac_addresses = concat(
+    var.network_mac_address == null ? [] : [var.network_mac_address],
+    [for attachment in var.additional_network_attachments : attachment.mac_address if try(attachment.mac_address != null, false)],
+  )
 }
 
 resource "proxmox_virtual_environment_vm" "this" {
@@ -50,7 +58,7 @@ resource "proxmox_virtual_environment_vm" "this" {
   # Waiting is disabled unconditionally rather than exposed: an attached
   # channel with no agent behind it is inert, but a provider that waits for one
   # would block every apply and refresh until its timeout expired. Addressing
-  # is the declared static configuration, never an agent-reported address.
+  # is the declared configuration, never an agent-reported address.
   agent {
     enabled = var.guest_agent_enabled
 
@@ -76,10 +84,12 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   # A null tag leaves vlan_id unset, which the provider plans as its untagged
   # default. The provider spells that default 0; the module does not accept 0,
-  # so null is the one way to say untagged.
+  # so null is the one way to say untagged. A null MAC address leaves the
+  # choice to Proxmox.
   network_device {
-    bridge  = var.network_bridge
-    vlan_id = var.network_vlan_id
+    bridge      = var.network_bridge
+    vlan_id     = var.network_vlan_id
+    mac_address = var.network_mac_address
   }
 
   # Additional attachments follow the primary in the declared order, net1
@@ -102,9 +112,13 @@ resource "proxmox_virtual_environment_vm" "this" {
   initialization {
     datastore_id = var.datastore_id
 
+    # DHCP is declared explicitly rather than left out: Proxmox falls back to
+    # DHCP for an interface with no IP configuration, but the module keeps the
+    # primary configuration declared in both modes. The gateway is null in
+    # DHCP mode, so the provider sends none.
     ip_config {
       ipv4 {
-        address = var.ipv4_address_cidr
+        address = var.ipv4_mode == "dhcp" ? "dhcp" : var.ipv4_address_cidr
         gateway = var.ipv4_gateway
       }
 
@@ -154,10 +168,32 @@ resource "proxmox_virtual_environment_vm" "this" {
     }
   }
 
+  # Checks that span more than one input. They fail at plan time, before
+  # anything reaches Proxmox.
   lifecycle {
     precondition {
       condition     = length(distinct(local.declared_ipv4_addresses)) == length(local.declared_ipv4_addresses)
       error_message = "Every network attachment must have a different IPv4 address. The primary ipv4_address_cidr and each additional attachment's ipv4_address_cidr are compared without their prefix lengths."
+    }
+
+    precondition {
+      condition     = length(distinct([for mac in local.declared_mac_addresses : lower(mac)])) == length(local.declared_mac_addresses)
+      error_message = "Every declared MAC address must be different. The primary network_mac_address and each additional attachment's mac_address are compared without regard to letter case."
+    }
+
+    precondition {
+      condition     = var.ipv4_mode != "static" || (var.ipv4_address_cidr != null && var.ipv4_gateway != null)
+      error_message = "Static IPv4 addressing, the default ipv4_mode, needs both ipv4_address_cidr and ipv4_gateway."
+    }
+
+    precondition {
+      condition     = var.ipv4_mode != "dhcp" || (var.ipv4_address_cidr == null && var.ipv4_gateway == null)
+      error_message = "With ipv4_mode = \"dhcp\", ipv4_address_cidr and ipv4_gateway must be null: the DHCP service supplies the address, and Proxmox expects no gateway alongside DHCP."
+    }
+
+    precondition {
+      condition     = var.ipv4_mode != "dhcp" || var.connection_host != null
+      error_message = "With ipv4_mode = \"dhcp\", connection_host is required, because the module cannot know the address the DHCP service will grant and never discovers one."
     }
 
     # The two IPv6 inputs are separate variables, and OpenTofu 1.6, the oldest

@@ -482,6 +482,345 @@ run "a_duplicate_mac_address_is_rejected_wherever_it_appears_in_the_list" {
   expect_failures = [var.additional_network_attachments]
 }
 
+run "an_unknown_ipv4_mode_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode = "manual"
+  }
+
+  expect_failures = [var.ipv4_mode]
+}
+
+run "an_ipv4_mode_written_in_another_case_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode = "DHCP"
+  }
+
+  expect_failures = [var.ipv4_mode]
+}
+
+# DHCP is selected by the mode, never by smuggling Proxmox's literal into the
+# static address.
+run "dhcp_cannot_be_requested_through_the_static_address" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "dhcp"
+  }
+
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+# The rules below span more than one input, so they are the resource's
+# preconditions rather than a variable's validation. Each run breaks exactly
+# one of them. A run that leaves no host to publish also fails the connection
+# output's own precondition, which holds even when a plan leaves the VM out.
+
+run "static_mode_without_an_address_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = null
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this, output.connection]
+}
+
+run "static_mode_without_a_gateway_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_gateway = null
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "dhcp_with_a_declared_address_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode       = "dhcp"
+    ipv4_gateway    = null
+    connection_host = "fictional-vm.example.invalid"
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "dhcp_with_a_declared_gateway_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    connection_host   = "fictional-vm.example.invalid"
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "dhcp_without_a_connection_host_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this, output.connection]
+}
+
+run "dhcp_without_dns_servers_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+    connection_host   = "fictional-vm.example.invalid"
+    dns_servers       = []
+  }
+
+  expect_failures = [var.dns_servers]
+}
+
+run "a_connection_host_with_a_scheme_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "ssh://fictional-vm.example.invalid"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_connection_host_with_a_port_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "fictional-vm.example.invalid:22"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_bracketed_ipv6_connection_host_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "[2001:db8::20]"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_connection_host_with_a_prefix_length_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "192.0.2.20/24"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_connection_host_that_is_a_mistyped_ipv4_address_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "192.0.2.300"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+# Resolvers read a leading zero as octal, so 192.0.2.010 would reach
+# 192.0.2.8, and a 0x label as hexadecimal, so 0x7f000001 would reach
+# 127.0.0.1. Neither is published as written.
+run "a_connection_host_with_a_leading_zero_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "192.0.2.010"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_hexadecimal_connection_host_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "0x7f000001"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_connection_host_containing_whitespace_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = "fictional vm"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "an_empty_connection_host_is_rejected" {
+  command = plan
+
+  variables {
+    connection_host = ""
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+run "a_malformed_connection_host_is_rejected_in_dhcp_mode" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+    connection_host   = "fictional_vm.example.invalid"
+  }
+
+  expect_failures = [var.connection_host]
+}
+
+# Proxmox refuses a MAC address with the group bit set, which marks a
+# multicast address.
+run "a_multicast_primary_mac_address_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "01:00:5E:90:10:01"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+run "a_primary_mac_address_with_other_separators_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "00-00-5E-00-53-01"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+run "a_primary_mac_address_with_too_few_octets_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "00:00:5E:00:53"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+run "a_primary_mac_address_that_is_not_hexadecimal_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "00:00:5E:00:53:ZZ"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+# The group-bit check reads the first octet, so these reach it with nothing
+# it can parse. They must fail this rule, not raise a function error.
+run "a_primary_mac_address_whose_first_octet_is_not_hexadecimal_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "ZZ:00:5E:00:53:01"
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+run "an_empty_primary_mac_address_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = ""
+  }
+
+  expect_failures = [var.network_mac_address]
+}
+
+# DHCP is a mode of the primary attachment only. An additional attachment's
+# address is static or absent.
+run "dhcp_is_not_accepted_on_an_additional_attachment" {
+  command = plan
+
+  variables {
+    additional_network_attachments = [
+      { bridge = "vmbr1", ipv4_address_cidr = "dhcp" },
+    ]
+  }
+
+  expect_failures = [var.additional_network_attachments]
+}
+
+# The primary declares no address in DHCP mode, but the additional addresses
+# are still compared with one another.
+run "duplicate_additional_addresses_are_rejected_when_the_primary_uses_dhcp" {
+  command = plan
+
+  variables {
+    ipv4_mode         = "dhcp"
+    ipv4_address_cidr = null
+    ipv4_gateway      = null
+    connection_host   = "fictional-vm.example.invalid"
+    additional_network_attachments = [
+      { bridge = "vmbr1", ipv4_address_cidr = "198.51.100.10/24" },
+      { bridge = "vmbr2", ipv4_address_cidr = "198.51.100.10/25" },
+    ]
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+# The declared primary MAC address joins the additional attachments' in one
+# comparison, so the two inputs cannot name one address twice.
+run "an_additional_attachment_declaring_the_primary_mac_address_is_rejected" {
+  command = plan
+
+  variables {
+    network_mac_address = "00:00:5E:00:53:01"
+    additional_network_attachments = [
+      { bridge = "vmbr1", mac_address = "00:00:5E:00:53:02" },
+      { bridge = "vmbr2", mac_address = "00:00:5E:00:53:01" },
+    ]
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
+run "the_primary_mac_address_is_compared_without_regard_to_letter_case" {
+  command = plan
+
+  variables {
+    network_mac_address = "00:00:5E:00:53:0A"
+    additional_network_attachments = [
+      { bridge = "vmbr1", mac_address = "00:00:5e:00:53:0a" },
+    ]
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this]
+}
+
 run "an_ipv6_address_without_a_prefix_length_is_rejected" {
   command = plan
 
@@ -598,6 +937,19 @@ run "a_link_local_ipv6_gateway_with_a_zone_is_rejected" {
   }
 
   expect_failures = [var.ipv6_gateway]
+}
+
+# IPv6 is added beside IPv4, never instead of it, so static mode still needs
+# its IPv4 address when IPv6 is declared.
+run "ipv6_does_not_replace_the_static_ipv4_address" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = null
+    ipv6_address_cidr = "2001:db8::10/64"
+  }
+
+  expect_failures = [proxmox_virtual_environment_vm.this, output.connection]
 }
 
 # A gateway without an address is the one IPv6 rule that spans two variables,

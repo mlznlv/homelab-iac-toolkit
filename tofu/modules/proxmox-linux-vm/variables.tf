@@ -72,22 +72,40 @@ variable "network_bridge" {
   }
 }
 
-variable "ipv4_address_cidr" {
-  description = "Static IPv4 address for the VM in CIDR notation, such as 192.0.2.10/24. It is required even when ipv6_address_cidr is set. DHCP is out of scope for this module."
+# The two static inputs default to null so that DHCP can forbid them. Static
+# mode, the default, still requires both: the resource's preconditions in
+# main.tf decide that, because a variable's own validation cannot read another
+# variable on every OpenTofu version this module supports.
+variable "ipv4_mode" {
+  description = "IPv4 addressing mode of the VM's primary attachment. \"static\", the default, requires ipv4_address_cidr and ipv4_gateway. \"dhcp\" asks cloud-init to request a DHCPv4 lease on the primary interface, forbids ipv4_address_cidr and ipv4_gateway, and requires connection_host. The DHCP service, its scopes, reservations and leases, and the names that reach the guest are the consumer's. Switching mode on an existing VM updates it in place but reboots it if it is running, and the guest's address and SSH host keys may change; see the README."
   type        = string
+  default     = "static"
+  nullable    = false
 
   validation {
-    condition     = can(cidrnetmask(var.ipv4_address_cidr))
+    condition     = contains(["static", "dhcp"], var.ipv4_mode)
+    error_message = "The ipv4_mode must be \"static\" or \"dhcp\"."
+  }
+}
+
+variable "ipv4_address_cidr" {
+  description = "Static IPv4 address for the VM's primary attachment in CIDR notation, such as 192.0.2.10/24. Required when ipv4_mode is \"static\", and must be null when it is \"dhcp\"."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.ipv4_address_cidr == null ? true : can(cidrnetmask(var.ipv4_address_cidr))
     error_message = "The ipv4_address_cidr must be an IPv4 address with a prefix length, such as 192.0.2.10/24."
   }
 }
 
 variable "ipv4_gateway" {
-  description = "IPv4 default gateway for the VM, without a prefix length."
+  description = "IPv4 default gateway for the VM's primary attachment, without a prefix length. Required when ipv4_mode is \"static\", and must be null when it is \"dhcp\"."
   type        = string
+  default     = null
 
   validation {
-    condition     = can(cidrnetmask("${var.ipv4_gateway}/32"))
+    condition     = var.ipv4_gateway == null ? true : can(cidrnetmask("${var.ipv4_gateway}/32"))
     error_message = "The ipv4_gateway must be a bare IPv4 address, such as 192.0.2.1."
   }
 }
@@ -174,8 +192,36 @@ variable "ssh_port" {
   }
 }
 
+variable "connection_host" {
+  description = "Host to publish in the connection output: a hostname, or an IPv4 or IPv6 address literal, without a scheme, brackets, or port. Required when ipv4_mode is \"dhcp\". In static mode it is optional, and null publishes the declared ipv4_address_cidr without its prefix length. This is composition metadata only: the module neither resolves nor checks it, and keeping it pointed at the guest is the consumer's."
+  type        = string
+  default     = null
+
+  # A conditional rather than `||`, so that a null never reaches length(): older
+  # OpenTofu releases this module supports evaluate both sides of `||`.
+  #
+  # Resolvers such as the one SSH and Ansible use read more than dotted decimal
+  # as an IPv4 address: 192.0.2.010 is 192.0.2.8, read as octal, and 0x7f000001
+  # is 127.0.0.1. So an IPv4 address is accepted only in plain dotted decimal
+  # without leading zeros, and a name whose final label is all digits or a 0x
+  # hexadecimal number is rejected, which also stops a mistyped address such as
+  # 192.0.2.300 passing as a hostname.
+  validation {
+    condition = var.connection_host == null ? true : (
+      can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])$", var.connection_host)) ||
+      can(cidrsubnet("${var.connection_host}/128", 0, 0)) ||
+      (
+        length(var.connection_host) <= 253 &&
+        can(regex("^([A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.)*[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?\\.?$", var.connection_host)) &&
+        !can(regex("(^|\\.)([0-9]+|0[xX][0-9A-Fa-f]*)\\.?$", var.connection_host))
+      )
+    )
+    error_message = "The connection_host must be null, a hostname such as fictional-vm.example.invalid, an IPv4 address in plain dotted decimal such as 192.0.2.10, or an IPv6 address, with no scheme, brackets, or port."
+  }
+}
+
 variable "network_vlan_id" {
-  description = "Access VLAN tag for the VM's primary network device, a whole number from 1 to 4094. Null, the default, leaves the device untagged and still attached. The bridge's configuration, upstream switching and routing, and a static address that belongs on the chosen VLAN are the consumer's. Changing the tag of an existing VM interrupts the guest's network link."
+  description = "Access VLAN tag for the VM's primary network device, a whole number from 1 to 4094. Null, the default, leaves the device untagged and still attached. The bridge's configuration, upstream switching and routing, and a static address or DHCP service that belongs on the chosen VLAN are the consumer's. Changing the tag of an existing VM interrupts the guest's network link."
   type        = number
   default     = null
 
@@ -185,8 +231,23 @@ variable "network_vlan_id" {
   }
 }
 
+variable "network_mac_address" {
+  description = "MAC address for the VM's primary network device, net0, such as 00:00:5E:00:53:01. Null, the default, lets Proxmox assign one when the VM is created. Declare it when a DHCP reservation must match from the first boot. Changing it on an existing VM updates the VM in place, but Proxmox replaces the device the guest sees, so the guest gets a new interface and a reservation keyed to the old address stops matching."
+  type        = string
+  default     = null
+
+  # Proxmox refuses a MAC address with the group bit, the lowest bit of the
+  # first octet, set. A conditional rather than `||`, so that a null never
+  # reaches substr(), and try() because older OpenTofu releases also evaluate
+  # both sides of `&&`, so parseint() sees a first octet the pattern rejected.
+  validation {
+    condition     = var.network_mac_address == null ? true : try(can(regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$", var.network_mac_address)) && parseint(substr(var.network_mac_address, 0, 2), 16) % 2 == 0, false)
+    error_message = "The network_mac_address must be null or a unicast MAC address written as six colon-separated hexadecimal octets, such as 00:00:5E:00:53:01."
+  }
+}
+
 variable "additional_network_attachments" {
-  description = "Network attachments after the primary one, in slot order: the first is net1, the next net2, and so on, with the same index for its cloud-init IP configuration. At most seven, for eight attachments in total. Each needs a bridge and may declare an access VLAN tag from 1 to 4094, a static IPv4 address in CIDR notation, and a MAC address; only the primary attachment has a gateway. Declared MAC addresses must differ from one another. Write [] for none: a null is not accepted. An attachment's identity is its position: on an existing VM, attachments can be added after the last one and changed in place, and removing one, removing its address, or reordering them is not supported. See the README before changing an existing VM."
+  description = "Network attachments after the primary one, in slot order: the first is net1, the next net2, and so on, with the same index for its cloud-init IP configuration. At most seven, for eight attachments in total. Each needs a bridge and may declare an access VLAN tag from 1 to 4094, a static IPv4 address in CIDR notation, and a MAC address; only the primary attachment has a gateway. Declared MAC addresses must differ from one another and from network_mac_address. Write [] for none: a null is not accepted. An attachment's identity is its position: on an existing VM, attachments can be added after the last one and changed in place, and removing one, removing its address, or reordering them is not supported. See the README before changing an existing VM."
   type = list(object({
     bridge            = string
     vlan_id           = optional(number)
@@ -266,7 +327,7 @@ variable "additional_network_attachments" {
 }
 
 variable "ipv6_address_cidr" {
-  description = "Static IPv6 address for the VM's primary network device, net0, in CIDR notation, with a prefix length from 8 to 128, such as 2001:db8::10/64. Additional network attachments take no IPv6. Null, the default, declares no IPv6. It is added beside the required IPv4 addressing, never replaces it, and never becomes the connection output's host. Only static addressing is supported, so Proxmox's auto, dhcp, and manual forms are rejected. Prefix allocation, address uniqueness, routing, router advertisements, and upstream IPv6 service are the consumer's. Adding, changing, or removing it reboots a running VM; see the README."
+  description = "Static IPv6 address for the VM's primary network device, net0, in CIDR notation, with a prefix length from 8 to 128, such as 2001:db8::10/64. Additional network attachments take no IPv6. Null, the default, declares no IPv6. It is added beside the primary attachment's IPv4 addressing, static or DHCP, never replaces it, and never becomes the connection output's host. Only static addressing is supported, so Proxmox's auto, dhcp, and manual forms are rejected. Prefix allocation, address uniqueness, routing, router advertisements, and upstream IPv6 service are the consumer's. Adding, changing, or removing it reboots a running VM; see the README."
   type        = string
   default     = null
 
