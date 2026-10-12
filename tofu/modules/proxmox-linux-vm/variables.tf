@@ -63,7 +63,7 @@ variable "memory_mib" {
 }
 
 variable "network_bridge" {
-  description = "Proxmox network bridge to attach the VM's single network device to, such as vmbr0."
+  description = "Proxmox network bridge to attach the VM's primary network device, net0, to, such as vmbr0."
   type        = string
 
   validation {
@@ -170,12 +170,92 @@ variable "ssh_port" {
 }
 
 variable "network_vlan_id" {
-  description = "Access VLAN tag for the VM's single network device, a whole number from 1 to 4094. Null, the default, leaves the device untagged and still attached. The bridge's configuration, upstream switching and routing, and a static address that belongs on the chosen VLAN are the consumer's. Changing the tag of an existing VM interrupts the guest's network link."
+  description = "Access VLAN tag for the VM's primary network device, a whole number from 1 to 4094. Null, the default, leaves the device untagged and still attached. The bridge's configuration, upstream switching and routing, and a static address that belongs on the chosen VLAN are the consumer's. Changing the tag of an existing VM interrupts the guest's network link."
   type        = number
   default     = null
 
   validation {
     condition     = var.network_vlan_id == null || (var.network_vlan_id == floor(var.network_vlan_id) && var.network_vlan_id >= 1 && var.network_vlan_id <= 4094)
     error_message = "The network_vlan_id must be null for an untagged device, or a whole number in the VLAN range 1 to 4094."
+  }
+}
+
+variable "additional_network_attachments" {
+  description = "Network attachments after the primary one, in slot order: the first is net1, the next net2, and so on, with the same index for its cloud-init IP configuration. At most seven, for eight attachments in total. Each needs a bridge and may declare an access VLAN tag from 1 to 4094, a static IPv4 address in CIDR notation, and a MAC address; only the primary attachment has a gateway. Declared MAC addresses must differ from one another. Write [] for none: a null is not accepted. An attachment's identity is its position: on an existing VM, attachments can be added after the last one and changed in place, and removing one, removing its address, or reordering them is not supported. See the README before changing an existing VM."
+  type = list(object({
+    bridge            = string
+    vlan_id           = optional(number)
+    ipv4_address_cidr = optional(string)
+    mac_address       = optional(string)
+  }))
+  default = []
+
+  # Deliberately nullable. With `nullable = false` OpenTofu would replace an
+  # explicit null with the default, and on a VM that already has attachments an
+  # empty list asks for all of them to be removed, which is not supported. A
+  # null is refused here instead. Every rule below passes a null through, so
+  # that this is the one diagnostic it produces.
+  validation {
+    condition     = var.additional_network_attachments != null
+    error_message = "The additional_network_attachments value must be a list and cannot be null. Write [] for no additional network attachments."
+  }
+
+  validation {
+    condition     = var.additional_network_attachments == null ? true : length(var.additional_network_attachments) <= 7
+    error_message = "At most seven additional network attachments are supported, for eight in total with the primary attachment."
+  }
+
+  validation {
+    condition = var.additional_network_attachments == null ? true : alltrue([
+      for attachment in var.additional_network_attachments :
+      can(regex("^[a-zA-Z][a-zA-Z0-9._-]{0,14}$", attachment.bridge))
+    ])
+    error_message = "Every additional network attachment must be an object whose bridge is a Linux interface name: a letter followed by at most 14 letters, digits, dots, hyphens, or underscores."
+  }
+
+  # The checks below choose with a conditional rather than `||`, so that a
+  # null never reaches a function that refuses one. OpenTofu evaluates both
+  # sides of `||` before 1.10, and only the chosen side of a conditional.
+  validation {
+    condition = var.additional_network_attachments == null ? true : alltrue([
+      for attachment in var.additional_network_attachments :
+      try(attachment.vlan_id == null ? true : (attachment.vlan_id == floor(attachment.vlan_id) && attachment.vlan_id >= 1 && attachment.vlan_id <= 4094), false)
+    ])
+    error_message = "An additional network attachment's vlan_id must be null for an untagged device, or a whole number in the VLAN range 1 to 4094."
+  }
+
+  # Written out to Proxmox's own rule rather than delegated to cidrnetmask(),
+  # which also accepts an IPv4-mapped IPv6 address, octets with leading zeros,
+  # and prefix lengths below 8, none of which Proxmox does.
+  validation {
+    condition = var.additional_network_attachments == null ? true : alltrue([
+      for attachment in var.additional_network_attachments :
+      try(attachment.ipv4_address_cidr == null ? true : can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])/([89]|[12][0-9]|3[0-2])$", attachment.ipv4_address_cidr)), false)
+    ])
+    error_message = "An additional network attachment's ipv4_address_cidr must be null or an IPv4 address in dotted decimal, without leading zeros, with a prefix length from 8 to 32, such as 198.51.100.10/24."
+  }
+
+  # Proxmox refuses a MAC address with the group bit, the lowest bit of the
+  # first octet, set.
+  validation {
+    condition = var.additional_network_attachments == null ? true : alltrue([
+      for attachment in var.additional_network_attachments :
+      try(attachment.mac_address == null ? true : (can(regex("^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$", attachment.mac_address)) && parseint(substr(attachment.mac_address, 0, 2), 16) % 2 == 0), false)
+    ])
+    error_message = "An additional network attachment's mac_address must be null or a unicast MAC address written as six colon-separated hexadecimal octets, such as 00:00:5E:00:53:01."
+  }
+
+  # Only declared addresses are compared, and without regard to letter case,
+  # which is not part of a MAC address. An address Proxmox assigns is unknown
+  # here, so nothing is claimed about it.
+  validation {
+    condition = var.additional_network_attachments == null ? true : length(distinct([
+      for attachment in var.additional_network_attachments : lower(attachment.mac_address)
+      if try(attachment.mac_address != null, false)
+      ])) == length([
+      for attachment in var.additional_network_attachments : attachment.mac_address
+      if try(attachment.mac_address != null, false)
+    ])
+    error_message = "Every additional network attachment that declares a mac_address must declare a different one. MAC addresses are compared without regard to letter case."
   }
 }
