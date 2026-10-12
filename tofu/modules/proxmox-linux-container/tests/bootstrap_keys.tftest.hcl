@@ -24,6 +24,7 @@ variables {
   ipv4_address_cidr       = "192.0.2.20/24"
   ipv4_gateway            = "192.0.2.1"
   dns_servers             = ["192.0.2.53"]
+  dns_search_domain       = "example.invalid"
   ssh_public_keys         = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid"]
 }
 

@@ -17,6 +17,7 @@ variables {
   ipv4_address_cidr       = "192.0.2.20/24"
   ipv4_gateway            = "192.0.2.1"
   dns_servers             = ["192.0.2.53"]
+  dns_search_domain       = "example.invalid"
   ssh_public_keys         = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid"]
 }
 
@@ -106,6 +107,41 @@ run "a_null_ssh_port_keeps_the_default" {
   }
 }
 
+# The search domain is the consumer's value, passed as given. The fixture's name
+# happens to end in the fixture's domain, so this run declares one that shares
+# nothing with the name, to show it is not derived from it.
+run "the_search_domain_is_the_declared_one_not_derived_from_the_name" {
+  command = plan
+
+  variables {
+    dns_search_domain = "search.test"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].dns[0].domain == "search.test"
+    error_message = "A declared search domain must reach the provider's DNS domain as given."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].hostname == "fictional-container.example.invalid" && proxmox_virtual_environment_container.this.initialization[0].dns[0].servers == tolist(["192.0.2.53"])
+    error_message = "Changing the search domain must leave the name and the DNS servers as declared."
+  }
+}
+
+# One label is a DNS name too.
+run "a_single_label_search_domain_is_accepted" {
+  command = plan
+
+  variables {
+    dns_search_domain = "test"
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].dns[0].domain == "test"
+    error_message = "A one-label search domain must be accepted and passed as given."
+  }
+}
+
 # Rejections alone would not notice a rule that had become too strict, so each
 # range is also exercised at its limits.
 run "the_lower_limit_of_each_range_is_accepted" {
@@ -142,6 +178,7 @@ run "the_upper_limit_of_each_range_is_accepted" {
 
   variables {
     name              = "a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.b012345678901234567890123456789012345678901234567890123456789"
+    dns_search_domain = "a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.b012345678901234567890123456789012345678901234567890123456789"
     container_id      = 999999999
     cpu_cores         = 128
     ipv4_address_cidr = "203.0.113.255/32"
@@ -153,6 +190,11 @@ run "the_upper_limit_of_each_range_is_accepted" {
   assert {
     condition     = length(proxmox_virtual_environment_container.this.initialization[0].hostname) == 253
     error_message = "A 253-character name made of 63-character labels must be accepted."
+  }
+
+  assert {
+    condition     = length(proxmox_virtual_environment_container.this.initialization[0].dns[0].domain) == 253
+    error_message = "A 253-character search domain made of 63-character labels must be accepted."
   }
 
   assert {

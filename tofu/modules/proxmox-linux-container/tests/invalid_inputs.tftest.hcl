@@ -19,6 +19,7 @@ variables {
   ipv4_address_cidr       = "192.0.2.20/24"
   ipv4_gateway            = "192.0.2.1"
   dns_servers             = ["192.0.2.53"]
+  dns_search_domain       = "example.invalid"
   ssh_public_keys         = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid"]
 }
 
@@ -339,4 +340,94 @@ run "key_with_more_padding_than_base64_allows_is_rejected" {
   command = plan
   variables { ssh_public_keys = ["ssh-ed25519 AAAA=== fictional@example.invalid"] }
   expect_failures = [var.ssh_public_keys]
+}
+
+# The search domain is required, with no default: Proxmox copies the node's own
+# into a container that declares none, and an empty one restores that fallback
+# rather than switching search off. So every way of not naming exactly one
+# domain is refused.
+run "null_search_domain_is_rejected" {
+  command = plan
+  variables { dns_search_domain = null }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "empty_search_domain_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "" }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "whitespace_only_search_domain_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "   " }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "search_domain_with_surrounding_whitespace_is_rejected" {
+  command = plan
+  variables { dns_search_domain = " example.invalid " }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "space_separated_search_domain_list_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "example.invalid search.test" }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "comma_separated_search_domain_list_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "example.invalid,search.test" }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "search_domain_of_a_single_dot_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "." }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "search_domain_with_a_trailing_dot_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "example.invalid." }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "search_domain_with_an_empty_label_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "example..invalid" }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "search_domain_label_starting_with_a_hyphen_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "-example.invalid" }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "search_domain_label_ending_with_a_hyphen_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "example-.invalid" }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "search_domain_with_an_underscore_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "exa_mple.invalid" }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "search_domain_label_longer_than_63_characters_is_rejected" {
+  command = plan
+  variables { dns_search_domain = "a012345678901234567890123456789012345678901234567890123456789012.invalid" }
+  expect_failures = [var.dns_search_domain]
+}
+
+run "search_domain_longer_than_253_characters_is_rejected" {
+  command = plan
+  variables {
+    dns_search_domain = join(".", [for index in range(26) : "fictional"], ["example.invalid"])
+  }
+  expect_failures = [var.dns_search_domain]
 }

@@ -42,7 +42,7 @@ variable "datastore_id" {
 }
 
 variable "root_filesystem_size_gb" {
-  description = "Root filesystem size in gigabytes."
+  description = "Root filesystem size in gigabytes. It can be grown on an existing container. Making it smaller is not supported: the module cannot see the previous size, so reject a decrease when you review the plan."
   type        = number
 
   validation {
@@ -108,7 +108,7 @@ variable "ipv4_gateway" {
 }
 
 variable "dns_servers" {
-  description = "IPv4 DNS servers for the container, in order of preference."
+  description = "IPv4 DNS servers for the container, in order of preference. Required together with dns_search_domain, because Proxmox falls back to the node for each one separately."
   type        = list(string)
 
   validation {
@@ -119,6 +119,19 @@ variable "dns_servers" {
   validation {
     condition     = alltrue([for server in var.dns_servers : can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])$", server))])
     error_message = "Every DNS server must be a bare IPv4 address in dotted decimal, without leading zeros, such as 192.0.2.53."
+  }
+}
+
+variable "dns_search_domain" {
+  description = "DNS search domain for the container: one DNS name, such as example.invalid. It is required and has no default, because Proxmox copies the node's own search domain into a container that declares none. A list of domains, an empty value, and a null are not accepted, and there is no value that asks for no search domain."
+  type        = string
+
+  # A conditional rather than `&&` alone, so that a null is refused by this
+  # rule instead of reaching length(): OpenTofu evaluates both sides of `&&`
+  # before 1.10. The name rule is the one the container name uses.
+  validation {
+    condition     = var.dns_search_domain == null ? false : (can(regex("^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$", var.dns_search_domain)) && length(var.dns_search_domain) <= 253)
+    error_message = "The dns_search_domain must be one DNS name of at most 253 characters, such as example.invalid: dot-separated labels of letters, digits, and inner hyphens, each at most 63 characters. A null, an empty value, and a list of domains are not accepted."
   }
 }
 
@@ -154,7 +167,7 @@ variable "container_id" {
 }
 
 variable "nesting_enabled" {
-  description = "Whether to enable the Proxmox nesting feature. It defaults to true for systemd-based Debian guests. A later change takes effect on the next container start, and on the provider build this repository locks Proxmox accepts it only from root@pam: see the README."
+  description = "Whether to enable the Proxmox nesting feature when the container is created. It defaults to true for systemd-based Debian guests. It is a creation-time choice: changing it on an existing container is not supported, and the module cannot see the previous value, so reject a toggle when you review the plan."
   type        = bool
   default     = true
 

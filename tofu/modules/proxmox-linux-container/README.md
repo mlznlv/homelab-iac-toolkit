@@ -19,7 +19,7 @@ You supply, and continue to own:
 - provider configuration, the endpoint, and credentials — this module declares no `provider` block;
 - backend configuration and state;
 - a Debian container template volume that already exists on Proxmox storage, with an SSH server that accepts public-key login for root, as the [container template contract](../../../docs/compatibility.md#container-template-contract) describes;
-- the node, datastore, bridge, addresses, sizing, and identifiers below;
+- the node, datastore, bridge, addresses, DNS servers and search domain, sizing, and identifiers below;
 - the private half of the SSH keys you authorize, and everything configured inside the container after it is created.
 
 ## Usage
@@ -41,6 +41,7 @@ module "fictional_container" {
   ipv4_address_cidr = "192.0.2.20/24"
   ipv4_gateway      = "192.0.2.1"
   dns_servers       = ["192.0.2.53"]
+  dns_search_domain = "example.invalid"
 
   ssh_public_keys = [trimspace(file(pathexpand("~/.ssh/id_ed25519.pub")))]
 }
@@ -58,13 +59,14 @@ Required:
 | `node_name` | `string` | Proxmox node to create the container on. |
 | `template_file_id` | `string` | Identifier of the existing Debian container template volume, in `datastore:path` form. |
 | `datastore_id` | `string` | Datastore for the root filesystem. |
-| `root_filesystem_size_gb` | `number` | Root filesystem size, in gigabytes. |
+| `root_filesystem_size_gb` | `number` | Root filesystem size, in gigabytes. It can be grown later, not shrunk. |
 | `cpu_cores` | `number` | CPU cores, from 1 to 128. |
 | `memory_mib` | `number` | Dedicated memory, in MiB. At least 16. |
 | `network_bridge` | `string` | Bridge for the container's single interface, such as `vmbr0`. |
 | `ipv4_address_cidr` | `string` | Static IPv4 address with a prefix length from 8 to 32, such as `192.0.2.20/24`. |
 | `ipv4_gateway` | `string` | IPv4 default gateway, without a prefix length. |
 | `dns_servers` | `list(string)` | IPv4 DNS servers, in order of preference. At least one. |
+| `dns_search_domain` | `string` | DNS search domain: one DNS name, such as `example.invalid`. There is no default, and no value that means none. |
 | `ssh_public_keys` | `list(string)` | OpenSSH **public** keys installed for root when the container is created. At least one, each a single line. |
 
 Optional:
@@ -72,12 +74,12 @@ Optional:
 | Name | Type | Default | Description |
 | --- | --- | --- | --- |
 | `container_id` | `number` | `null` | Container identifier. Proxmox assigns the next free one when this is null. |
-| `nesting_enabled` | `bool` | `true` | Whether to enable the Proxmox nesting feature. See [Nesting](#nesting). |
+| `nesting_enabled` | `bool` | `true` | Whether to enable the Proxmox nesting feature when the container is created. See [Nesting](#nesting). |
 | `ssh_port` | `number` | `22` | Port published in the `connection` output. Metadata only. |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: a name that is not a DNS name, an address without a prefix length, an IPv6 address in any spelling, an octet written with a leading zero, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, an entry that is not one OpenSSH public key on one line, a size that is not a whole number within its range, an identifier outside Proxmox's range, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: a name that is not a DNS name, an address without a prefix length, an IPv6 address in any spelling, an octet written with a leading zero, a gateway carrying a prefix, a DNS server that is not an IPv4 address, a search domain that is empty, a list, or not a DNS name, an empty key list, an entry that is not one OpenSSH public key on one line, a size that is not a whole number within its range, an identifier outside Proxmox's range, and so on.
 
-DNS servers are required rather than optional. Without one, Proxmox copies the node's own name servers into the container, and a node's resolvers are not something a reusable module should adopt for you silently. **The node's search domain is still copied.** Proxmox falls back to the node for the name servers and the search domain separately, and this module has no search-domain input, so a container's `/etc/resolv.conf` gets your name servers and the `search` line of whichever node created it. This is read from Proxmox's source and has not been exercised.
+DNS servers and the search domain are both required, and neither has a default. Proxmox falls back to the node for each of them separately: a container that declares no name server gets the node's, and one that declares no search domain gets the node's `search` line, whatever name servers it declares. A node's resolver settings are not something a reusable module should adopt for you silently, so the module asks for both. `dns_search_domain` is one DNS name, passed to Proxmox as given, and is not derived from the container's name. There is no way to ask for no search domain: an empty domain restores the node fallback instead of switching search off, so that mode is not offered.
 
 ## Outputs
 
@@ -98,7 +100,7 @@ Four things are fixed or defaulted because the provider's own defaults would giv
 - **The operating-system type is Debian.** The provider's default is `unmanaged`, and Proxmox writes the network configuration, hostname, DNS servers, and root's keys into a container only through a managed operating-system type.
 - **The container is unprivileged.** The provider's default is privileged. There is no input for it.
 - **The container starts when its host boots.** That matches the provider's default, but the module declares it so that it is this module's decision and its tests assert it. There is no input for it, and no startup ordering.
-- **Nesting is on unless you turn it off.** See below.
+- **Nesting is on unless you turn it off when the container is created.** See below.
 
 Root gets the SSH public keys you declare and no password.
 
@@ -108,9 +110,9 @@ One provider default is left as it is: swap. The module declares dedicated memor
 
 `nesting_enabled` defaults to `true` because a systemd-based Debian guest may need the nesting feature to behave as Proxmox expects, and the provider's default is off. Nesting gives the container a broader profile; set `nesting_enabled = false` when your guest does not need it. A null is treated as the default, not as off.
 
-Changing it later is not live. The provider updates the container's configuration and requests no restart, so the container keeps running under its previous profile until something restarts it.
+**It is a creation-time choice. Changing `nesting_enabled` on an existing container is not supported.** Keep the value the container was created with. The module cannot hold you to that, because input validation sees only the configuration you give it now: a changed value plans as an ordinary `update in-place`, and that plan is not evidence that it can be applied. If a plan shows `nesting` changing on an existing container, do not apply it.
 
-**A later nesting change needs `root@pam` on the provider build this repository locks.** When features change, that build restates every container feature flag in its update request, not only nesting. Proxmox accepts a change to any flag other than nesting only from `root@pam` itself, and counts a flag that was absent and is now stated as off as a change. A provider authenticated as anything else, an API token included, should therefore expect Proxmox to refuse the update. Creating the container is not affected: the create request states nesting alone, and only when it is on. This is read from the provider's and Proxmox's source and has not been exercised against a real Proxmox VE.
+The reason is authorization, on the provider build this repository locks. When features change, that build restates every container feature flag in its update request, not only nesting. Proxmox accepts a change to any flag other than nesting only from `root@pam` itself, and counts a flag that was absent and is now stated as off as a change, so it would refuse the update from any other identity, an API token included. This module does not make `root@pam` a requirement, and it does not hide a changed value from the plan either. Creating the container is unaffected: the create request states nesting alone, and only when it is on. All of this is read from the provider's and Proxmox's source; no refusal has been observed.
 
 ## Bootstrap keys are creation-time only
 
@@ -127,24 +129,27 @@ Read the plan before you apply. With the provider build this repository locks, t
 | Change | Plan | What a running container sees |
 | --- | --- | --- |
 | `network_bridge`, `ipv4_address_cidr`, `ipv4_gateway` | Update in place | The provider reboots it. |
-| `dns_servers` | Update in place | The provider reboots it. |
+| `dns_servers`, `dns_search_domain` | Update in place | The provider reboots it. |
 | `name` | Update in place | The provider reboots it. |
 | `memory_mib` | Update in place | The provider reboots it. |
 | `cpu_cores` | Update in place | No reboot is requested. |
-| `nesting_enabled` | Update in place | No reboot is requested; see [Nesting](#nesting). |
-| `root_filesystem_size_gb`, larger | Update in place | The root filesystem is resized; no reboot is requested. |
-| `root_filesystem_size_gb`, smaller | Update in place, **which cannot be applied** | See below. |
+| `root_filesystem_size_gb`, larger | Update in place | The root filesystem is resized; no reboot is requested for the size alone. |
 | `template_file_id`, `datastore_id`, `node_name`, `container_id` | **Replace** | It is destroyed, with its root filesystem, and a new one is created. |
 | `ssh_public_keys` | No change | Nothing. |
 | `ssh_port` | No change to the container | Nothing; only the `connection` output changes. |
 
-Changing `ipv4_address_cidr` also changes `connection.host`, and changing `name` changes `container_name`.
+Changing `ipv4_address_cidr` also changes `connection.host`, and changing `name` changes `container_name`. Where no reboot is requested, that is what the provider's update asks for, not a promise that the guest is undisturbed.
 
 **A replacement destroys the container and its root filesystem.** OpenTofu shows it in the plan as `must be replaced`. The module does not hide it and cannot prevent it; your review of the plan is the control. Supplying the identifier the container already has, or removing a supplied identifier, is not a change.
 
-**The root filesystem cannot be shrunk.** Proxmox cannot shrink one in place. On the locked provider build a smaller `root_filesystem_size_gb` does not plan a replacement: it plans an in-place update, and the provider's update then refuses the smaller size and stops before it sends Proxmox any change. Input validation cannot catch this, because it cannot see the size the container already has. If a plan shows the root filesystem size going down, do not apply it. To get a smaller root filesystem, replace the container deliberately, with your data moved first.
-
 If a plan shows the container being replaced for a change the table lists as an update, do not apply it: that is not the behaviour this module relies on. Check which provider build your root module's lock selects, because only the build named below has been evaluated.
+
+### What is not supported on an existing container
+
+Two changes plan as `update in-place` and are not supported. The module cannot reject either one, because input validation cannot see what the container had before. Reading the plan before you apply is the control, and it is yours.
+
+- **Making the root filesystem smaller.** Growth is the only supported size change. On the locked provider build a smaller `root_filesystem_size_gb` does not plan a replacement, although the provider means it to: it plans an in-place update, and the provider's update then refuses the smaller size and stops before it sends Proxmox any change. If a plan shows the root filesystem size going down, do not apply it. A smaller root filesystem means recreating the container yourself, deliberately, with its data preserved first and the loss of the old container and its root filesystem accepted. The module has no replacement trigger, resize workaround, or recovery step for this.
+- **Changing `nesting_enabled`.** See [Nesting](#nesting).
 
 ### Reading and destroying
 
@@ -161,6 +166,9 @@ This module is one unprivileged Debian container, created once from a template, 
 - VLAN tags, more than one network interface, DHCP, or IPv6;
 - mount points, bind mounts, device passthrough, or ID mapping;
 - container features other than nesting;
+- shrinking the root filesystem, or changing nesting, on an existing container;
+- a container with no DNS search domain, or with a list of them;
+- a swap setting;
 - passwords, or a bootstrap account other than root;
 - distributions other than Debian;
 - a start-on-boot override, startup ordering, protection, HA, or pools;
@@ -173,9 +181,9 @@ The [`qemu_guest_agent`](../../../ansible/roles/qemu_guest_agent) role does not 
 
 Formatting, `tofu validate`, and a set of contract tests under [`tests/`](tests) that run against a **mocked** provider: no Proxmox endpoint, no credentials, nothing created. Run them with `task validate:tofu`, or directly as [Local validation](../../../docs/validation.md) describes.
 
-They prove what the module asks the provider for — creation from the declared template and never a clone, the Debian operating-system type, unprivileged mode, start-on-boot, nesting on by default and off when it is turned off, the declared sizing and root filesystem, exactly one interface with the declared static addressing and DNS servers, root's keys with no password, a later key change leaving the declared keys as they were created, the `connection` output's derivation from declared values whatever the provider reports, and none of the capabilities listed under [Limitations](#limitations) — and that bad input fails at plan time.
+They prove what the module asks the provider for — creation from the declared template and never a clone, the Debian operating-system type, unprivileged mode, start-on-boot, nesting on by default and off when it is turned off at creation, the declared sizing and root filesystem with no swap declared, exactly one interface with the declared static addressing, DNS servers and search domain, root's keys with no password, a later key change leaving the declared keys as they were created, the `connection` output's derivation from declared values whatever the provider reports, and none of the capabilities listed under [Limitations](#limitations) — and that bad input fails at plan time.
 
-A mocked provider cannot show which changes replace a container and which update it. The table above is evidenced for the provider build this repository locks, `bpg/proxmox` v0.111.1, at provider level: its schema and source, and credential-free plans made with that build for each row, including the key change planning nothing and the replacement the provider would otherwise force for it. Which changes reboot a running container, what the provider does with a smaller root filesystem when it applies, and what Proxmox requires for a feature change are read from source, because a plan does not show them.
+A mocked provider cannot show which changes replace a container and which update it. The table above is evidenced for the provider build this repository locks, `bpg/proxmox` v0.111.1, at provider level: its schema and source, and credential-free plans made with that build for each row, including the declared search domain in the create and update plans, the key change planning nothing, and the replacement the provider would otherwise force for it. The two unsupported changes are recorded the same way, as the in-place plans they produce. Which changes reboot a running container, what the provider does with a smaller root filesystem when it applies, what Proxmox requires for a feature change, and that a declared search domain is sent, read back, and keeps the node's own out are read from source, because a plan does not show them.
 
 None of this has been observed against a real Proxmox VE. No container has been created, started, read, updated, rebooted, shut down, stopped, or destroyed; no template has been tried; and nothing shows that Proxmox configures a guest's network, DNS, or keys, that nesting is sufficient for a guest's init system, or that SSH is reachable. [Compatibility](../../../docs/compatibility.md#lxc-capability) records that boundary, and your own root module's lock decides which provider build you run.
 

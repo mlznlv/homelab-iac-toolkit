@@ -23,6 +23,7 @@ variables {
   ipv4_address_cidr       = "192.0.2.20/24"
   ipv4_gateway            = "192.0.2.1"
   dns_servers             = ["192.0.2.53", "192.0.2.54"]
+  dns_search_domain       = "example.invalid"
   ssh_public_keys         = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid"]
 }
 
@@ -108,6 +109,11 @@ run "network_dns_and_key_only_bootstrap_are_declared" {
   }
 
   assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].dns[0].domain == "example.invalid"
+    error_message = "The declared search domain must reach the provider's DNS domain, so that the node's own is not copied."
+  }
+
+  assert {
     condition     = length(proxmox_virtual_environment_container.this.initialization[0].user_account[0].keys) == 1
     error_message = "The declared root SSH public keys must reach initialization."
   }
@@ -162,6 +168,16 @@ run "nothing_outside_the_first_capability_is_declared" {
   assert {
     condition     = proxmox_virtual_environment_container.this.features[0].keyctl == null && proxmox_virtual_environment_container.this.features[0].fuse == null && proxmox_virtual_environment_container.this.features[0].mknod == null && proxmox_virtual_environment_container.this.features[0].mount == null
     error_message = "Nesting is the only container feature the module may declare."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.memory[0].swap == null
+    error_message = "The module must declare no swap: it has no swap input, and the provider's own default applies."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].dns[0].server == null
+    error_message = "The module must declare DNS servers through the list only."
   }
 
   assert {

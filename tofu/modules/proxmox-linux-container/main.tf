@@ -39,7 +39,11 @@ resource "proxmox_virtual_environment_container" "this" {
       }
     }
 
+    # Both are declared because Proxmox falls back to the node for each one
+    # separately: name servers alone would still let the node's search domain
+    # into the container.
     dns {
+      domain  = var.dns_search_domain
       servers = var.dns_servers
     }
 
