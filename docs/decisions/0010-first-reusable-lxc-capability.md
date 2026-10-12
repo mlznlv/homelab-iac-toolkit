@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0015](0015-first-lxc-lifecycle-and-dns-contract.md).
 
 ## Context
 
