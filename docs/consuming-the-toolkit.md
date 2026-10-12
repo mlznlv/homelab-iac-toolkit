@@ -115,7 +115,7 @@ Error: Missing required argument
 The argument "node_name" is required, but no definition was found.
 ```
 
-Required inputs have no defaults, so every value the module cannot reasonably guess for you is named explicitly. Its four optional inputs each default to something, and they are not all the same kind of thing: `guest_agent_enabled` and `stop_on_destroy` choose behaviour, `ssh_port` only sets the port published in the `connection` output and configures nothing in the guest, and `vm_id` defaults to `null`, which leaves Proxmox to assign the next free identifier. [Its README](../tofu/modules/proxmox-linux-vm/README.md) lists both sets.
+Required inputs have no defaults, so every value the module cannot reasonably guess for you is named explicitly. `ipv4_address_cidr` and `ipv4_gateway` are the exception: required only in the default static mode, they default to `null` so that [DHCP](../tofu/modules/proxmox-linux-vm/README.md#dhcp-addressing) can leave them out, and a static configuration that omits them is rejected by a precondition when you plan rather than by this error. The optional inputs each default to something, and they are not all the same kind of thing: `guest_agent_enabled` and `stop_on_destroy` choose behaviour, `ssh_port` and `connection_host` only set what the `connection` output publishes and configure nothing in the guest, and `vm_id` defaults to `null`, which leaves Proxmox to assign the next free identifier. [Its README](../tofu/modules/proxmox-linux-vm/README.md) lists both sets.
 
 ### An input is rejected
 

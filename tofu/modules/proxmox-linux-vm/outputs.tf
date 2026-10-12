@@ -2,13 +2,30 @@
 # consumer needs to reach the guest, and never key material or a password.
 
 output "connection" {
-  description = "Where the bootstrap account can be reached: the declared IPv4 address without its prefix, the bootstrap username, and the ssh_port metadata value. It is a convenience for composing consumer-owned inventory, not a required integration: nothing in this toolkit consumes it at run time."
+  description = "Where the bootstrap account can be reached: connection_host when it is supplied, and otherwise the declared static IPv4 address without its prefix; the bootstrap username; and the ssh_port metadata value. Every value is declared, never discovered. It is a convenience for composing consumer-owned inventory, not a required integration: nothing in this toolkit consumes it at run time."
 
+  # Never derived from a lease, an agent-reported or provider-read address, or
+  # state. A configuration that would reach the null branch below fails the
+  # resource's preconditions and the one here, so a null host is never
+  # published.
   value = {
-    host = split("/", var.ipv4_address_cidr)[0]
+    host = var.connection_host != null ? var.connection_host : (var.ipv4_address_cidr != null ? split("/", var.ipv4_address_cidr)[0] : null)
     user = var.username
     port = var.ssh_port
   }
+
+  # The resource's preconditions already refuse such a configuration, but this
+  # output reads only variables, so a plan that leaves the VM out, such as one
+  # targeting a consumer resource that reads this output, never runs them.
+  precondition {
+    condition     = var.connection_host != null || var.ipv4_address_cidr != null
+    error_message = "The connection output has no host to publish: set connection_host, which ipv4_mode = \"dhcp\" requires, or declare ipv4_address_cidr in static mode."
+  }
+}
+
+output "mac_addresses" {
+  description = "MAC address of every network attachment, in slot order: the primary attachment's first, then each additional attachment's. A declared address is reported as given; the others are the ones Proxmox assigned. In the plan that adds an attachment without a declared MAC address, its entry is null rather than known after apply: the assigned address appears once that apply has run."
+  value       = proxmox_virtual_environment_vm.this.network_device[*].mac_address
 }
 
 output "vm_id" {

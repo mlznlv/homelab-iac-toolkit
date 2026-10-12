@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR 0014](0014-additional-attachment-retirement-lifecycle.md). Its interface and ownership remain in force through that decision; its removal, de-addressing, and reordering lifecycle claims do not.
 
 ## Context
 
