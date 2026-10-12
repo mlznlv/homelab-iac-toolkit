@@ -123,10 +123,10 @@ resource "proxmox_virtual_environment_vm" "this" {
       }
 
       # IPv6 is optional, static, primary-only, and added beside the IPv4
-      # configuration rather than in place of it. A null address declares no ipv6 block,
-      # which the provider plans as its empty default, so a configuration
-      # without IPv6 plans exactly as before. A null gateway is the provider's
-      # empty default too, and is never sent to Proxmox.
+      # configuration rather than in place of it. A null address declares no
+      # ipv6 block, which the provider plans as its empty default, so a
+      # configuration without IPv6 plans exactly as before. A null gateway is
+      # the provider's empty default too, and is never sent to Proxmox.
       dynamic "ipv6" {
         for_each = var.ipv6_address_cidr == null ? [] : [var.ipv6_address_cidr]
 

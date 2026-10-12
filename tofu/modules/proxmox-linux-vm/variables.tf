@@ -335,7 +335,7 @@ variable "ipv6_address_cidr" {
   # a /128 rejects IPv4, and requiring a colon in its canonical form rejects
   # IPv4-mapped values, which name an IPv4 address in IPv6 notation.
   validation {
-    condition = var.ipv6_address_cidr == null || try(
+    condition = var.ipv6_address_cidr == null ? true : try(
       can(regex("^[0-9A-Fa-f:.]+/([89]|[1-9][0-9]|1[01][0-9]|12[0-8])$", var.ipv6_address_cidr)) &&
       strcontains(cidrhost("${split("/", var.ipv6_address_cidr)[0]}/128", 0), ":"),
       false
@@ -353,7 +353,7 @@ variable "ipv6_gateway" {
   # carries a prefix length or a zone, and requiring a colon in the canonical
   # form rejects IPv4-mapped values.
   validation {
-    condition     = var.ipv6_gateway == null || try(strcontains(cidrhost("${var.ipv6_gateway}/128", 0), ":"), false)
+    condition     = var.ipv6_gateway == null ? true : try(strcontains(cidrhost("${var.ipv6_gateway}/128", 0), ":"), false)
     error_message = "The ipv6_gateway must be null or a bare IPv6 address without a prefix length, such as 2001:db8::1 or fe80::1."
   }
 }
