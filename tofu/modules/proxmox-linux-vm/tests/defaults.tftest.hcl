@@ -190,3 +190,33 @@ run "connection_output_is_derived_from_the_declared_values" {
     error_message = "connection.port must default to 22."
   }
 }
+
+run "static_is_the_default_ipv4_mode" {
+  command = plan
+
+  assert {
+    condition     = length(proxmox_virtual_environment_vm.this.initialization[0].ip_config) == 1
+    error_message = "The module must declare exactly one IP configuration, the primary attachment's."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.10/24" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == "192.0.2.1"
+    error_message = "Without an ipv4_mode, the primary attachment must keep the declared static address and gateway."
+  }
+
+  assert {
+    condition     = output.connection.host == "192.0.2.10"
+    error_message = "Without a connection_host, connection.host must stay the declared static address."
+  }
+}
+
+run "the_primary_mac_address_is_left_to_proxmox_by_default" {
+  command = plan
+
+  # The mock applies no provider defaults, so an unset MAC address plans as
+  # null here. The real provider leaves it for Proxmox to assign.
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.network_device[0].mac_address == null
+    error_message = "With no network_mac_address, the primary network device's MAC address must be left unset."
+  }
+}

@@ -1,6 +1,6 @@
 # `proxmox-linux-vm`
 
-An OpenTofu module that creates one Proxmox VE Linux VM as a full clone of a cloud-init template you already have, gives it static IPv4 addressing, optional additional network attachments and a bootstrap account, and publishes where that account can be reached.
+An OpenTofu module that creates one Proxmox VE Linux VM as a full clone of a cloud-init template you already have, gives it static or DHCP IPv4 addressing, optional additional network attachments and a bootstrap account, and publishes where that account can be reached.
 
 It is deliberately small. It owns the VM's lifecycle in Proxmox and nothing else: it configures no provider, keeps no state, manages no disks, and stops caring about the guest's users, keys, and SSH configuration the moment cloud-init has run. Installing the guest agent afterwards belongs to Ansible, and composing the two is yours.
 
@@ -22,6 +22,7 @@ You supply, and continue to own:
 - the datastore, node, bridge, addresses, sizing, and identifiers below;
 - if you tag a network device, the VLAN and everything that carries it: the bridge's configuration, upstream switching and routing, and addressing that belongs on that VLAN;
 - if you add network attachments, their bridges and networks, allocating their addresses, and any routing between them;
+- if you choose DHCP, the DHCP service with its scopes, reservations, and leases, and a connection host that keeps reaching the guest;
 - the private half of the SSH keys you authorize.
 
 ## Usage
@@ -63,8 +64,8 @@ Required:
 | `cpu_cores` | `number` | CPU cores. |
 | `memory_mib` | `number` | Dedicated memory, in MiB. |
 | `network_bridge` | `string` | Bridge for the VM's primary network device, `net0`, such as `vmbr0`. |
-| `ipv4_address_cidr` | `string` | Static IPv4 address with a prefix length, such as `192.0.2.10/24`. |
-| `ipv4_gateway` | `string` | IPv4 default gateway, without a prefix length. |
+| `ipv4_address_cidr` | `string` | Static IPv4 address with a prefix length, such as `192.0.2.10/24`. Required in static mode, the default; must be null with [DHCP](#dhcp-addressing). |
+| `ipv4_gateway` | `string` | IPv4 default gateway, without a prefix length. Required in static mode; must be null with DHCP. |
 | `dns_servers` | `list(string)` | IPv4 DNS servers, in order of preference. At least one. |
 | `username` | `string` | Bootstrap account cloud-init creates. |
 | `ssh_public_keys` | `list(string)` | OpenSSH **public** keys authorized for that account. At least one. |
@@ -78,15 +79,18 @@ Optional:
 | `stop_on_destroy` | `bool` | `true` | Whether destroy stops the VM instead of asking the guest to shut down. |
 | `ssh_port` | `number` | `22` | Port published in the `connection` output. Metadata only. |
 | `network_vlan_id` | `number` | `null` | Access VLAN tag for the primary network device, `1` to `4094`. Null leaves it untagged. See [VLAN tagging](#vlan-tagging). |
+| `ipv4_mode` | `string` | `"static"` | IPv4 addressing mode of the primary attachment: `"static"` or `"dhcp"`. See [DHCP addressing](#dhcp-addressing). |
+| `connection_host` | `string` | `null` | Host published in the `connection` output: a hostname or an IPv4 or IPv6 address. Required with DHCP. Metadata only. |
+| `network_mac_address` | `string` | `null` | MAC address for the primary network device, `net0`. Null lets Proxmox assign one. |
 | `additional_network_attachments` | `list(object)` | `[]` | Up to seven more network attachments, `net1` onwards, in the order given. On an existing VM they can be added and changed, not removed or reordered. See [Additional network attachments](#additional-network-attachments). |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, a null in place of the attachment list, an additional address that is not dotted-decimal IPv4, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address, a gateway carrying a prefix, a DNS server that is not an IPv4 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, a null in place of the attachment list, an additional address that is not dotted-decimal IPv4, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, an addressing mode other than `static` or `dhcp`, a static configuration missing its address or gateway, a DHCP configuration that declares either or supplies no connection host, a connection host that is not a hostname or a plainly written IP address, and so on.
 
 ## Outputs
 
 | Name | Description |
 | --- | --- |
-| `connection` | `{ host, user, port }` — the declared IPv4 address without its prefix, the bootstrap username, and `ssh_port`. |
+| `connection` | `{ host, user, port }` — `connection_host` when you supply one, otherwise the declared IPv4 address without its prefix; the bootstrap username; and `ssh_port`. |
 | `mac_addresses` | MAC address of every network attachment, in slot order: `net0` first. Declared ones as given, the rest as Proxmox assigned them. |
 | `vm_id` | Identifier of the created VM, supplied or assigned. |
 | `vm_name` | Name of the created VM. |
@@ -107,7 +111,7 @@ Set it to `false` when your guests shut down reliably and you would rather wait 
 
 ## The guest agent
 
-The VM is created with the guest-agent channel attached, and the module never waits for an agent to answer. Those are separate things and both matter: Proxmox adds the `org.qemu.guest_agent.0` device only when the agent setting is enabled, and a Debian guest's `qemu-guest-agent.service` is bound to that device, so a VM created without the channel is one where the service can never start. Meanwhile a provider that waited for an agent-reported address would block every apply and refresh until it timed out, so this module disables that wait unconditionally and addressing is always the static configuration you declared.
+The VM is created with the guest-agent channel attached, and the module never waits for an agent to answer. Those are separate things and both matter: Proxmox adds the `org.qemu.guest_agent.0` device only when the agent setting is enabled, and a Debian guest's `qemu-guest-agent.service` is bound to that device, so a VM created without the channel is one where the service can never start. Meanwhile a provider that waited for an agent-reported address would block every apply and refresh until it timed out, so this module disables that wait unconditionally and addressing is always what you declared: a static address, or DHCP with a connection host you supply.
 
 The composition is therefore one apply, then guest configuration: create the VM, build your inventory, install the agent with the [Ansible guest-agent capability](../../../docs/architecture.md#ansible-guest-agent-capability). No second apply, no power cycle. [ADR 0006](../../../docs/decisions/0006-guest-agent-channel-at-creation.md) records it in full.
 
@@ -144,7 +148,7 @@ The module sets the tag on the Proxmox side of the attachment and nothing more. 
 
 - a bridge on the node configured to carry the VLAN you choose;
 - upstream switching and routing that deliver that VLAN;
-- a static address, gateway, and DNS servers that belong on that VLAN. The module does not check that they agree with the tag.
+- addressing that belongs on that VLAN, a static address and gateway or a DHCP service, and DNS servers that serve it. The module does not check that they agree with the tag.
 
 It does not create VLANs, configure or discover bridges, expose trunks, or configure a VLAN interface inside the guest.
 
@@ -153,6 +157,81 @@ It does not create VLANs, configure or discover bridges, expose trunks, or confi
 Read the plan before you apply. A tag-only change shows the VM as `update in-place`. If a plan shows the VM being replaced for a tag-only change, do not apply it: that is not the behaviour this module relies on. Check which provider build your root module's lock selects, because only the build named below has been evaluated.
 
 That in-place behaviour is evidenced for the provider build this repository locks, `bpg/proxmox` v0.111.1, at provider level: its schema and source, and credential-free plans made with that build for untagged-to-tagged, tagged-to-different-tag, and tagged-to-untagged changes. It has not been observed against a real Proxmox VE, and nothing here shows that a tag is applied successfully, that a bridge or upstream network carries it, or that the guest stays reachable. [Compatibility](../../../docs/compatibility.md#optional-vlan-capability) records that boundary, and that your own root module's lock decides which provider build you run.
+
+## DHCP addressing
+
+`ipv4_mode` chooses how the primary attachment gets its IPv4 address. `"static"`, the default, is the addressing the rest of this README describes, and a configuration that does not set `ipv4_mode` plans exactly as before. `"dhcp"` asks cloud-init to request a DHCPv4 lease on the primary interface instead.
+
+```hcl
+module "fictional_vm" {
+  # ...the other inputs shown in Usage, without ipv4_address_cidr and ipv4_gateway...
+
+  ipv4_mode       = "dhcp"
+  connection_host = "fictional-vm.example.invalid"
+  dns_servers     = ["192.0.2.53"]
+
+  network_mac_address = "00:00:5E:00:53:01"
+}
+```
+
+The name is from [RFC 2606](https://www.rfc-editor.org/info/rfc2606/) and the MAC address from the range [RFC 7042](https://www.rfc-editor.org/info/rfc7042/) reserves for documentation.
+
+DHCP changes three inputs:
+
+- **`ipv4_address_cidr` and `ipv4_gateway` must be null.** The DHCP service supplies the address, and Proxmox expects no gateway alongside DHCP. Static mode still requires both.
+- **`connection_host` is required.** The module cannot know the address your DHCP service will grant, and it never finds out. See [The connection host](#the-connection-host).
+- **`dns_servers` stays required.** Without it Proxmox would give the guest the node's own resolvers, which this module will not choose for you.
+
+DHCP is for the primary attachment only. An [additional attachment](#additional-network-attachments) stays static or addressless whatever the primary does.
+
+The module declares that the primary attachment uses DHCP, and its MAC address if you give one. Everything else that makes DHCP work is yours:
+
+- the DHCP service, its scopes, reservations, and leases, on the network the primary attachment reaches;
+- names that resolve to the guest, if you publish one as the connection host, and keeping them accurate;
+- a template whose cloud-init renders a DHCPv4 configuration into a running DHCP client.
+
+Apply finishes without any evidence that a lease was granted or that the guest can be reached.
+
+### The connection host
+
+The `connection` output keeps its `host`, `user`, and `port` shape in both modes. `connection_host` decides `host`:
+
+| Mode | `connection_host` | `connection.host` |
+| --- | --- | --- |
+| Static | null | The declared address without its prefix, as before |
+| Static | set | `connection_host` |
+| DHCP | set | `connection_host` |
+| DHCP | null | Rejected when you plan |
+
+It takes a hostname, such as `fictional-vm.example.invalid`, or an IPv4 or IPv6 address, written without a scheme, brackets, or port. An IPv4 address must be plain dotted decimal: `192.0.2.010` and `0x7f000001` are refused, because the resolver SSH and Ansible use would read them as octal and hexadecimal and reach `192.0.2.8` and `127.0.0.1`. It is declared metadata, the same as `ssh_port`. The module never resolves it, never checks that it reaches the guest, and never fills it in from a lease, a guest agent, a provider read, OpenTofu state, or generated inventory. In static mode it lets you publish a name instead of the address.
+
+### The primary MAC address
+
+`network_mac_address` sets the MAC address of the primary network device, `net0`. It is optional in both modes, takes the same form as an additional attachment's `mac_address`, and is used as given. Declared MAC addresses must differ across the primary and every additional attachment, whatever letter case each is written in. As for additional attachments, that rule covers only what you declare in one configuration.
+
+Declare it when a DHCP reservation must match from the first boot, and create the reservation for that address before you apply. Leave it null and Proxmox assigns one when the VM is created, so nothing can be reserved for the first boot: `mac_addresses` reports the assigned address, `net0` first, once that apply has run.
+
+Changing it, or declaring one where Proxmox assigned it, updates the VM in place, but on a running VM Proxmox unplugs the device and plugs in one with the new address. The guest sees a different interface, and a reservation keyed to the old address stops matching. Stop declaring it and nothing changes: the device keeps the address it has.
+
+### Switching an existing VM between static and DHCP
+
+Changing `ipv4_mode` on an existing VM updates it in place; it does not replace it. With the provider build this repository locks, the plan changes only the primary cloud-init IP configuration, and once that update is applied the next plan proposes nothing.
+
+It is still disruptive. As for any [address change](#changing-attachments-on-an-existing-vm), it rebuilds the cloud-init drive and reboots a running VM, and the next boot is a new cloud-init instance. Cloud-init re-applies network configuration and, unless your template's configuration says otherwise, deletes and regenerates the guest's SSH host keys. The guest's address can change, so update anything that depends on it, including the connection host, a DNS record, and known host keys.
+
+Changing only `connection_host` changes no infrastructure: the plan shows a different `connection` output and no change to the VM.
+
+Read the plan before you apply. A mode switch shows the VM as `update in-place`, with only `ipconfig0` changing. If a plan shows the VM being replaced, do not apply it: that is not the behaviour this module relies on. Check which provider build your root module's lock selects, because only the build named below has been evaluated.
+
+### Where the DHCP behaviour is evidenced
+
+All of the above is for the provider build this repository locks, `bpg/proxmox` v0.111.1, at provider level, and the evidence comes in the same three kinds as for [additional attachments](#where-this-is-evidenced).
+
+- **Plans.** Credential-free plans made with that build, with refresh disabled, against synthetic prior states: an existing static VM picking up this module unchanged, creation in DHCP mode and with a declared primary MAC address, static to DHCP and back with and without an additional attachment, a connection-host-only change, and declaring, changing, and no longer declaring the primary MAC address.
+- **Modelled read-back.** Each change was then planned again against a state modelled on the provider's read path, and proposed nothing. No apply and no refresh was run.
+- **Source.** That the provider sends `ipconfig0` as `ip=dhcp` with no gateway and reads an absent gateway back as empty, that Proxmox stores the IP configuration as sent and commits it on a running VM, and that a changed MAC address replaces the device are read from the provider's and Proxmox's source.
+
+None of it has been observed against a real Proxmox VE. Nothing here shows that a lease is granted, that a reservation or name matches, that a guest's DHCP client runs, that the connection host reaches the guest, or that anything is reachable after a mode change. [Compatibility](../../../docs/compatibility.md#dhcp-addressing) records that boundary, and your root module's own lock decides which provider build you run.
 
 ## Additional network attachments
 
@@ -186,9 +265,9 @@ The addresses are from [RFC 5737](https://www.rfc-editor.org/info/rfc5737/) and 
 | `ipv4_address_cidr` | Static IPv4 address in dotted decimal with a prefix length from 8 to 32. Null gives the attachment no cloud-init IP configuration of its own. |
 | `mac_address` | Unicast MAC address written as six colon-separated hexadecimal octets, used as given. Null lets Proxmox assign one. |
 
-Declared MAC addresses must differ from one another, whatever letter case each is written in. That is a rule about what you declare in one configuration, and nothing more. The module does not compare a declared address with one a device already holds, whether Proxmox assigned it or the device kept it after you stopped declaring it, so declaring an address another device of the same VM has is not caught. It promises nothing about uniqueness on your network either.
+Declared MAC addresses must differ from one another and from the primary attachment's [`network_mac_address`](#the-primary-mac-address), whatever letter case each is written in. That is a rule about what you declare in one configuration, and nothing more. The module does not compare a declared address with one a device already holds, whether Proxmox assigned it or the device kept it after you stopped declaring it, so declaring an address another device of the same VM has is not caught. It promises nothing about uniqueness on your network either.
 
-There is no gateway. Only the primary attachment has one, so the guest never receives a second default route, and routing between attachments is guest configuration. OpenTofu ignores a key the type does not declare, without an error. A `gateway` written on an additional attachment does nothing, and neither does a misspelled attribute name: `vlan` for `vlan_id` leaves the device untagged, with no diagnostic. Check the plan for the tag, address, and MAC address you meant.
+There is no gateway, and no DHCP. Only the primary attachment can have a gateway, so the guest never receives a second default route from this module, and routing between attachments is guest configuration. An additional attachment's `ipv4_address_cidr` is a static address or null: `dhcp` is rejected, because a DHCP service could hand each such attachment its own default route. OpenTofu ignores a key the type does not declare, without an error. A `gateway` written on an additional attachment does nothing, and neither does a misspelled attribute name: `vlan` for `vlan_id` leaves the device untagged, with no diagnostic. Check the plan for the tag, address, and MAC address you meant.
 
 As with VLAN tags, the module sets the Proxmox side of each attachment and nothing more. It does not check that an address belongs on its bridge or VLAN, and it does not configure interfaces inside the guest.
 
@@ -215,7 +294,7 @@ Once a VM exists, these are the supported changes. With the provider build this 
 
 Existing attachments keep their order, and the list may grow but not shrink.
 
-**Changing any attachment's address reboots the VM.** This covers adding an addressed attachment, changing an address, giving an address to an attachment that had none, and the primary attachment's own `ipv4_address_cidr`. Each changes the cloud-init data, and with the locked provider's defaults that rebuilds the cloud-init drive and reboots a running VM. The changed data also gives the VM a new cloud-init instance identifier, so on that boot cloud-init treats the guest as a new instance. It re-applies network configuration and, unless your template's cloud-init configuration says otherwise, deletes and regenerates the guest's SSH host keys. Expect the reboot, and expect host-key verification to change. Adding an attachment without an address leaves the cloud-init data unchanged.
+**Changing any attachment's address reboots the VM.** This covers adding an addressed attachment, changing an address, giving an address to an attachment that had none, and the primary attachment's own `ipv4_address_cidr` and [`ipv4_mode`](#switching-an-existing-vm-between-static-and-dhcp). Each changes the cloud-init data, and with the locked provider's defaults that rebuilds the cloud-init drive and reboots a running VM. The changed data also gives the VM a new cloud-init instance identifier, so on that boot cloud-init treats the guest as a new instance. It re-applies network configuration and, unless your template's cloud-init configuration says otherwise, deletes and regenerates the guest's SSH host keys. Expect the reboot, and expect host-key verification to change. Adding an attachment without an address leaves the cloud-init data unchanged.
 
 ### What is not supported
 
@@ -246,12 +325,13 @@ None of it has been observed against a real Proxmox VE. Nothing here shows that 
 
 ## Limitations
 
-This module is one VM, cloned once, addressed statically. It does not do:
+This module is one VM, cloned once, addressed as you declare. It does not do:
 
 - template creation or upkeep;
 - disk resizing, extra disks, or any disk management — the clone inherits the template's layout;
 - linked clones, or cloning from a template on another node;
-- DHCP, IPv6, VLAN trunks, or more than eight network attachments;
+- DHCP on an additional attachment, DHCP service, scope, reservation, or name management, or discovering the address a guest was given;
+- IPv6, VLAN trunks, or more than eight network attachments;
 - removing, reordering, or taking the address from an additional attachment on an existing VM;
 - a gateway or routes on any attachment but the primary, NIC models, firewall, MTU, rate, queue, or link-state settings;
 - VLAN creation, bridge configuration or discovery, or network configuration inside the guest;
@@ -262,8 +342,8 @@ This module is one VM, cloned once, addressed statically. It does not do:
 
 Formatting, `tofu validate`, and a set of contract tests under [`tests/`](tests) that run against a **mocked** provider: no Proxmox endpoint, no credentials, nothing created. Run them with `task validate:tofu`, or directly as [Local validation](../../../docs/validation.md) describes.
 
-They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, the guest-agent channel attached by default and absent when it is turned off, waiting for an agent-reported address disabled in both cases, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation, the network device left untagged by default and tagged with `1` and `4094` without gaining a second device or changing the addressing or `connection` output, no additional attachment by default, additional attachments in the declared order from `net1` with their own bridge, tag, address, and MAC address, no gateway on any of them, an empty IP configuration for an addressless attachment before an addressed one and none after the last addressed one, eight attachments accepted, undeclared and distinct declared MAC addresses accepted together, `mac_addresses` in slot order, and the primary attachment and `connection` output unchanged by them — and that bad input fails at plan time, including a null in place of the attachment list and one MAC address declared twice in either letter case.
+They prove what the module asks the provider for — one full clone of the declared template, the declared static addressing and bootstrap account, the guest-agent channel attached by default and absent when it is turned off, waiting for an agent-reported address disabled in both cases, `stop_on_destroy` on both settings reaching the resource, the `connection` output's derivation, the network device left untagged by default and tagged with `1` and `4094` without gaining a second device or changing the addressing or `connection` output, no additional attachment by default, additional attachments in the declared order from `net1` with their own bridge, tag, address, and MAC address, no gateway on any of them, an empty IP configuration for an addressless attachment before an addressed one and none after the last addressed one, eight attachments accepted, undeclared and distinct declared MAC addresses accepted together, `mac_addresses` in slot order, and the primary attachment and `connection` output unchanged by them, static as the default addressing mode, DHCP declared on the primary IP configuration with no address or gateway and the DNS servers kept, additional attachments left static beside it, the connection host published in either mode and the declared address otherwise, the primary MAC address absent by default and reaching `net0` as given in either mode, and reported first in `mac_addresses` — and that bad input fails at plan time, including a null in place of the attachment list, one MAC address declared twice in either letter case, on two additional attachments or on the primary and an additional one, and every rejected combination of mode, address, gateway, and connection host.
 
-They prove nothing about a real Proxmox VE. No clone, boot, cloud-init run, SSH connection, shutdown, stop, destroy, VLAN change, attachment change, or guest agent has been exercised. Nor can a mocked provider show that a tag or attachment change is made in place, or that a plan settles afterwards; [VLAN tagging](#vlan-tagging) and [Additional network attachments](#where-this-is-evidenced) say where that evidence comes from. [Compatibility](../../../docs/compatibility.md) records what this evidence does and does not cover.
+They prove nothing about a real Proxmox VE. No clone, boot, cloud-init run, SSH connection, shutdown, stop, destroy, VLAN change, attachment change, DHCP lease, or guest agent has been exercised. Nor can a mocked provider show that a tag, attachment, addressing-mode, or MAC address change is made in place, or that a plan settles afterwards; [VLAN tagging](#vlan-tagging), [Additional network attachments](#where-this-is-evidenced), and [DHCP addressing](#where-the-dhcp-behaviour-is-evidenced) say where that evidence comes from. [Compatibility](../../../docs/compatibility.md) records what this evidence does and does not cover.
 
 `.terraform.lock.hcl` is committed so those checks resolve the same provider build every time, verified against recorded hashes, on Linux and macOS. It governs this repository's own validation. Your root module has its own lock file; this one does not constrain it.
