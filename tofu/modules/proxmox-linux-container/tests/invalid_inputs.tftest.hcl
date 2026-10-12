@@ -152,17 +152,19 @@ run "hostname_with_an_underscore_is_rejected" {
   expect_failures = [var.name]
 }
 
+# A single 64-character label is within the length the name may have in all,
+# so only the label rule can refuse it.
 run "hostname_label_longer_than_63_characters_is_rejected" {
   command = plan
-  variables { name = "a123456789012345678901234567890123456789012345678901234567890123.example.invalid" }
+  variables { name = "a012345678901234567890123456789012345678901234567890123456789012" }
   expect_failures = [var.name]
 }
 
-run "hostname_longer_than_253_characters_is_rejected" {
+# Every label here is valid and well under 63 characters. The name is one
+# character longer than LXC accepts as a container's host name.
+run "hostname_longer_than_64_characters_is_rejected" {
   command = plan
-  variables {
-    name = join(".", [for index in range(26) : "fictional"], ["example.invalid"])
-  }
+  variables { name = "a012345678901234567890123456789012345678901234567.example.invalid" }
   expect_failures = [var.name]
 }
 
@@ -430,4 +432,24 @@ run "search_domain_longer_than_253_characters_is_rejected" {
     dns_search_domain = join(".", [for index in range(26) : "fictional"], ["example.invalid"])
   }
   expect_failures = [var.dns_search_domain]
+}
+
+# The gateway and DNS server rules are written out separately from the address
+# rule, so each is exercised on the same ground.
+run "gateway_with_an_octet_above_255_is_rejected" {
+  command = plan
+  variables { ipv4_gateway = "192.0.2.256" }
+  expect_failures = [var.ipv4_gateway]
+}
+
+run "dns_server_with_an_octet_above_255_is_rejected" {
+  command = plan
+  variables { dns_servers = ["192.0.2.256"] }
+  expect_failures = [var.dns_servers]
+}
+
+run "ipv4_mapped_ipv6_dns_server_is_rejected" {
+  command = plan
+  variables { dns_servers = ["::ffff:192.0.2.53"] }
+  expect_failures = [var.dns_servers]
 }

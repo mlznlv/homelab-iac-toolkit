@@ -26,7 +26,7 @@ You supply, and continue to own:
 
 ```hcl
 module "fictional_container" {
-  source = "git::https://github.com/mlznlv/homelab-iac-toolkit.git//tofu/modules/proxmox-linux-container?ref=<commit>"
+  source = "git::https://github.com/mlznlv/proxmox-iac-toolkit.git//tofu/modules/proxmox-linux-container?ref=<commit>"
 
   name             = "fictional-container.example.invalid"
   node_name        = "fictional-node"
@@ -55,7 +55,7 @@ Required:
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `name` | `string` | Container hostname. A DNS name: dot-separated labels of letters, digits, and inner hyphens. |
+| `name` | `string` | Container hostname. A DNS name of at most 64 characters in all: dot-separated labels of letters, digits, and inner hyphens. |
 | `node_name` | `string` | Proxmox node to create the container on. |
 | `template_file_id` | `string` | Identifier of the existing Debian container template volume, in `datastore:path` form. |
 | `datastore_id` | `string` | Datastore for the root filesystem. |
@@ -67,7 +67,7 @@ Required:
 | `ipv4_gateway` | `string` | IPv4 default gateway, without a prefix length. |
 | `dns_servers` | `list(string)` | IPv4 DNS servers, in order of preference. At least one. |
 | `dns_search_domain` | `string` | DNS search domain: one DNS name, such as `example.invalid`. There is no default, and no value that means none. |
-| `ssh_public_keys` | `list(string)` | OpenSSH **public** keys installed for root when the container is created. At least one, each a single line. |
+| `ssh_public_keys` | `list(string)` | OpenSSH **public** keys installed for root when the container is created. At least one, each a single line; surrounding whitespace is trimmed. |
 
 Optional:
 
@@ -77,7 +77,9 @@ Optional:
 | `nesting_enabled` | `bool` | `true` | Whether to enable the Proxmox nesting feature when the container is created. See [Nesting](#nesting). |
 | `ssh_port` | `number` | `22` | Port published in the `connection` output. Metadata only. |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: a name that is not a DNS name, an address without a prefix length, an IPv6 address in any spelling, an octet written with a leading zero, a gateway carrying a prefix, a DNS server that is not an IPv4 address, a search domain that is empty, a list, or not a DNS name, an empty key list, an entry that is not one OpenSSH public key on one line, a size that is not a whole number within its range, an identifier outside Proxmox's range, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: a name that is not a DNS name or is longer than 64 characters, an address without a prefix length, an IPv6 address in any spelling, an octet written with a leading zero, a gateway carrying a prefix, a DNS server that is not an IPv4 address, a search domain that is empty, a list, or not a DNS name, an empty key list, an entry that is not one OpenSSH public key on one line, a size that is not a whole number within its range, an identifier outside Proxmox's range, and so on.
+
+The name is limited to 64 characters in all, shorter than a DNS name may be. Proxmox writes the whole name as the container's `lxc.uts.name`, and LXC refuses a longer one, so a longer name would give you a container that is created and cannot start. This is read from Proxmox's and LXC's source, not observed.
 
 DNS servers and the search domain are both required, and neither has a default. Proxmox falls back to the node for each of them separately: a container that declares no name server gets the node's, and one that declares no search domain gets the node's `search` line, whatever name servers it declares. A node's resolver settings are not something a reusable module should adopt for you silently, so the module asks for both. `dns_search_domain` is one DNS name, passed to Proxmox as given, and is not derived from the container's name. There is no way to ask for no search domain: an empty domain restores the node fallback instead of switching search off, so that mode is not offered.
 
@@ -95,7 +97,7 @@ All three are non-sensitive; the module never publishes a private key or a passw
 
 ## What the module decides for you
 
-Four things are fixed or defaulted because the provider's own defaults would give you a different container than the inputs describe.
+Four things are fixed or defaulted by the module rather than left to the provider. For three of them the provider's own default would give you a different container than the inputs describe; the fourth is declared so that it is this module's decision.
 
 - **The operating-system type is Debian.** The provider's default is `unmanaged`, and Proxmox writes the network configuration, hostname, DNS servers, and root's keys into a container only through a managed operating-system type.
 - **The container is unprivileged.** The provider's default is privileged. There is no input for it.

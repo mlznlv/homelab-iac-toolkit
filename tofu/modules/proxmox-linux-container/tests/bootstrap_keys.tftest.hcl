@@ -65,3 +65,53 @@ run "an_added_key_changes_nothing_on_the_existing_container" {
     error_message = "A key added after creation must not reach the existing container."
   }
 }
+
+# The keys are the one thing the module declines to act on after creation.
+# Every other input must still reach the plan when it changes, including the
+# two changes that are not supported: a changed value is shown, never hidden.
+run "every_other_changed_input_still_reaches_the_plan" {
+  command = plan
+
+  variables {
+    name                    = "renamed-container.example.invalid"
+    root_filesystem_size_gb = 32
+    cpu_cores               = 4
+    memory_mib              = 4096
+    network_bridge          = "vmbr1"
+    ipv4_address_cidr       = "192.0.2.30/24"
+    ipv4_gateway            = "192.0.2.254"
+    dns_servers             = ["192.0.2.54"]
+    dns_search_domain       = "search.test"
+    nesting_enabled         = false
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].hostname == "renamed-container.example.invalid"
+    error_message = "A changed name must reach the plan."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.disk[0].size == 32 && proxmox_virtual_environment_container.this.cpu[0].cores == 4 && proxmox_virtual_environment_container.this.memory[0].dedicated == 4096
+    error_message = "A changed root filesystem size, core count, and memory must reach the plan."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.network_interface[0].bridge == "vmbr1" && proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.30/24" && proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].gateway == "192.0.2.254"
+    error_message = "A changed bridge, address, and gateway must reach the plan."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].dns[0].servers == tolist(["192.0.2.54"]) && proxmox_virtual_environment_container.this.initialization[0].dns[0].domain == "search.test"
+    error_message = "Changed DNS servers and a changed search domain must reach the plan."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.features[0].nesting == false
+    error_message = "A changed nesting value must be shown in the plan, not concealed, even though applying it is not supported."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].user_account[0].keys == tolist(["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid"])
+    error_message = "The bootstrap keys must stay as they were created while everything else changes."
+  }
+}

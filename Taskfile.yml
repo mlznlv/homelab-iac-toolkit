@@ -172,16 +172,16 @@ tasks:
       - '{{.PYTHON_TOOL_PREFIX}}python3 ansible/roles/qemu_guest_agent/tests/check-role-contract.py'
 
   validate:composition:
-    desc: 'Components: check that the connection output composes into ordinary Ansible inventory.'
+    desc: 'Components: check that the VM module connection output composes into ordinary Ansible inventory.'
     preconditions:
       - sh: '{{.PYTHON_TOOL_PREFIX}}ansible-inventory --version >/dev/null 2>&1'
         msg: 'ansible-inventory runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
     cmds:
-      # Ansible reads the committed fixture back: the three values the module
-      # publishes, unchanged, in an inventory of the kind a consumer writes by
-      # hand. The other half of this evidence — that the connection output
-      # composes into exactly that document — is asserted by
-      # tests/composition.tftest.hcl, which validate:tofu runs.
+      # Ansible reads the committed fixture back: the three values the VM
+      # module publishes, unchanged, in an inventory of the kind a consumer
+      # writes by hand. The other half of this evidence — that the connection
+      # output composes into exactly that document — is asserted by that
+      # module's tests/composition.tftest.hcl, which validate:tofu runs.
       #
       # Nothing here reads OpenTofu state, generates inventory, or runs the
       # role: the composition stays the consumer's to perform.

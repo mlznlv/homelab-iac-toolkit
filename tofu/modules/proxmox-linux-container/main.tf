@@ -47,8 +47,10 @@ resource "proxmox_virtual_environment_container" "this" {
       servers = var.dns_servers
     }
 
+    # Trimmed, because that is the form the input rule checks: a key read
+    # from a file usually ends in a newline.
     user_account {
-      keys = var.ssh_public_keys
+      keys = [for key in var.ssh_public_keys : trimspace(key)]
     }
   }
 

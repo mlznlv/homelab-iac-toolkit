@@ -1,19 +1,28 @@
 # Inputs are consumer-owned. Defaults are limited to behavior that is part of
 # the reusable capability rather than to any environment-specific value.
+#
+# Required inputs are not nullable, so OpenTofu itself refuses a null and no
+# rule below has to guard a function against one. dns_search_domain is the
+# exception: it refuses a null with its own message.
 
 variable "name" {
-  description = "Hostname to give the container. It must be a valid DNS name."
+  description = "Hostname to give the container. It must be a valid DNS name of at most 64 characters in all."
   type        = string
+  nullable    = false
 
+  # 64 characters in all, not the 253 a DNS name may have: Proxmox writes the
+  # whole name as the container's lxc.uts.name, and LXC refuses a longer one,
+  # so the container could be created but never started.
   validation {
-    condition     = can(regex("^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$", var.name)) && length(var.name) <= 253
-    error_message = "The name must be a DNS name of at most 253 characters: dot-separated labels of letters, digits, and inner hyphens, each at most 63 characters."
+    condition     = can(regex("^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$", var.name)) && length(var.name) <= 64
+    error_message = "The name must be a DNS name of at most 64 characters in all: dot-separated labels of letters, digits, and inner hyphens, each at most 63 characters."
   }
 }
 
 variable "node_name" {
   description = "Name of the Proxmox VE node to create the container on."
   type        = string
+  nullable    = false
 
   validation {
     condition     = can(regex("^[a-zA-Z0-9][a-zA-Z0-9._-]*$", var.node_name))
@@ -24,6 +33,7 @@ variable "node_name" {
 variable "template_file_id" {
   description = "Identifier of the existing Debian container template volume, such as local:vztmpl/debian-13-standard_13.0-1_amd64.tar.zst."
   type        = string
+  nullable    = false
 
   validation {
     condition     = can(regex("^[a-zA-Z0-9][a-zA-Z0-9._-]*:[^[:space:]]+$", var.template_file_id))
@@ -34,6 +44,7 @@ variable "template_file_id" {
 variable "datastore_id" {
   description = "Datastore for the container root filesystem."
   type        = string
+  nullable    = false
 
   validation {
     condition     = can(regex("^[a-zA-Z0-9][a-zA-Z0-9._-]*$", var.datastore_id))
@@ -44,6 +55,7 @@ variable "datastore_id" {
 variable "root_filesystem_size_gb" {
   description = "Root filesystem size in gigabytes. It can be grown on an existing container. Making it smaller is not supported: the module cannot see the previous size, so reject a decrease when you review the plan."
   type        = number
+  nullable    = false
 
   validation {
     condition     = var.root_filesystem_size_gb == floor(var.root_filesystem_size_gb) && var.root_filesystem_size_gb >= 1
@@ -54,6 +66,7 @@ variable "root_filesystem_size_gb" {
 variable "cpu_cores" {
   description = "Number of CPU cores to give the container."
   type        = number
+  nullable    = false
 
   # The upper bound is the provider's own for a container.
   validation {
@@ -65,6 +78,7 @@ variable "cpu_cores" {
 variable "memory_mib" {
   description = "Dedicated memory to give the container, in MiB."
   type        = number
+  nullable    = false
 
   # Proxmox gives a container no less than 16 MiB.
   validation {
@@ -76,6 +90,7 @@ variable "memory_mib" {
 variable "network_bridge" {
   description = "Proxmox network bridge for the container's single veth0 interface."
   type        = string
+  nullable    = false
 
   validation {
     condition     = can(regex("^[a-zA-Z][a-zA-Z0-9._-]{0,14}$", var.network_bridge))
@@ -86,6 +101,7 @@ variable "network_bridge" {
 variable "ipv4_address_cidr" {
   description = "Static IPv4 address for the container in CIDR notation."
   type        = string
+  nullable    = false
 
   # Written out to Proxmox's own rule rather than delegated to cidrnetmask(),
   # which also accepts an IPv4-mapped IPv6 address, octets with leading zeros,
@@ -100,6 +116,7 @@ variable "ipv4_address_cidr" {
 variable "ipv4_gateway" {
   description = "IPv4 default gateway for the container, without a prefix length."
   type        = string
+  nullable    = false
 
   validation {
     condition     = can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])$", var.ipv4_gateway))
@@ -110,6 +127,7 @@ variable "ipv4_gateway" {
 variable "dns_servers" {
   description = "IPv4 DNS servers for the container, in order of preference. Required together with dns_search_domain, because Proxmox falls back to the node for each one separately."
   type        = list(string)
+  nullable    = false
 
   validation {
     condition     = length(var.dns_servers) >= 1
@@ -138,6 +156,7 @@ variable "dns_search_domain" {
 variable "ssh_public_keys" {
   description = "OpenSSH public keys installed for root during container creation. Later key rotation belongs to guest configuration."
   type        = list(string)
+  nullable    = false
 
   validation {
     condition     = length(var.ssh_public_keys) >= 1

@@ -177,7 +177,7 @@ run "the_upper_limit_of_each_range_is_accepted" {
   command = plan
 
   variables {
-    name              = "a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.b012345678901234567890123456789012345678901234567890123456789"
+    name              = "a01234567890123456789012345678901234567890123456.example.invalid"
     dns_search_domain = "a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.a01234567890123456789012345678901234567890123456789012345678901.b012345678901234567890123456789012345678901234567890123456789"
     container_id      = 999999999
     cpu_cores         = 128
@@ -188,8 +188,8 @@ run "the_upper_limit_of_each_range_is_accepted" {
   }
 
   assert {
-    condition     = length(proxmox_virtual_environment_container.this.initialization[0].hostname) == 253
-    error_message = "A 253-character name made of 63-character labels must be accepted."
+    condition     = length(proxmox_virtual_environment_container.this.initialization[0].hostname) == 64
+    error_message = "A name of 64 characters in all must be accepted."
   }
 
   assert {
@@ -205,5 +205,20 @@ run "the_upper_limit_of_each_range_is_accepted" {
   assert {
     condition     = proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].address == "203.0.113.255/32" && proxmox_virtual_environment_container.this.initialization[0].ip_config[0].ipv4[0].gateway == "203.0.113.255" && output.connection.port == 65535
     error_message = "An octet of 255, a prefix length of 32, and port 65535 must be accepted."
+  }
+}
+
+# A key read from a file usually ends in a newline. The rule checks the trimmed
+# entry, so the trimmed entry is what the container is given.
+run "surrounding_whitespace_around_a_key_is_not_sent" {
+  command = plan
+
+  variables {
+    ssh_public_keys = ["  ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid\n"]
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_container.this.initialization[0].user_account[0].keys == tolist(["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid"])
+    error_message = "A key must reach the container without the whitespace around it."
   }
 }
