@@ -3,7 +3,7 @@
 #
 # This file is the authoritative declaration for the Python package dependency
 # class. Language runtimes and standalone command-line tools are declared in
-# .tool-versions. See docs/toolchain.md for how to read, obtain, and change
+# .tool-versions. See CONTRIBUTING.md for how to read, obtain, and change
 # these versions.
 #
 # This file is the declaration. Installs use requirements-dev.lock, which is

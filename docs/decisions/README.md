@@ -1,17 +1,23 @@
 # Architecture Decision Records
 
-Architecture Decision Records document durable, cross-cutting decisions that affect repository boundaries, lifecycle ownership, contributor behavior, or public interfaces.
+Architecture Decision Records document durable, cross-cutting decisions that affect repository
+boundaries, lifecycle ownership, contributor behavior, or public interfaces.
 
 ## Convention
 
-- Filenames use a four-digit identifier followed by a concise title.
-- Every ADR contains Status, Context, Decision, and Consequences.
-- Valid statuses are `Proposed`, `Accepted`, `Rejected`, and `Superseded`.
-- Proposed ADRs are not authoritative until accepted.
-- The decision text of an accepted ADR is immutable.
-- A later change is recorded in a new ADR that supersedes the earlier decision.
-- Non-semantic corrections may be reviewed without changing the decision.
-- ADRs do not duplicate roadmap sequencing or implementation specifications.
+- Use a unique four-digit identifier and concise title: `NNNN-title.md`.
+- Metadata records `Proposed`, `Accepted`, `Rejected`, or `Superseded`, plus
+  the authority and successor where applicable. A proposal is not authority.
+- Accepted decisions are **semantically immutable**. Editorial compression,
+  wording, structure, and reference repairs are allowed when they preserve
+  obligations, rationale, safety constraints, and consequences.
+- Change a decision through a new ADR that supersedes the affected decision;
+  identify retained contracts when supersession is partial.
+- Use metadata, **Decision** (3–7 bullets), **Rationale**, **Consequences**, and
+  **References**. Aim for 40–60 lines for active records and 5–15 for superseded
+  records; completeness matters more than the line target.
+- ADRs explain why. Link to current interfaces, evidence, procedures, and
+  execution tracking under [documentation ownership](../../CONTRIBUTING.md#documentation-ownership).
 
 ## Index
 
@@ -34,4 +40,5 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 | [0015](0015-first-lxc-lifecycle-and-dns-contract.md) | Constrain the first LXC capability to evidenced lifecycle and explicit consumer DNS | Accepted |
 | [0016](0016-module-cli-minimum-and-evidence-policy.md) | Separate module CLI compatibility from contributor validation | Accepted |
 | [0017](0017-guest-distribution-extension-and-qualification.md) | Qualify guest distributions separately for VM templates, LXC, and Ansible roles | Accepted |
-| [0019](0019-explicit-vm-dns-search-domain.md) | Require an explicit consumer-owned VM DNS search domain | Accepted |
+| [0018](0018-isolated-live-validation-path.md) | Isolated, operator-run live validation; PR #127 reconciliation | Proposed |
+| [0019](0019-explicit-vm-dns-search-domain.md) | Explicit VM DNS search domain | Accepted |

@@ -2,7 +2,7 @@
 # used to develop and validate this repository.
 #
 # This file is the authoritative declaration for those tools. Python packages
-# are declared in requirements-dev.txt. See docs/toolchain.md for how to read,
+# are declared in requirements-dev.txt. See CONTRIBUTING.md for how to read,
 # obtain, and change these versions.
 #
 # Runtimes are declared at their supported series because the patch release is

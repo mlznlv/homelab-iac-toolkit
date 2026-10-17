@@ -1,7 +1,7 @@
 # Developer workflow entry points for this repository.
 #
-# Every task below is a thin wrapper around a command documented in
-# docs/validation.md that can also be run directly, without Task. Task prints
+# Every task below is a thin wrapper around an inspectable command below
+# that can also be run directly, without Task. Task prints
 # each command before running it, so a task never does more than it shows.
 #
 # Task orchestrates workflow only. Nothing here owns infrastructure state, runs
@@ -11,7 +11,7 @@
 # check is silently skipped.
 #
 # Tool versions come from .tool-versions and requirements-dev.txt; see
-# docs/toolchain.md.
+# CONTRIBUTING.md.
 
 version: '3'
 
@@ -89,7 +89,7 @@ tasks:
     cmds:
       # Scoped to tracked files: an untracked or ignored Markdown file in a
       # local working tree is absent from a CI checkout, so linting it would
-      # make the local result diverge from CI. See docs/validation.md.
+      # make the local result diverge from CI. See CONTRIBUTING.md.
       - git ls-files -z '*.md' | xargs -0 markdownlint-cli2
 
   validate:links:
@@ -101,7 +101,7 @@ tasks:
     desc: 'GitHub configuration: lint tracked YAML.'
     preconditions:
       - sh: '{{.PYTHON_TOOL_PREFIX}}yamllint --version >/dev/null 2>&1'
-        msg: 'yamllint runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
+        msg: 'yamllint runs from neither {{.VENV_BIN}} nor PATH. See CONTRIBUTING.md for the setup commands.'
     cmds:
       # The pathspec covers the file names yamllint selects by default: the two
       # YAML suffixes and its own configuration file.
@@ -111,7 +111,7 @@ tasks:
     desc: 'GitHub configuration: validate workflow, action, Dependabot, and Taskfile schemas.'
     preconditions:
       - sh: '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --version >/dev/null 2>&1'
-        msg: 'check-jsonschema runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
+        msg: 'check-jsonschema runs from neither {{.VENV_BIN}} nor PATH. See CONTRIBUTING.md for the setup commands.'
     cmds:
       - '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --builtin-schema github-workflows .github/workflows/*.yml'
       - '{{.PYTHON_TOOL_PREFIX}}check-jsonschema --builtin-schema dependabot .github/dependabot.yml'
@@ -159,7 +159,7 @@ tasks:
     desc: 'Components: check the Ansible role, its fixture play, and its declared contract.'
     preconditions:
       - sh: '{{.PYTHON_TOOL_PREFIX}}ansible-lint --version >/dev/null 2>&1'
-        msg: 'ansible-lint runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
+        msg: 'ansible-lint runs from neither {{.VENV_BIN}} nor PATH. See CONTRIBUTING.md for the setup commands.'
     cmds:
       # The fixture play lives inside the role it uses, so neither Ansible nor
       # ansible-lint resolves that role by its own defaults. The roles path is
@@ -175,7 +175,7 @@ tasks:
     desc: 'Components: check that the VM module connection output composes into ordinary Ansible inventory.'
     preconditions:
       - sh: '{{.PYTHON_TOOL_PREFIX}}ansible-inventory --version >/dev/null 2>&1'
-        msg: 'ansible-inventory runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
+        msg: 'ansible-inventory runs from neither {{.VENV_BIN}} nor PATH. See CONTRIBUTING.md for the setup commands.'
     cmds:
       # Ansible reads the committed fixture back: the three values the VM
       # module publishes, unchanged, in an inventory of the kind a consumer
@@ -214,7 +214,7 @@ tasks:
     desc: 'Components: check the separate-repository consumer example. Needs public network access.'
     preconditions:
       - sh: '{{.PYTHON_TOOL_PREFIX}}ansible-lint --version >/dev/null 2>&1'
-        msg: 'ansible-lint runs from neither {{.VENV_BIN}} nor PATH. See docs/validation.md for the setup commands.'
+        msg: 'ansible-lint runs from neither {{.VENV_BIN}} nor PATH. See CONTRIBUTING.md for the setup commands.'
     cmds:
       - tofu fmt -check -recursive examples/
       # The example points both components at a toolkit checkout it does not

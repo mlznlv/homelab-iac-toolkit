@@ -12,7 +12,7 @@ permissions:
 # Each job installs the toolchain this repository declares and then runs the
 # same Task entry points a contributor runs locally, so the check definitions,
 # tool versions, configuration and pass/fail semantics are shared rather than
-# restated here. docs/validation.md documents them, and every task wraps a
+# restated here. CONTRIBUTING.md documents them, and every task wraps a
 # command that can be run directly.
 
 jobs:

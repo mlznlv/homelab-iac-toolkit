@@ -17,7 +17,7 @@
 # nothing here verifies otherwise.
 #
 # Every command is printed before it runs, and each is one a reader can run by
-# hand after making that directory themselves. docs/validation.md documents
+# hand after making that directory themselves. CONTRIBUTING.md documents
 # them.
 #
 # What this proves: the example parses, its module call type-checks against the

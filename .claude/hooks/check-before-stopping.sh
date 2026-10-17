@@ -1,14 +1,14 @@
 #!/bin/bash
 # Runs this repository's fast local checks before a turn is allowed to end.
 #
-# CLAUDE.md and docs/validation.md already say that a change is validated
+# CLAUDE.md and CONTRIBUTING.md already say that a change is validated
 # before it is offered for review. That instruction is advisory: it holds when
 # it is read and remembered, and the checks it names are cheap enough that
 # skipping one is easy and noticing the skip is not. This makes the cheap half
 # of that deterministic, so a turn that leaves the working tree failing them
 # does not end quietly.
 #
-# It decides nothing. `task validate` remains the check set, docs/validation.md
+# It decides nothing. `task validate` remains the check set, CONTRIBUTING.md
 # remains its documentation, and CI remains what actually governs a merge; this
 # only refuses to let a session stop while a subset of that is already failing
 # locally. Like everything under .claude/, it is optional defense in depth for

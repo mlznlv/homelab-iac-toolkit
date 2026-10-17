@@ -1,80 +1,60 @@
 # `qemu_guest_agent`
 
-An Ansible role that installs the QEMU guest agent in a Linux guest and brings its service up.
-
-That is the whole of it: two tasks, no variables, no handlers, no templates. Proxmox can then report the guest's addresses, and shut it down gracefully, because something inside the guest is answering.
-
-## What you own
-
-The role takes ordinary inventory and nothing else. It never reads OpenTofu state or outputs, generates no inventory, and manages no Proxmox resource — use it against any host you can already reach, whether or not this toolkit created it.
-
-It deliberately does not set `become`. Both tasks need root, and how you get there is your decision to make in your play or inventory. You own the inventory, the credentials and private keys, the privilege configuration, and when the role runs.
+Install the `qemu-guest-agent` package and start its service in a suitable VM. The role takes
+ordinary inventory and has no OpenTofu or Proxmox API dependency.
 
 ## Requirements
 
-The guest must have:
+The guest needs Python supported by the declared Ansible toolchain, APT, systemd, the
+`qemu-guest-agent` package/service, an attached guest-agent channel and SSH access able to
+perform privileged operations non-interactively. [Compatibility](../../../docs/compatibility.md)
+owns target distributions and evidence.
 
-- a Python interpreter Ansible can use, at a version the declared `ansible-core` supports;
-- APT package management;
-- systemd;
-- a `qemu-guest-agent` package and service under that name;
-- **the guest-agent channel attached to the VM** — the service is bound to that device, so without it the service cannot start no matter what is installed;
-- SSH access with an identity that can perform privileged operations non-interactively.
+The [VM module](../../../tofu/modules/proxmox-linux-vm/README.md#guest-agent-and-destroy)
+describes channel creation, later enablement and the interval before the agent runs. Consumers
+own inventory, private keys, authentication, privilege configuration and ordering. The role does
+not set `become`; both tasks require root privileges.
 
-The channel is the one prerequisite you cannot fix from inside the guest. The [`proxmox-linux-vm`](../../../tofu/modules/proxmox-linux-vm/README.md) module attaches it at creation, and any other VM created with its QEMU guest agent option enabled has it too. On a VM created without it, attaching it later means stopping and starting the VM.
+## Quick start
 
-[Compatibility](../../../docs/compatibility.md) is the authority on that contract. It names Debian Stable and Kali Rolling as **expected-compatible** targets: they meet the capabilities above, and nothing in this repository has run this role against either of them, or against any other guest. They are not validated reference platforms, and no result here should be read as though they were.
-
-## What the role promises
-
-The service **is running**, and **enabled where the packaging supports enabling it**.
-
-The second half is not a hedge. On the expected-compatible targets above the unit is device-activated and ships an empty `[Install]` section, so `systemctl is-enabled` reports `static`, Ansible reads that as already enabled, and the enable step is correctly a no-op — there is nothing to enable. Where packaging does ship an `[Install]` section, the same task enables the unit for boot.
-
-Anything stronger would be a claim about packaging this role does not control, on distributions it has never run against.
-
-## Usage
-
-Put this repository's `ansible/roles` on your roles path, then use the role in a play:
-
-```yaml
-- name: Install the QEMU guest agent and bring its service up
-  hosts: fictional_guests
-  become: true
-  roles:
-    - role: qemu_guest_agent
-```
-
-The roles path can come from your `ansible.cfg`:
+Put the pinned checkout's `ansible/roles` on `roles_path` in your `ansible.cfg`:
 
 ```ini
 [defaults]
 roles_path = ./vendor/proxmox-iac-toolkit/ansible/roles
 ```
 
-or from the environment, which is how this repository's own checks do it:
+Then use it in a play against your inventory:
 
-```sh
-ANSIBLE_ROLES_PATH=ansible/roles ansible-playbook --inventory inventory.yml play.yml
+```yaml
+- name: Install and start the QEMU guest agent
+  hosts: fictional_guests
+  become: true
+  roles:
+    - role: qemu_guest_agent
 ```
 
-Composing this with the [`proxmox-linux-vm`](../../../tofu/modules/proxmox-linux-vm/README.md) module is your job and stays that way: apply the module, build inventory however you build inventory, then run the role. That is the whole sequence — the module attaches the channel at creation, so there is no second apply to remember and nothing to switch on afterwards.
+The [consumer example](../../../examples/separate-consumer-repository/README.md) shows the
+complete handoff and invocation.
 
-## Limitations
+## Interface and lifecycle
 
-- One package, one service. It configures nothing inside the agent and owns no other guest state.
-- It creates no users and does not touch SSH configuration; the OpenTofu module's cloud-init bootstrap is where an initial account comes from, and after that the account is yours.
-- It makes no Proxmox API call and needs no Proxmox credential.
-- It has no opinion about ordering: nothing here waits for a VM to exist, and nothing wires it to an infrastructure run.
+There are no role variables, handlers or templates. The package is present and the service
+running; boot-enabling is honored only where packaging supports it. On device-activated static
+units, `systemctl is-enabled` reports `static`, Ansible treats that as already enabled and udev
+starts the service when its device appears. There is no guest-side enablement configuration to
+add for such a unit.
 
-## How this role is checked
+## Limitations and validation
 
-Three credential-free checks, all runnable with `task validate:ansible` and documented individually in [Local validation](../../../docs/validation.md):
+The role configures no agent settings, users, SSH or other guest state. It creates no inventory,
+waits for no VM, and reads no state/output or infrastructure credentials. It does not apply to
+LXC containers.
 
-| Check | What it establishes |
-| --- | --- |
-| `ansible-playbook --syntax-check` on [`tests/role.yml`](tests/role.yml) | A minimal play using the role parses, with a fictional inventory that resolves nowhere. |
-| `ansible-lint` on the role and that fixture | The role and fixture meet ansible-lint's rules at its `production` profile. |
-| [`tests/check-role-contract.py`](tests/check-role-contract.py) | The role still declares what it claims: the package present through Ansible's package management, the service started through its service management, no shell command standing in for a module, no `become` taken from the consumer, and no OpenTofu reference in anything it executes. It reads every task and handler file and walks tasks nested in `block`, `rescue` and `always`. Anything that would run content it has not read fails it: an include resolving outside the role, a module named through `action` or `local_action` instead of directly, another role pulled in, or a role dependency declared in `meta`. That is what lets "everything it executes" be a claim the check can actually make. |
-
-None of them contacts a guest, needs a credential, or runs the role. They are evidence about what the role declares — not that a package installed, not that a service came up, not that the role converges or is idempotent on any distribution, and not that Proxmox subsequently saw a guest agent.
+[`tests/`](tests) supplies a syntax fixture and static contract check, alongside Ansible lint.
+The check reads all executable task/handler paths and rejects opaque includes, action forms or
+dependencies it cannot inspect. Required package/service behavior, module use, consumer-owned
+privilege and lack of OpenTofu coupling are checked under
+[Contributing](../../../CONTRIBUTING.md#validate-your-change). These are structural checks;
+[Compatibility](../../../docs/compatibility.md#current-evidence-level) records the absence of
+runtime convergence/idempotency evidence.

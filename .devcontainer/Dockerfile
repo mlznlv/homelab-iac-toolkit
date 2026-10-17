@@ -1,7 +1,7 @@
 # Canonical development environment for this repository.
 #
 # Tool versions are deliberately not declared here. `.tool-versions` and
-# `requirements-dev.txt` are authoritative (see docs/toolchain.md), and this
+# `requirements-dev.txt` are authoritative (see CONTRIBUTING.md), and this
 # image installs exactly what they declare, so the container is a consumer of
 # those declarations rather than a second source of truth.
 #

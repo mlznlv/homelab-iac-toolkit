@@ -1,41 +1,34 @@
 # ADR 0004: Local validation, Task, and CI security boundary
 
-## Status
-
-Accepted
-
-## Context
-
-The repository has useful GitHub Actions validation, but the check implementation is CI-only. M2 requires reproducible local validation, transparent workflow entry points, and equivalent public CI behavior without private credentials or infrastructure.
+Status: Accepted.
 
 ## Decision
 
-Repository-owned tool configuration and documented direct commands define validation behavior.
+- Define validation in repository-owned configuration and inspectable direct commands, with thin
+  Task wrappers and non-mutating aggregate validation.
+- Keep local/CI checks, versions, configuration and pass/fail semantics equivalent.
+- Treat public PR code as untrusted, with minimal permissions, immutable action references,
+  verified downloads and no privileged execution of untrusted code.
+- Exclude credentials, decryption, deployment/private access, apply/destroy and sensitive
+  artifacts from normal validation; allow public downloads/link checks.
+- Require separate Architecture and isolation for future live tests; never label static evidence
+  as live compatibility.
 
-Task provides discoverable, thin wrappers for focused checks and non-mutating aggregate validation. Direct commands remain documented for troubleshooting and environments where Task is unavailable. Task must not own infrastructure state, run apply or destroy as part of validation, decrypt secrets, or hide stateful behavior.
+## Rationale
 
-CI uses the same check definitions, supported tool versions, configuration, and pass/fail semantics as local validation. The exact workflow composition and task names are implementation details.
-
-Normal public CI:
-
-- treats pull-request code as untrusted;
-- requires no private deployment credentials or secrets;
-- uses minimal token permissions;
-- does not persist credentials unless explicitly required by an approved workflow;
-- does not use privileged pull-request events to execute untrusted code;
-- uses immutable references for third-party actions;
-- provides verifiable integrity for downloaded executables and dependencies;
-- performs no infrastructure apply, destroy, secret decryption, or live private-infrastructure operation;
-- does not publish sensitive plans, state, logs, or decrypted artifacts.
-
-Public network access may be used for dependency acquisition and public-link validation. Access to private networks, private repositories, or deployment infrastructure is prohibited in normal public CI.
-
-Future live testing requires separate Architecture and isolation from normal public validation. Static validation must not be represented as live infrastructure evidence.
+CI-only checks leave contributors unable to reproduce failures. Shared local commands improve
+review and troubleshooting without making Task a lifecycle owner or giving public forks
+privileged access.
 
 ## Consequences
 
-- Existing CI must be reconciled with shared local validation.
-- Task becomes a supported contributor interface without becoming a lifecycle owner.
-- CI remains suitable for forks and public contributions.
-- Executable acquisition must satisfy the integrity policy.
-- Normal validation remains available without Proxmox credentials or a private deployment repository.
+[Architecture](../architecture.md#validation-boundary) owns the current security boundary;
+[Taskfile](../../Taskfile.yml) owns direct commands, also usable without Task. Credentials are
+not persisted unless an approved workflow requires it. Normal checks remain available without a
+private repository or Proxmox access. Workflow grouping/task names can evolve without changing
+these decisions.
+
+## References
+
+- [Contributor validation](../../CONTRIBUTING.md#validate-your-change)
+- [Evidence levels](../compatibility.md#current-evidence-level)

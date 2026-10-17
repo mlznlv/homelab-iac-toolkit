@@ -1,97 +1,67 @@
 # A separate consumer repository
 
-This directory is shaped like the repository you would keep for your own homelab. It exists to show one thing — how a repository that is not this one uses both halves of the toolkit together, from a single checkout pinned at a single commit.
+This copyable, fictional example composes the [VM
+module](../../tofu/modules/proxmox-linux-vm/README.md) and [guest-agent
+role](../../ansible/roles/qemu_guest_agent/README.md). It represents a separate repository and
+is not deployment-ready. Reusable components do not read it or depend on it.
+[Using](../../docs/using.md) owns the consumption contract.
 
-It represents such a repository rather than being one. It is tracked here like any other file, and this repository's own checks read it on every change to confirm it still demonstrates what it documents. What does not read it is the toolkit's reusable source: neither the OpenTofu module nor the Ansible role knows this directory exists, and nothing you consume depends on it.
+## Layout
 
-The two halves are the [`proxmox-linux-vm`](../../tofu/modules/proxmox-linux-vm) OpenTofu module and the [`qemu_guest_agent`](../../ansible/roles/qemu_guest_agent) Ansible role. They have no runtime dependency on each other, and neither knows the other exists. What ties them together here is that both are resolved out of the same directory, at the same revision, which [ADR 0007](../../docs/decisions/0007-single-revision-consumer-contract.md) records as the reason this example is shaped the way it is.
-
-**This is not deployment-ready, and copying it does not make it so.** Every value in it is fictional, it declares no backend, it holds no credentials, and no part of it has ever run against a Proxmox host. Read [What is actually proven](#what-is-actually-proven) before relying on any of it.
-
-## The layout
-
-```text
-toolkit-revision.yml            the full commit SHA this repository pins
-tofu/
-  versions.tf                   the provider, configured by you, and no backend
-  main.tf                       the module, from a local path in the checkout
-  outputs.tf                    the connection values you read after an apply
-  tests/                        one test asserting the inventory still matches
-ansible/
-  ansible.cfg                   roles_path, reaching the same checkout
-  inventory.yml                 the connection values, mapped in by hand
-  guest-agent.yml               the play that runs the role
-tests/                          this toolkit's own checks of this example
-vendor/proxmox-iac-toolkit/     the checkout — you create this; see step 1
-```
-
-The two test directories are not the same thing. `tofu/tests/` asserts that `ansible/inventory.yml` is still the module's `connection` output mapped unchanged, which is a useful thing to keep once the values are yours: it catches an address edited in one file and not the other. The top-level `tests/` checks that this example still demonstrates the contract it documents, which is this repository's concern rather than yours — leave it behind.
-
-The one thing both `tofu/main.tf` and `ansible/ansible.cfg` have in common is `vendor/proxmox-iac-toolkit/`. That is the contract: one directory, one commit, both components. Point them at two different checkouts and they can drift onto two different revisions of the toolkit without anything complaining.
-
-## What you supply
-
-This example contains neither the checkout nor anything environment-specific — not the Proxmox endpoint and credentials, the backend and state custody, the node, template, datastore, bridge, addresses, sizing, the SSH keys you authorize and their private halves, how Ansible authenticates, or the order you run things in. [Using the toolkit](../../docs/consuming-the-toolkit.md#what-you-own) lists what that ownership covers.
-
-How you obtain the checkout and where you put it are yours. `vendor/proxmox-iac-toolkit/` is this example's convention, not a toolkit interface, and nothing in the toolkit acquires, updates, verifies, or synchronizes it.
+| Path | Purpose |
+| --- | --- |
+| `toolkit-revision.yml` | Full toolkit SHA and represented checkout path |
+| `vendor/proxmox-iac-toolkit/` | Checkout you establish; absent from this example |
+| `tofu/versions.tf` | Provider declaration; no endpoint, credentials or backend |
+| `tofu/main.tf`, `tofu/outputs.tf` | Local module reference and connection output |
+| `ansible/ansible.cfg` | Role path into the same checkout |
+| `ansible/inventory.yml`, `ansible/guest-agent.yml` | Manual connection mapping and play |
+| `tofu/tests/` | Checks inventory matches declared connection values; useful to retain |
+| `tests/` | Toolkit's structural example checks; leave behind when copying |
 
 ## Getting started
 
-Nothing below is automated, and the ordering is deliberate: a human reviews a plan before anything is created, and a human writes the inventory afterwards.
+1. Replace the synthetic SHA in `toolkit-revision.yml` with a real full SHA and
+   establish that checkout at the recorded path through your own mechanism.
+2. Replace every fictional value in the module call and inventory. Choose your
+   provider credentials, SSH authentication and backend/state custody using
+   [Using](../../docs/using.md#credentials-state-and-secrets) before applying.
+3. From this example's `tofu/` directory, initialize and produce a plan:
 
-**1. Establish the checkout at the pinned revision.** Read `toolkit-revision.yml`, then obtain that commit into `vendor/proxmox-iac-toolkit/` by whatever mechanism you have chosen. The revision recorded there is synthetic and names no commit; replace it with the full SHA you actually checked out. A full SHA is the point — a branch or a tag can move, and then the two components are no longer pinned together.
+   ```sh
+   tofu init
+   tofu plan
+   ```
 
-**2. Review the configuration.** `tofu/main.tf` and `ansible/inventory.yml` are entirely fictional. Replace every value in them with yours before going further.
+4. Review the plan against the module lifecycle rules, then explicitly run:
 
-**3. Configure the provider.** `tofu/versions.tf` declares an empty `provider "proxmox"` block. Supply the endpoint and credentials at run time through the provider's own environment variables, which [the provider documents](https://search.opentofu.org/provider/bpg/proxmox/latest). They are not toolkit interfaces, and they do not belong in this repository.
+   ```sh
+   tofu apply
+   tofu output connection
+   ```
 
-**4. Plan, and read the plan.**
+5. Map the returned `host`, `user`, `port` manually into `ansible_host`,
+   `ansible_user`, `ansible_port` in `ansible/inventory.yml`.
+6. From this example's `ansible/` directory, run:
 
-```sh
-cd tofu
-tofu init
-tofu plan
-```
+   ```sh
+   ansible-playbook guest-agent.yml
+   ```
 
-**5. Apply, explicitly, after that review.**
+Run the play where `ansible.cfg` is discoverable (or select it explicitly). Its relative paths
+resolve against that file. Checkout path changes must reach both the module source and role
+path. Neither the example nor Task acquires the checkout, generates inventory, reads state or
+orchestrates deployment.
 
-```sh
-tofu apply
-```
+## Limitations and checks
 
-**6. Map the connection values into inventory by hand.**
+No backend is declared; the [state warning](../../docs/using.md#credentials-state-and-secrets)
+applies before real use. These live invocation steps describe the accepted workflow, not an
+executed integration test. [Compatibility](../../docs/compatibility.md#current-evidence-level)
+owns evidence limits and [Release policy](../../docs/release-policy.md#maturity) owns
+pre-release guarantees.
 
-```sh
-tofu output connection
-```
-
-That prints three values — `host`, `user`, and `port`. Copy them into `ansible/inventory.yml` as `ansible_host`, `ansible_user`, and `ansible_port`. Doing it by hand is the design, not an omission: nothing here reads OpenTofu state, generates inventory, or wires the output through automatically, so composing the two components stays a step you take deliberately.
-
-**7. Run the play.**
-
-```sh
-cd ../ansible
-ansible-playbook guest-agent.yml
-```
-
-Run it from that directory. Ansible resolves the relative paths inside `ansible.cfg` against the directory holding the file, but it only finds the file at all when it is the working directory.
-
-## Two things this example does not decide for you
-
-**There is no backend.** `tofu/versions.tf` declares none, so the choice stays yours. As committed this example has never been applied and holds no state — but applying it creates a real VM and real state, and with no backend that state lands in a local file with nothing protecting it. Choose a backend and a state-custody policy before you apply anything, including this. The omission is not a recommendation to use local state.
-
-**There are no secrets, and no mechanism for them.** Runtime credentials stay outside Git and reach the provider and Ansible through their own mechanisms. **A decryption identity is a private key: keep it out of Git** — yours as much as this one — on the machines that need it. [Using the toolkit](../../docs/consuming-the-toolkit.md#credentials-state-and-secrets) records the rest of the boundary.
-
-## What is actually proven
-
-This repository checks the example on every change. Those checks are credential-free and read only what is declared. They establish that:
-
-- the example parses, and its module call type-checks against the module's real interface;
-- the OpenTofu module source and the Ansible `roles_path` resolve into the same represented checkout;
-- `ansible/inventory.yml` is the module's `connection` output mapped into `ansible_host`, `ansible_user`, and `ansible_port` with no value changed;
-- the play resolves `qemu_guest_agent` from that same checkout; and
-- the example carries no acquisition, orchestration, state-reading, inventory-generation, or secret-handling mechanism, and no real address, host, or credential.
-
-They establish nothing else. **No part of this example has been run against a Proxmox host or a guest.** Steps 4 through 7 above are the accepted workflow, not a tested path: this repository has never executed a `tofu plan`, `tofu apply`, or `ansible-playbook` run outside the credential-free checks described here. Nothing here is evidence about provisioning, cloud-init, SSH connectivity, Ansible convergence or idempotency, `qemu-guest-agent` runtime behaviour, or shutdown, reboot, backup, and destroy behaviour. [Compatibility](../../docs/compatibility.md) records what the project does and does not claim.
-
-Pinning a full commit SHA selects exact pre-release source. It is not a release, and it carries no semantic-versioning, upgrade, migration, stability, or support guarantee.
+The repository checks parsing, both paths resolving from a temporary shared checkout, unchanged
+inventory mapping, role resolution, the full-SHA declaration and absence of
+acquisition/state/secret/orchestration mechanisms. Run the checks through
+[Contributing](../../CONTRIBUTING.md#validate-your-change).

@@ -1,58 +1,79 @@
-# ADR 0019: Require an explicit consumer-owned VM DNS search domain
+# ADR 0019: Explicit consumer-owned VM DNS search domain
 
-## Status
-
-Accepted
-
-## Context
-
-The VM module declares DNS servers but no search domain. The [VM-specific investigation for #121](https://github.com/mlznlv/proxmox-iac-toolkit/issues/121#issuecomment-6233199488) inspected locked `bpg/proxmox` v0.111.1 at source `b22fe919fc34476b232191b69c8907f0c1aa5bea` and Proxmox qemu-server at `14c0f871fa926e04eee090afae5d2d8670aa4a79`.
-
-The clone path copies a template's configured search domain. With no explicit VM domain, Proxmox's cloud-init generator independently falls back to the selected node's search domain, even when nameservers are declared. Required nameservers therefore do not make all DNS bootstrap configuration consumer-explicit.
-
-The provider sends a nonempty domain during clone initialization and update, and reads it back. An empty domain is instead omitted; the VM update path does not delete an existing `searchdomain`. Its read-back can consequently restore a value the configuration attempted to remove. This differs from the LXC deletion path and does not establish a supported clearing transition.
-
-An explicit domain also affects generated user data: Proxmox appends it to the module's single-label VM name to form the FQDN. The upstream helper's qualified-name branch does not expand this module's existing name interface. Initialization changes request cloud-init rebuild and reboot on the pinned provider, and changed generated user/network data changes the NoCloud instance identifier.
-
-These are VM-specific source findings, not an extension of [ADR 0015](0015-first-lxc-lifecycle-and-dns-contract.md). The investigation executed only extracted DNS/hostname helper functions with a fictional resolver reader; it did not run full Proxmox/cloud-init or a guest. No live lifecycle, DNS or connectivity evidence is claimed.
+Status: Accepted in [PR #128](https://github.com/mlznlv/proxmox-iac-toolkit/pull/128),
+under [#121](https://github.com/mlznlv/proxmox-iac-toolkit/issues/121).
+Implementation remains separate; this is not an existing module input.
 
 ## Decision
 
-Require one explicit, nonempty, consumer-supplied VM DNS search domain alongside the existing required DNS servers. There is no toolkit default, node/template-derived value, domain-list interface or no-search sentinel. The module passes the validated declaration through the existing provider DNS initialization field. Locally decidable invalid domain/name combinations fail before apply; validating the domain alone must not permit an overlong generated FQDN or widen the existing single-label VM-name contract.
+- Require non-null string `dns_search_domain`, no default: one ASCII DNS name with
+  1–63-character letter/digit/inner-hyphen labels, maximum 253 characters, no trailing dot.
+  Permit a single label; reject empty/whitespace, lists, malformed names and `.`.
+- Preserve VM `name` as a single DNS label at most 63 characters; reject known `name.domain`
+  combinations exceeding 253 characters before apply. Pass the domain unchanged to
+  `initialization.dns.domain`, never derive it from name/template/node.
+- Keep DNS servers required and all IPv4 static/DHCP, optional IPv6, attachment,
+  gateway/MAC/VLAN and connection contracts unchanged. Domain is global initialization; never
+  append it to connection metadata or add guest DNS/service/IPAM orchestration.
+- Make domain/namespace/service/template suitability consumer-owned. OpenTofu owns its Proxmox
+  declaration; ongoing guest resolver configuration stays Ansible/consumer-owned.
+- Require initial declaration, adoption from node/template inheritance and nonempty changes to
+  preserve the VM and converge. Removal, empty values, return to inheritance and no-search mode
+  are unsupported; replacement or recurring differences block provider adoption pending
+  Architecture review.
+- Require independent module and exact-provider acceptance evidence below, refreshed on provider
+  upgrades. This breaking input requires deliberate consumer selection and reconciled existing
+  documentation/example/fixtures, without automatic migration.
 
-This refines the previously incomplete VM DNS ownership boundary without changing the resource family or the other decisions in [ADR 0006](0006-guest-agent-channel-at-creation.md), [ADR 0012](0012-dhcp-primary-attachment-addressing.md), [ADR 0013](0013-static-ipv6-primary-attachment.md) or [ADR 0014](0014-additional-attachment-retirement-lifecycle.md). It preserves [public/private boundaries](0001-public-toolkit-private-deployment-boundary.md), [lifecycle ownership](0002-lifecycle-orchestration-ownership.md) and [credential-free validation](0004-local-validation-task-ci-security-boundary.md).
+## Rationale
 
-OpenTofu owns the declared Proxmox cloud-init search-domain setting. Consumers own its value, namespace, DNS service, template suitability and consistency with the VM name and their environment. Continuing guest resolver configuration remains an Ansible/consumer concern; no role or alternative configuration mechanism is introduced.
+VM clone copies an explicit template domain; absent that, cloud-init independently uses the node
+search domain despite explicit nameservers. The provider sends/reads a nonempty domain but omits
+empty without deleting an existing field, risking recurring differences. LXC has a different
+deletion path and cannot establish VM semantics. Optional inheritance leaves ownership implicit;
+bypassing the provider would create competing mutation. API string acceptance proves no safe
+no-search sentinel.
 
-Initial explicit declaration, adoption on an existing VM, and a change from one valid nonempty domain to another must preserve the VM and converge at provider update/read level. Removal, empty values and a return to inheritance are not supported. The implementation evidence gate must cover each supported transition, including replacement of a template-inherited value and a subsequent no-change plan grounded in the exact provider's update/read paths.
-
-An in-place plan alone does not establish convergence or successful guest DNS. Domain changes carry the established initialization rebuild/reboot and new-instance consequences, including a changed generated FQDN where applicable, possible SSH host-key regeneration and interrupted connectivity. Provider upgrades must re-evaluate this behavior rather than silently permit replacement or non-convergence.
-
-The exact input and validation contract belongs in [Architecture](../architecture.md#vm-dns-search-domain). Evidence and non-claims belong in [Compatibility](../compatibility.md#vm-dns-search-domain). Component syntax/examples and required caller updates are Developer work after acceptance, not implementation in this decision.
+Explicit domain also changes generated `name.domain` and potentially user/network data. Even
+choosing the previous node fallback can change FQDN because the hostname helper does not use
+that fallback. Its qualified-name branch does not widen this module's name contract.
+Initialization update requests cloud-init rebuild/reboot; changed rendered data changes NoCloud
+instance identity.
 
 ## Consequences
 
-- This is a breaking required-input addition. Existing consumers must deliberately choose a domain before adopting the implementation; even retaining an inherited value is an explicit consumer choice, not automatic discovery.
-- Consumers review the plan and bootstrap/disruption consequences before explicit apply. The toolkit does not rewrite configuration, mutate state, clear Proxmox fields directly, or migrate consumers automatically.
-- The primary IPv4 modes, static IPv6, additional-attachment lifecycle, required DNS servers and metadata-only `connection` contract stay unchanged. The domain is global DNS initialization, not per-attachment addressing.
-- An explicit no-search mode remains deferred: an accepted API string is not evidence of reliable no-search semantics across generated user/network data and guest renderers.
-- Architecture acceptance rests on pinned source evidence and explicit limits; Developer acceptance separately requires module tests, exact-provider implementation evidence, the consumption-minimum evidence of [ADR 0016](0016-module-cli-minimum-and-evidence-policy.md) and reconciled existing documentation/callers.
-- No provider/CLI upgrade, PVE target change, LXC change, new Ansible capability, live-testing requirement or orchestration is introduced.
+Consumers review disruptive reconfiguration, changed FQDN, possible SSH host-key regeneration
+and lost connectivity; this is not cosmetic or a zero-downtime promise. The toolkit does not
+rewrite configuration/state, clear Proxmox directly or migrate consumers. Explicit no-search
+awaits separately reviewed semantics and convergence.
 
-## Alternatives considered
+Module checks must cover required/null/empty/name/list validation, accepted/rejected
+generated-FQDN boundaries, unchanged pass-through servers/addressing/connection and absence of
+defaults/no-search. Exact locked-provider evidence must cover first explicit initialization,
+adoption from node fallback and explicit template domain, and one nonempty change; preserve
+unrelated networking/VM and show a subsequent no-change plan for each update from
+source-grounded read-back. Distinguish executed plans, modeled read-back and inspected
+create/update/read/rendering from live evidence.
 
-- **Optional domain with inherited defaults:** rejected for this contract. It retains environment-specific behavior and cannot offer a truthful generic set-then-remove transition on the pinned provider.
-- **Document inheritance and defer an input:** rejected for the selected increment; it leaves the demonstrated ownership gap unresolved.
-- **Expose empty or dot-like no-search values:** deferred. Empty is omitted by the provider; the VM API's string acceptance alone does not establish a safe public no-search contract.
-- **Bypass the provider to clear the domain:** rejected. It introduces competing lifecycle ownership and hidden mutation.
+Architecture may be accepted before finished module tests; Developer acceptance requires those
+tests/evidence and consistent existing callers using fictional domains. No new
+example/consumption model, provider/CLI/PVE change, LXC change, Ansible capability or
+live-testing requirement is introduced. The investigation executed extracted DNS/hostname
+helpers with a fictional resolver reader only: no installed Proxmox/cloud-init, apply/refresh,
+guest resolver/hostname, DNS, reboot, SSH or reachability proof.
 
-## Sources
+Implementation must preserve the retained CLI minimum with the consuming-root evidence of
+[ADR 0016](0016-module-cli-minimum-and-evidence-policy.md). The combined name/domain rule spans
+two inputs and must not rely on cross-variable validation available only in a newer CLI.
 
-- [Provider domain schema](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L865-L890)
-- [Provider domain mapping and omission](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L3586-L3614)
-- [Provider domain read-back](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L5039-L5059)
+Repeated apply, ignored differences and direct Proxmox cleanup are not supported convergence
+remedies for this DNS contract.
+
+## References
+
+- [Investigation](https://github.com/mlznlv/proxmox-iac-toolkit/issues/121#issuecomment-6233199488)
+- [DNS presentation bounds](https://www.rfc-editor.org/rfc/rfc1035.html#section-2.3.4)
+- [Provider domain schema](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L865-L890); [Provider domain mapping and omission](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L3586-L3614); [Provider domain read-back](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L5039-L5059); [Provider initialization update/rebuild/reboot path](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L6592-L6684)
 - [Provider request encoding](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmox/nodes/vms/custom_cloud_init.go#L105-L121)
-- [Provider initialization update/rebuild/reboot path](https://github.com/bpg/terraform-provider-proxmox/blob/b22fe919fc34476b232191b69c8907f0c1aa5bea/proxmoxtf/resource/vm/vm.go#L6592-L6684)
 - [Proxmox clone configuration inheritance](https://github.com/proxmox/qemu-server/blob/14c0f871fa926e04eee090afae5d2d8670aa4a79/src/PVE/API2/Qemu.pm#L4510-L4580)
-- [Proxmox VM FQDN and independent DNS fallback](https://github.com/proxmox/qemu-server/blob/14c0f871fa926e04eee090afae5d2d8670aa4a79/src/PVE/QemuServer/Cloudinit.pm#L112-L143)
-- [Proxmox NoCloud instance identity](https://github.com/proxmox/qemu-server/blob/14c0f871fa926e04eee090afae5d2d8670aa4a79/src/PVE/QemuServer/Cloudinit.pm#L604-L623)
+- [Proxmox VM FQDN and independent DNS fallback](https://github.com/proxmox/qemu-server/blob/14c0f871fa926e04eee090afae5d2d8670aa4a79/src/PVE/QemuServer/Cloudinit.pm#L112-L143); [Proxmox NoCloud instance identity](https://github.com/proxmox/qemu-server/blob/14c0f871fa926e04eee090afae5d2d8670aa4a79/src/PVE/QemuServer/Cloudinit.pm#L604-L623)

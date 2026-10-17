@@ -1,45 +1,38 @@
 # Security
 
-## Project maturity
+## Publication boundary
 
-This project is in its bootstrap, pre-release stage. There is no released
-version, no supported-version policy and no compatibility or response-time
-commitment. Treat everything here as work in progress.
+Everything in this repository and its public artifacts must be safe to publish. Reusable code,
+documentation and sanitized examples belong here; concrete deployments belong to their
+consumers. [Architecture](docs/architecture.md) defines that ownership, and [ADR
+0001](docs/decisions/0001-public-toolkit-private-deployment-boundary.md) records why.
 
-## What this repository holds
+Never publish credentials, private keys or decryption identities, real inventory, private
+hostnames/addresses/identifiers, topology, generated state, sensitive plans or logs, or real
+encrypted secrets and their recipients. Use fictional or standards-reserved values in examples
+and reports. `.gitignore`, hooks and publication/secret checks catch obvious cases; review the
+content too.
 
-This repository is the public half of a public/private split. It holds reusable
-toolkit code, documentation and validation; concrete environment configuration,
-credentials and state belong to a separate private deployment repository. The
-boundary is defined in
-[ADR 0001](docs/decisions/0001-public-toolkit-private-deployment-boundary.md).
+Consumers may commit ciphertext and recipient lists to their own repositories. Decryption
+identities stay outside **all** source control, on systems that need them, distributed through
+the consumer's private-key process. Keeping a key beside the ciphertext it opens defeats
+encryption.
 
-Two consequences matter for security:
+## Validation and releases
 
-- Nothing committed here is a secret. No credentials, decryption identities,
-  private inventory, generated state or infrastructure identifiers belong in
-  this repository, and its checks look for them on every change.
-- Validation performs no infrastructure operation. The checks are
-  non-destructive, need no credentials, and reach no live environment, so
-  running them cannot affect any deployment.
+Normal validation needs no credentials, private inventory, decryption or live environment. It
+performs no infrastructure apply or destroy. Public CI treats PR code as untrusted; its controls
+are in [Architecture](docs/architecture.md#validation-boundary). Release publication uses
+maintainer authorization outside normal CI under the [release policy](docs/release-policy.md).
 
-A problem in a deployment built with this toolkit, rather than in the toolkit
-itself, belongs with whoever operates that deployment.
+The project provides no response-time or disclosure-timeline commitment at this stage; see
+[release maturity](docs/release-policy.md#maturity). Deployment incidents belong with the
+deployment's operator.
 
-## Reporting a problem
+## Reporting
 
-**This repository has no private reporting channel at present.** GitHub's
-private vulnerability reporting is not enabled here, so anything you send
-arrives in public. Open an [issue](https://github.com/mlznlv/proxmox-iac-toolkit/issues)
-and keep it publishable:
-
-- Do not include credentials, keys, decryption identities, private inventory,
-  real hostnames or addresses, or any other sensitive material, whether yours
-  or a third party's.
-- Describe the problem and how to reproduce it using fictional or
-  standards-reserved values, which is what the rest of the repository uses.
-- If a report genuinely cannot be written without sensitive material, say that
-  in the issue and withhold the material rather than publishing it.
-
-There is no disclosure timeline to promise at this stage. A report will be read
-and addressed on the same basis as any other issue.
+**There is no private reporting channel currently configured.** Open a public
+[issue](https://github.com/mlznlv/proxmox-iac-toolkit/issues) with a description and
+reproduction using fictional values. Withhold sensitive material belonging to you or anyone
+else. If a report cannot be written safely without it, state that limitation without publishing
+the material. Reports are handled through the ordinary issue process.
