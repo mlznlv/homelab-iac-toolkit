@@ -2,13 +2,23 @@
 
 This document is the public compatibility contract for approved reusable toolkit components. It records current platform targets and the level of evidence supporting them. At a release commit, this file is the authoritative compatibility snapshot for that release; on `main`, it may describe later unreleased changes. It is not a duplicate tool-version manifest.
 
-Executable tool versions remain authoritative in [Supported tool versions](toolchain.md). Exact provider constraints belong in the OpenTofu module's source-controlled provider requirements when the module exists.
+Contributor tool versions remain authoritative in the declarations described by [Supported tool versions](toolchain.md). Each module's executable `required_version` and provider requirements own its consumption and provider constraints; this document records compatibility targets, evidence and limitations rather than replacing those declarations.
 
 ## Release maturity
 
 `v0.1.0-alpha.1` is an evaluation and early-consumer pre-release. Its source identity is immutable, but its public interfaces are not yet stable and breaking changes may occur before 1.0. It creates no support-duration, maintenance-line, LTS, response-time, future release-cadence, or 1.0 commitment.
 
 The first release inherits only the targets and evidence recorded on this page at its release commit. Publication does not promote an expected-compatible platform to a runtime-validated reference platform or turn static and mocked checks into live compatibility evidence. Release notes link to this snapshot rather than maintaining a competing compatibility table.
+
+## OpenTofu CLI compatibility and evidence
+
+[ADR 0016](decisions/0016-module-cli-minimum-and-evidence-policy.md) retains 1.6.0 as the intended consumer minimum for both modules. The executable constraints are in the [VM requirements](../tofu/modules/proxmox-linux-vm/versions.tf) and [LXC requirements](../tofu/modules/proxmox-linux-container/versions.tf). The contributor OpenTofu pin is a separate development/test contract, not a replacement consumption minimum. The repository's mock tests need newer test-runner features; their prerequisites neither raise the consumer minimum nor establish a supported range for the whole test suite.
+
+**The current VM source does not meet its declared minimum.** At reviewed source `3a8553a16bcfd5a4e78957988d96f0b5fc9ab543`, fresh consuming-root initialization succeeded but validation with nullable defaults failed on 1.6.0 and 1.9.4 at the VM's identifier/VLAN guards. The same baseline passed for LXC, and both roots passed on 1.10.0 and 1.12.6. [The exact investigation record](https://github.com/mlznlv/proxmox-iac-toolkit/issues/120#issuecomment-6233199326) distinguishes these unmodified-source probes from earlier scratch-patched diagnostics. They are sampled initialization/validation results, not full feature qualification or an interval-wide guarantee.
+
+[Correction #112](https://github.com/mlznlv/proxmox-iac-toolkit/issues/112) must be followed by fresh evidence against the final corrected, unmodified source before the retained VM minimum can be called verified. The [consumption evidence procedure](validation.md#module-consumption-compatibility-evidence) requires a calling root at the declared minimum, nullable-default checks and focused valid/invalid cases; passing normal full validation on the contributor pin is necessary but not sufficient for that claim. This policy does not itself complete the correction, change executable constraints or introduce a CI version matrix.
+
+CLI evidence does not expand provider lifecycle or runtime claims. It qualifies only the behavior actually exercised at the recorded source, CLI and provider identities, not every version allowed by a constraint or future releases. Provider signing remediation remains separately tracked in [#111](https://github.com/mlznlv/proxmox-iac-toolkit/issues/111); a different CLI's warning behavior is not evidence that signing has been fixed.
 
 ## Proxmox VE target
 

@@ -32,4 +32,5 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 | [0013](0013-static-ipv6-primary-attachment.md) | Static IPv6 for the primary VM attachment | Accepted |
 | [0014](0014-additional-attachment-retirement-lifecycle.md) | Constrain additional VM attachment retirement on the pinned provider | Accepted |
 | [0015](0015-first-lxc-lifecycle-and-dns-contract.md) | Constrain the first LXC capability to evidenced lifecycle and explicit consumer DNS | Accepted |
+| [0016](0016-module-cli-minimum-and-evidence-policy.md) | Separate module CLI compatibility from contributor validation | Accepted |
 | [0018](0018-isolated-live-validation-path.md) | Collect live Proxmox evidence only through an isolated, operator-run path | Accepted |
