@@ -3,10 +3,10 @@
 ## Current state
 
 - **Current phase:** M6 — Broader Proxmox infrastructure
-- **Milestone state:** M1 through M5 are complete. VLAN is merged. The multiple-attachment lifecycle is accepted through [ADR 0014](decisions/0014-additional-attachment-retirement-lifecycle.md), which supersedes ADR 0011; LXC, DHCP and IPv6 Architecture remain accepted.
-- **Implementation state:** Multiple attachments [#98](https://github.com/mlznlv/proxmox-iac-toolkit/issues/98) and LXC [#99](https://github.com/mlznlv/proxmox-iac-toolkit/issues/99) are Ready and independent. DHCP [#100](https://github.com/mlznlv/proxmox-iac-toolkit/issues/100) follows #98, and IPv6 [#101](https://github.com/mlznlv/proxmox-iac-toolkit/issues/101) follows #100.
-- **Current blocker:** None for #98 or #99 implementation. DHCP and IPv6 await their implementation dependencies. Additional VM data disks remain independently blocked in [#80](https://github.com/mlznlv/proxmox-iac-toolkit/issues/80).
-- **Next action:** Complete the multiple-attachment and LXC Issues, including provider-lifecycle evidence and final Architecture review before implementation merge.
+- **Milestone state:** M1 through M5 are complete. M6 has merged VLAN [#85](https://github.com/mlznlv/proxmox-iac-toolkit/issues/85), ordered additional attachments [#98](https://github.com/mlznlv/proxmox-iac-toolkit/issues/98), primary-attachment DHCP [#100](https://github.com/mlznlv/proxmox-iac-toolkit/issues/100) and static IPv6 [#101](https://github.com/mlznlv/proxmox-iac-toolkit/issues/101) under ADRs 0009 and 0012–0014, and LXC [#99](https://github.com/mlznlv/proxmox-iac-toolkit/issues/99) under [ADR 0015](decisions/0015-first-lxc-lifecycle-and-dns-contract.md). Retrospective Architecture audits in [#119](https://github.com/mlznlv/proxmox-iac-toolkit/issues/119) accept the DHCP and LXC merges. Correction [#112](https://github.com/mlznlv/proxmox-iac-toolkit/issues/112) repaired the VM module's weaker input rules and recorded the consumption-minimum evidence [ADR 0016](decisions/0016-module-cli-minimum-and-evidence-policy.md) requires. [ADR 0019](decisions/0019-explicit-vm-dns-search-domain.md) accepts an explicit consumer-owned VM DNS search domain that the VM module does not yet implement.
+- **Implementation state:** No Developer work is Ready. The ADR 0019 VM search-domain input has no implementation specification yet.
+- **Current blocker:** M6 is not complete. Until ADR 0019 is implemented, a VM's cloud-init search domain comes from its template or Proxmox node rather than from the consumer, so the network capabilities are not yet free of environment-specific defaults. Additional VM data disks remain independently blocked in [#80](https://github.com/mlznlv/proxmox-iac-toolkit/issues/80); while no disk capability is approved, they add no M6 exit criterion.
+- **Next action:** PO specifies the ADR 0019 implementation, including its exact-provider evidence gate and ADR 0016 consumption evidence, and reassesses M6 completion once it merges. M7 stays gated on M6 completion and on the first-party consumer evidence that [#104](https://github.com/mlznlv/proxmox-iac-toolkit/issues/104) requires.
 
 ## Milestone sequence
 
@@ -295,7 +295,7 @@ This is Architecture-owned and is not a Developer implementation ticket.
 
 ## Near-term Developer work
 
-Multiple attachments #98 and LXC #99 can proceed independently under accepted Architecture. DHCP #100 follows #98, and IPv6 #101 follows #100. Issue-level specifications and execution state live in GitHub.
+No Developer work is Ready. The next M6 Developer work implements the ADR 0019 VM DNS search-domain input once PO specifies it. Issue-level specifications and execution state live in GitHub.
 
 ## Deferred from current execution
 
