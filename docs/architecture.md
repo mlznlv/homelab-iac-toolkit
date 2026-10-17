@@ -2,7 +2,7 @@
 
 ## Scope
 
-This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, the first M6 Proxmox expansion, multiple VM network attachments, DHCP addressing for the primary VM attachment, static IPv6 for the primary VM attachment, and the first reusable LXC capability. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
+This document defines the cross-cutting architecture for reproducible development, validation, the first reusable toolkit slice, its initial separate-repository consumer contract, the first pre-release, the first M6 Proxmox expansion, multiple VM network attachments, DHCP addressing for the primary VM attachment, static IPv6 for the primary VM attachment, the first reusable LXC capability, and the qualification policy for additional guest distributions. Component design and consumer workflows beyond those contracts and live infrastructure testing remain deferred to the milestones that require them.
 
 ## Repository boundary
 
@@ -468,6 +468,37 @@ Credential-free module and mock-provider tests must prove the required inputs an
 Public validation does not prove container creation, template compatibility, in-container network configuration, SSH reachability, whether nesting is sufficient for a guest's init system, reboot, shutdown, forced stop, or destroy behavior.
 
 Cloning, privileged containers, post-create nesting toggles, root-filesystem shrinking, a no-search DNS mode, swap inputs, other container features, mount points, bind mounts, device passthrough, ID mapping, multiple network interfaces, VLAN tags, DHCP, IPv6, passwords, non-root bootstrap accounts, other distributions, a consumer override for start-on-boot, startup ordering, protection, HA, timeout and destroy-policy inputs, template acquisition, container-specific Ansible roles, and examples remain deferred.
+
+## Guest-distribution extension and qualification
+
+Additional guest distributions are assessed separately for VM templates, LXC, and each Ansible role, as accepted in [ADR 0017](decisions/0017-guest-distribution-extension-and-qualification.md). The policy selects no distribution and changes none of the component contracts above. [Compatibility](compatibility.md#guest-distribution-qualification) owns its claim levels, evidence classes, qualification record, and requalification triggers.
+
+### Extension boundaries
+
+- **VM templates.** A template that meets the [capability contract](compatibility.md#guest-capability-contract) is a consumer-owned suitability judgement and gains no toolkit claim. Naming a distribution release as a target is a compatibility claim. A change to the module, such as a distribution-specific input, a cloud-init format or datasource choice, custom cloud-init data, or another bootstrap mechanism, is a new capability with its own decision and exact-provider evidence. A clone copies its template's configuration, and the module sets neither the cloud-init format nor the package-upgrade setting, so the template, or Proxmox's default where it sets none, decides which format Proxmox generates and whether cloud-init upgrades packages on each new instance. The template's cloud-init default-user configuration decides the bootstrap account's groups and sudo rules. A qualification records all three.
+- **LXC.** The [first LXC capability](#first-reusable-lxc-capability) fixes the Debian operating-system type and has no distribution extension point. Proxmox selects a container's setup plugin by detecting the distribution in its root filesystem, warns rather than fails when that differs from the declared type, and re-runs network, hostname, and DNS setup at every start. Neither a different template nor a type input therefore adds a distribution; that needs a target-specific decision covering the type, its setup plugin, template contract, authorization, lifecycle, and placement.
+- **Ansible.** Support is per role and per release, against the role's declared contract. The generic package and service modules the `qemu_guest_agent` role calls do not widen its APT and systemd contract.
+
+Support is never transitive. A VM or LXC qualification qualifies no role, a role qualification qualifies neither guest type, the two guest types do not qualify each other for the same distribution, and composing qualified components does not qualify the composition. Evidence for the same exact identity may serve more than one track as an input, but each track states its own claim, and an existing component is reused for a new target only within its unchanged contract.
+
+### New and existing guests
+
+A qualification covers VMs and containers created from the qualified identity, and role runs against a guest at the qualified release. It does not cover how an existing guest reached that release.
+
+- A distribution change is never an in-place transition. On the pinned provider, changing a VM's template replaces the VM and destroys its disks, changing a container's template destroys it and its root filesystem, and changing a container's declared type does not convert it. The consumer-owned path is a new guest, consumer-owned data migration, and a reviewed retirement of the old guest.
+- A release upgrade inside a guest is a consumer-owned guest operation. A release qualified for new guests does not qualify the upgrade path to it unless a decision says so. Container setup acts on the upgraded root filesystem at every start, so that path is evaluated against the pinned Proxmox plugin.
+- Supported updates keep their documented consequences, and a qualification records the target-specific ones, such as what a new cloud-init instance re-applies or what container setup rewrites at start.
+- Bootstrap stays the minimum creation-time step. A target whose bootstrap would write configuration an Ansible capability owns, or keep managing the guest after creation, needs an ownership decision. No qualification adopts a privileged container, a container feature other than nesting, a `root@pam`-only operation, or interactive privilege escalation.
+
+The toolkit offers no in-place conversion, state rewriting, import, or automatic data migration. Migration notes for a narrowed or withdrawn target describe the consumer-owned replacement path and its destructive consequences.
+
+### Expansion trigger and gates
+
+Expansion starts only from a demonstrated consumer requirement for a specific distribution and release with a repeatable workload that current targets cannot meet. It is recorded, sanitized, in an Architecture change Issue: the operations and problems observed, why current targets cannot meet them, which tracks apply, and the privilege and maintenance constraints. A planned runner, a desired catalog, or a distribution's popularity is not a trigger.
+
+The gates are separate: the recorded need, the applicable milestone prerequisites, an Accepted target-specific Architecture decision, and a focused PO specification. That decision updates this document where a contract changes, Compatibility, the component README, consumer documentation where the workflow changes, the changelog with concise migration actions, and repository design only when it places new content.
+
+The first LXC capability's fixed type, defaults, public interface, and ADR 0015 restrictions, the VM and role contracts, and the existing expected-compatible targets are unchanged. No operating-system selector, distribution layer, test, workflow, or live infrastructure is introduced.
 
 ## Constraints for future components
 

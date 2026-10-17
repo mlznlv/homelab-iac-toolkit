@@ -63,6 +63,8 @@ Component documentation and contract tests are co-located with their owning comp
 
 Additional module, role, collection, shared-library, or platform hierarchies remain deferred until approved content requires them.
 
+Guest-distribution expansion under [ADR 0017](decisions/0017-guest-distribution-extension-and-qualification.md) adds no operating-system selector, distribution layer, or per-distribution hierarchy. A target-specific decision states whether its content belongs in an existing component or a new one, and this document changes only when it does.
+
 ## Examples
 
 Examples are introduced only with supported behavior:
