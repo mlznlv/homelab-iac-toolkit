@@ -143,6 +143,36 @@ Task entry points: `task validate:ansible`, `task validate:tofu`, `task validate
 
 None of the above reads OpenTofu state, generates inventory, contacts Proxmox, or runs the role. It is contract evidence that the composition a consumer performs by hand is possible, not evidence that anyone has performed it. See [Compatibility](compatibility.md) for what this evidence does and does not demonstrate.
 
+## Module consumption compatibility evidence
+
+Normal full repository validation uses the contributor toolchain. Under
+[ADR 0016](decisions/0016-module-cli-minimum-and-evidence-policy.md), that is
+separate from evidence for a module's declared consumption minimum.
+
+Check the final unmodified module through a fictional consuming root at the
+exact declared minimum, not by assuming the module's repository test files
+parse on that CLI. The root supplies valid required inputs and leaves nullable
+optional values at their defaults. Initialize without backend access and with
+the recorded provider lock read only, then validate. Add focused accepted and
+rejected cases for the corrected behavior and its existing-mode interactions;
+where preconditions require planning, use isolated refresh-disabled provider
+plans with fictional values, not a live endpoint or real credentials.
+
+Record the exact source revision, CLI version and verified executable
+acquisition, provider build/lock, cases and commands actually run, failures and
+successes, and any source patching. Repeat against the final corrected,
+unmodified source before accepting its minimum-version claim. Scratch-patched
+diagnostics or a baseline on another CLI do not satisfy that gate.
+
+The current VM failure and sampled baseline results are recorded in
+[Compatibility](compatibility.md#opentofu-cli-compatibility-and-evidence).
+Consumption checks do not require the complete mock suite to run on the
+minimum. Conversely, a test feature's availability does not establish that the
+whole current suite works on every later test runner. Normal full validation
+remains required on the contributor pin, and separately specified older-version
+checks remain applicable. No permanent additional version matrix is introduced.
+These checks establish no live provider or guest behavior.
+
 ## Task entry points
 
 [`Taskfile.yml`](../Taskfile.yml) wraps the commands above and nothing else. It prints each command before running it, declares no `sources:` or `status:`, so nothing is cached or silently skipped, and owns no infrastructure state, secret material, or lifecycle operation.

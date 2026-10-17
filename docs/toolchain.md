@@ -9,6 +9,14 @@ same values rather than defining its own.
 Declared versions describe the supported development toolchain. They are not a
 compatibility or support statement for a project release.
 
+Module consumption is a separate contract: each module's executable
+`required_version` declares its CLI constraint. The contributor OpenTofu pin
+and test-runner features do not silently raise that constraint. See
+[module CLI compatibility and evidence](compatibility.md#opentofu-cli-compatibility-and-evidence)
+for the intended minimum, known failures and the checks required before
+claiming compatibility, under
+[ADR 0016](decisions/0016-module-cli-minimum-and-evidence-policy.md).
+
 ## Authoritative declarations
 
 Each dependency class has exactly one authoritative declaration.
@@ -62,8 +70,10 @@ each one yet.
 
 ## Determining a supported version
 
-Read the declaration files. No other file in the repository defines a supported
-version.
+For development and repository validation, read the declaration files above.
+For module consumption, read that module's executable requirements and the
+compatibility evidence linked above; a declared minimum alone is not proof
+that the current source passes it.
 
 ```sh
 # A runtime or standalone command-line tool.
