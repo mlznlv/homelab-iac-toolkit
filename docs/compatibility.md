@@ -122,7 +122,7 @@ The evidence classes are kept distinct:
 
 Consumer-run results can show a need but are not toolkit runtime evidence.
 
-Each claim is recorded with sanitized, public values only: the track and component; the distribution, exact release, and architecture; the public template or image identity, with its checksum where one is published, and never a private storage path or volume; the PVE major and the relevant Proxmox package, the provider build and source revision, and the `ansible-core`, cloud-init, init system, and Python versions that apply; the evidence class behind each claim; what was executed and what was only inspected; failures and counterexamples; and the toolkit commit evaluated.
+Each claim is recorded with sanitized, public values only: the track and component; the distribution and architecture; the exact release, or for a rolling distribution the dated image or snapshot evaluated; the public template or image identity, with its checksum where one is published, and never a private storage path or volume; the PVE major and the relevant Proxmox package, the provider build and source revision, and the OpenTofu, `ansible-core`, cloud-init, init system, and Python versions that apply; the evidence class behind each claim; what was executed and what was only inspected; failures and counterexamples; and the toolkit commit evaluated.
 
 A claim covers only the identities recorded, and a release-series name such as Debian Stable does not carry it to a release that was not evaluated. The affected tracks are requalified before a claim is kept when:
 
@@ -181,4 +181,4 @@ This evidence does not demonstrate:
 - a consumer's checkout-acquisition mechanism; or
 - compatibility with a live consumer environment.
 
-Static or mocked evidence must not be described as live infrastructure or guest compatibility evidence. A distribution becomes a validated reference platform only after public validation exercises it to the level claimed and this contract records that evidence.
+Static or mocked evidence must not be described as live infrastructure or guest compatibility evidence. A distribution becomes a runtime-validated reference platform only as [Guest-distribution qualification](#guest-distribution-qualification) defines.
