@@ -1,62 +1,42 @@
 # Proxmox IaC Toolkit
 
-A reusable, open-source infrastructure-as-code toolkit for Proxmox VE homelabs. It is intended to provide public building blocks that can be composed by a separate, private deployment repository.
+Reusable OpenTofu modules and Ansible roles for Proxmox VE homelabs, composed
+from a separate consumer repository. Public source contains reusable code and
+fictional examples; your repository holds deployment configuration.
 
-## Why
+The toolkit is at an early pre-release stage. Read the
+[compatibility evidence](docs/compatibility.md) before choosing a component.
 
-Homelab automation often combines reusable code with environment-specific configuration, making it difficult to share safely or reuse elsewhere.
+## Quick start
 
-This project separates the reusable toolkit from the concrete deployment. The goal is to make homelab infrastructure easier to reproduce, review, validate, and maintain without publishing private environment data.
+1. Choose a toolkit revision and record its full commit SHA in your repository.
+2. Establish one checkout and follow [Using the toolkit](docs/using.md).
+3. Adapt the [consumer example](examples/separate-consumer-repository/README.md),
+   review a plan, then apply explicitly and configure the guest.
 
-## Goals
+To work on the toolkit itself, follow [Contributing](CONTRIBUTING.md).
 
-- Provide reusable infrastructure and configuration building blocks.
-- Make homelab environments easier to reproduce and maintain.
-- Make infrastructure changes easier to understand and review.
-- Keep reusable public code separate from private deployments.
+## Components
 
-## Technology
-
-The project currently focuses on:
-
-- [OpenTofu](https://opentofu.org/)
-- [Proxmox VE](https://www.proxmox.com/en/proxmox-virtual-environment/overview)
-- [Ansible](https://www.ansible.com/)
-- [Task](https://taskfile.dev/)
-- [SOPS](https://github.com/getsops/sops)
-- [age](https://age-encryption.org/)
-- [GitHub Actions](https://github.com/features/actions)
-
-## Repository model
-
-This public repository contains reusable toolkit components, documentation, examples, and validation.
-
-A separate private deployment repository will contain concrete environment configuration. The public toolkit must remain usable without access to private deployment data.
-
-Everything in this repository must be safe to publish and must not contain real secrets or private deployment data.
-
-## Status
-
-The project is currently in its bootstrap, pre-release stage.
-
-## Documentation
-
-| Document | What it covers |
+| Component | Purpose |
 | --- | --- |
-| [Using the toolkit](docs/consuming-the-toolkit.md) | How another repository consumes both components, and what to check when something does not resolve |
-| [Contributing](CONTRIBUTING.md) | How to set up, validate a change, and get it reviewed |
-| [Security](SECURITY.md) | Security posture of this repository and how to report a problem |
-| [Development environment](docs/development-environment.md) | The canonical container, and what it deliberately omits |
-| [Supported tool versions](docs/toolchain.md) | The declared versions, and how to obtain and check them |
-| [Local validation](docs/validation.md) | Every check, its direct command, and its Task entry point |
-| [Roadmap](docs/roadmap.md) | The approved plan and current milestone |
-| [Architecture](docs/architecture.md) | Cross-cutting boundaries and lifecycle ownership |
-| [Repository design](docs/repository-design.md) | Where content belongs and what each area owns |
-| [Compatibility](docs/compatibility.md) | Current platform targets, evidence, and explicit non-claims |
-| [Changelog](CHANGELOG.md) | What changed for consumers, by version |
-| [Release policy](docs/release-policy.md) | Pre-release identity, maturity, publication gates, and correction rules |
-| [Architecture Decision Records](docs/decisions/README.md) | Durable decisions and their status |
+| [Linux VM](tofu/modules/proxmox-linux-vm/README.md) | Full clone of a cloud-init template; static/DHCP IPv4, optional static IPv6 and additional attachments |
+| [Linux container](tofu/modules/proxmox-linux-container/README.md) | Unprivileged Debian LXC, one static IPv4 interface |
+| [QEMU guest agent](ansible/roles/qemu_guest_agent/README.md) | Install and start the agent inside a suitable VM |
+| [Separate consumer repository](examples/separate-consumer-repository/README.md) | Compose the VM and role from one pinned checkout |
 
-## License
+## Guides
 
-Licensed under the [Apache License 2.0](LICENSE).
+| Guide | Purpose |
+| --- | --- |
+| [Using](docs/using.md) | Consumption, upgrades and troubleshooting |
+| [Contributing](CONTRIBUTING.md) | Setup, validation and documentation ownership |
+| [Security](SECURITY.md) | Publication safety and reporting |
+| [Architecture](docs/architecture.md) | Boundaries, dependencies and ownership |
+| [Compatibility](docs/compatibility.md) | Targets and evidence levels |
+| [Roadmap](docs/roadmap.md) | Near-term direction; execution tracking lives in issues |
+| [Decisions](docs/decisions/README.md) | Durable rationale and ADR convention |
+| [Release policy](docs/release-policy.md) | Release gates, immutability and corrections |
+| [Changelog](CHANGELOG.md) | Consumer-visible changes |
+
+Licensed under [Apache 2.0](LICENSE).

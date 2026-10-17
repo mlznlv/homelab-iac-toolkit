@@ -284,7 +284,7 @@ def check(description, ok, detail=None):
 def tracked(directory):
     """The files git tracks under a directory, in sorted order.
 
-    Tracked rather than walked, for the reason docs/validation.md gives for
+    Tracked rather than walked, for the reason CONTRIBUTING.md gives for
     every other file-based check here: a continuous-integration checkout holds
     exactly the tracked files, and a working tree holds more. That difference
     is not theoretical for this example. Following its own README - establish
