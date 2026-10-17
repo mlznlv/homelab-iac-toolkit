@@ -93,9 +93,13 @@ variable "ipv4_address_cidr" {
   type        = string
   default     = null
 
+  # Written out to Proxmox's own rule rather than delegated to cidrnetmask(),
+  # which also accepts an IPv4-mapped IPv6 address, octets with leading zeros,
+  # and prefix lengths below 8, none of which Proxmox does. The gateway and DNS
+  # server rules below are written out for the same reason.
   validation {
-    condition     = var.ipv4_address_cidr == null ? true : can(cidrnetmask(var.ipv4_address_cidr))
-    error_message = "The ipv4_address_cidr must be an IPv4 address with a prefix length, such as 192.0.2.10/24."
+    condition     = var.ipv4_address_cidr == null ? true : can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])/([89]|[12][0-9]|3[0-2])$", var.ipv4_address_cidr))
+    error_message = "The ipv4_address_cidr must be an IPv4 address in dotted decimal, without leading zeros, with a prefix length from 8 to 32, such as 192.0.2.10/24."
   }
 }
 
@@ -105,8 +109,8 @@ variable "ipv4_gateway" {
   default     = null
 
   validation {
-    condition     = var.ipv4_gateway == null ? true : can(cidrnetmask("${var.ipv4_gateway}/32"))
-    error_message = "The ipv4_gateway must be a bare IPv4 address, such as 192.0.2.1."
+    condition     = var.ipv4_gateway == null ? true : can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])$", var.ipv4_gateway))
+    error_message = "The ipv4_gateway must be a bare IPv4 address in dotted decimal, without leading zeros, such as 192.0.2.1."
   }
 }
 
@@ -124,9 +128,9 @@ variable "dns_servers" {
   validation {
     condition = alltrue([
       for server in var.dns_servers :
-      can(cidrnetmask("${server}/32")) || try(strcontains(cidrhost("${server}/128", 0), ":"), false)
+      can(regex("^((25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1[0-9]|[1-9])?[0-9])$", server)) || try(strcontains(cidrhost("${server}/128", 0), ":"), false)
     ])
-    error_message = "Every DNS server must be a bare IPv4 or IPv6 address, such as 192.0.2.53 or 2001:db8::53."
+    error_message = "Every DNS server must be a bare IPv4 address in dotted decimal, without leading zeros, or a bare IPv6 address, such as 192.0.2.53 or 2001:db8::53."
   }
 }
 
@@ -152,9 +156,9 @@ variable "ssh_public_keys" {
   validation {
     condition = alltrue([
       for key in var.ssh_public_keys :
-      can(regex("^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\\.com|sk-ecdsa-sha2-nistp256@openssh\\.com) [A-Za-z0-9+/]+={0,3}( |$)", trimspace(key)))
+      can(regex("^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\\.com|sk-ecdsa-sha2-nistp256@openssh\\.com) [A-Za-z0-9+/]+={0,2}( [^\\r\\n]*)?$", trimspace(key)))
     ])
-    error_message = "Every entry must be an OpenSSH public key line, such as \"ssh-ed25519 AAAA... comment\"."
+    error_message = "Every entry must be one OpenSSH public key on a single line, such as \"ssh-ed25519 AAAA... comment\"."
   }
 }
 
@@ -163,8 +167,10 @@ variable "vm_id" {
   type        = number
   default     = null
 
+  # A conditional rather than `||`, so that a null never reaches floor():
+  # OpenTofu evaluates both sides of `||` before 1.10.
   validation {
-    condition     = var.vm_id == null || (var.vm_id == floor(var.vm_id) && var.vm_id >= 100 && var.vm_id <= 999999999)
+    condition     = var.vm_id == null ? true : (var.vm_id == floor(var.vm_id) && var.vm_id >= 100 && var.vm_id <= 999999999)
     error_message = "The vm_id must be null or a whole number in the Proxmox range 100 to 999999999."
   }
 }
@@ -225,8 +231,10 @@ variable "network_vlan_id" {
   type        = number
   default     = null
 
+  # A conditional rather than `||`, so that a null never reaches floor():
+  # OpenTofu evaluates both sides of `||` before 1.10.
   validation {
-    condition     = var.network_vlan_id == null || (var.network_vlan_id == floor(var.network_vlan_id) && var.network_vlan_id >= 1 && var.network_vlan_id <= 4094)
+    condition     = var.network_vlan_id == null ? true : (var.network_vlan_id == floor(var.network_vlan_id) && var.network_vlan_id >= 1 && var.network_vlan_id <= 4094)
     error_message = "The network_vlan_id must be null for an untagged device, or a whole number in the VLAN range 1 to 4094."
   }
 }

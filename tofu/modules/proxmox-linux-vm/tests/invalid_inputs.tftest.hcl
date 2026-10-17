@@ -47,11 +47,84 @@ run "an_ipv6_address_in_the_ipv4_input_is_rejected" {
   expect_failures = [var.ipv4_address_cidr]
 }
 
+# cidrnetmask() accepts an IPv4-mapped IPv6 address, octets with leading
+# zeros, and prefix lengths below 8, and Proxmox accepts none of them, so the
+# IPv4 rules do not rest on it.
+run "an_ipv4_mapped_ipv6_address_in_the_ipv4_input_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "::ffff:192.0.2.10/120"
+  }
+
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "an_address_with_a_leading_zero_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "192.0.2.010/24"
+  }
+
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "an_address_with_a_prefix_below_8_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "192.0.2.10/7"
+  }
+
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "an_address_with_an_octet_above_255_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "192.0.2.256/24"
+  }
+
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "an_address_with_a_prefix_above_32_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "192.0.2.10/33"
+  }
+
+  expect_failures = [var.ipv4_address_cidr]
+}
+
 run "a_gateway_carrying_a_prefix_length_is_rejected" {
   command = plan
 
   variables {
     ipv4_gateway = "192.0.2.1/24"
+  }
+
+  expect_failures = [var.ipv4_gateway]
+}
+
+run "a_gateway_with_a_leading_zero_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_gateway = "192.0.2.01"
+  }
+
+  expect_failures = [var.ipv4_gateway]
+}
+
+run "a_gateway_with_an_octet_above_255_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_gateway = "192.0.2.256"
   }
 
   expect_failures = [var.ipv4_gateway]
@@ -87,6 +160,28 @@ run "a_dns_server_with_a_prefix_length_is_rejected" {
   expect_failures = [var.dns_servers]
 }
 
+# The locked provider refuses this too, but with its own message rather than
+# the module's.
+run "a_dns_server_with_a_leading_zero_is_rejected" {
+  command = plan
+
+  variables {
+    dns_servers = ["192.0.2.053"]
+  }
+
+  expect_failures = [var.dns_servers]
+}
+
+run "a_dns_server_with_an_octet_above_255_is_rejected" {
+  command = plan
+
+  variables {
+    dns_servers = ["192.0.2.256"]
+  }
+
+  expect_failures = [var.dns_servers]
+}
+
 run "an_empty_ssh_public_key_list_is_rejected" {
   command = plan
 
@@ -102,6 +197,28 @@ run "a_value_that_is_not_an_openssh_public_key_is_rejected" {
 
   variables {
     ssh_public_keys = ["fictional-nonsense"]
+  }
+
+  expect_failures = [var.ssh_public_keys]
+}
+
+# One entry is one key. The provider joins the entries with newlines, so an
+# entry holding a second line would be sent on as two.
+run "a_key_entry_spanning_two_lines_is_rejected" {
+  command = plan
+
+  variables {
+    ssh_public_keys = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid\nfictional-nonsense"]
+  }
+
+  expect_failures = [var.ssh_public_keys]
+}
+
+run "a_key_with_more_padding_than_base64_allows_is_rejected" {
+  command = plan
+
+  variables {
+    ssh_public_keys = ["ssh-ed25519 AAAA=== fictional@example.invalid"]
   }
 
   expect_failures = [var.ssh_public_keys]
@@ -235,8 +352,19 @@ run "a_vlan_identifier_above_the_vlan_range_is_rejected" {
 run "more_than_eight_attachments_in_total_are_rejected" {
   command = plan
 
+  # Written out rather than built with range(), because OpenTofu 1.9.4 does
+  # not allow a function call in a run's variables.
   variables {
-    additional_network_attachments = [for slot in range(1, 9) : { bridge = "vmbr${slot}" }]
+    additional_network_attachments = [
+      { bridge = "vmbr1" },
+      { bridge = "vmbr2" },
+      { bridge = "vmbr3" },
+      { bridge = "vmbr4" },
+      { bridge = "vmbr5" },
+      { bridge = "vmbr6" },
+      { bridge = "vmbr7" },
+      { bridge = "vmbr8" },
+    ]
   }
 
   expect_failures = [var.additional_network_attachments]
