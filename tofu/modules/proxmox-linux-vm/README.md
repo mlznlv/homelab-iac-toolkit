@@ -19,7 +19,8 @@ template need not contain the agent.
 The clone inherits template disks and configuration. The template or Proxmox's default chooses
 cloud-init format and per-instance package upgrade behavior; the template's default-user
 configuration chooses bootstrap groups/sudo rules. The module supplies no VM DNS search-domain
-input: template/node inheritance still applies. [Proposal #128](https://github.com/mlznlv/proxmox-iac-toolkit/pull/128) is not an available input.
+input: template/node inheritance still applies. [ADR 0019](../../../docs/decisions/0019-explicit-vm-dns-search-domain.md)
+is accepted for later implementation; the input is not available yet.
 
 You supply bridges, VLAN transport/switching/routing, suitable addresses and DNS; DHCP
 service/reservations/naming; IPv6 prefix allocation, uniqueness, routing, upstream service and

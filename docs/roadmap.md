@@ -13,9 +13,9 @@ Completed consumer changes belong in the [changelog](../CHANGELOG.md).
   and [ADR 0016](decisions/0016-module-cli-minimum-and-evidence-policy.md).
 - Resolve provider acquisition/signing evidence independently:
   [#111](https://github.com/mlznlv/proxmox-iac-toolkit/issues/111).
-- Reconcile explicit VM DNS ownership before a focused implementation:
+- Implement the accepted explicit VM DNS contract through a focused specification:
   [#121](https://github.com/mlznlv/proxmox-iac-toolkit/issues/121) and
-  [proposal #128](https://github.com/mlznlv/proxmox-iac-toolkit/pull/128).
+  [ADR 0019](decisions/0019-explicit-vm-dns-search-domain.md).
 - Expand Proxmox and Ansible capabilities only from demonstrated reusable
   consumer needs; [#80](https://github.com/mlznlv/proxmox-iac-toolkit/issues/80)
   and [#104](https://github.com/mlznlv/proxmox-iac-toolkit/issues/104) hold their gates.

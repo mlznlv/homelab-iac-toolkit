@@ -64,6 +64,12 @@ planning and update/read paths under the [acceptance
 procedure](../CONTRIBUTING.md#component-evidence-requirements). Unexpected replacement or
 recurring differences for a supported update block adoption pending Architecture review.
 
+The accepted [VM DNS decision](decisions/0019-explicit-vm-dns-search-domain.md) awaits
+implementation. Its [investigation](https://github.com/mlznlv/proxmox-iac-toolkit/issues/121#issuecomment-6233199488)
+inspected the locked provider and pinned qemu-server paths and executed extracted DNS/hostname
+helpers with a fictional resolver reader. It did not execute installed Proxmox/cloud-init or
+apply/refresh. Implementation still needs the decision's lifecycle and CLI-minimum evidence.
+
 ## Current evidence level
 
 | Class | Proves | Does not prove |

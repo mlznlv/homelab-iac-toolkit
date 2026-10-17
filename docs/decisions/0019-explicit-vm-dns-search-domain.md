@@ -1,9 +1,8 @@
 # ADR 0019: Explicit consumer-owned VM DNS search domain
 
-Status: Proposed. Reconciles [PR #128](https://github.com/mlznlv/proxmox-iac-toolkit/pull/128)
-under [#121](https://github.com/mlznlv/proxmox-iac-toolkit/issues/121). Renumbered from that
-PR's 0017 to avoid the accepted distribution-policy ADR. Acceptance and later implementation
-remain separate; this is not an existing input.
+Status: Accepted in [PR #128](https://github.com/mlznlv/proxmox-iac-toolkit/pull/128),
+under [#121](https://github.com/mlznlv/proxmox-iac-toolkit/issues/121).
+Implementation remains separate; this is not an existing module input.
 
 ## Decision
 
@@ -62,6 +61,13 @@ example/consumption model, provider/CLI/PVE change, LXC change, Ansible capabili
 live-testing requirement is introduced. The investigation executed extracted DNS/hostname
 helpers with a fictional resolver reader only: no installed Proxmox/cloud-init, apply/refresh,
 guest resolver/hostname, DNS, reboot, SSH or reachability proof.
+
+Implementation must preserve the retained CLI minimum with the consuming-root evidence of
+[ADR 0016](0016-module-cli-minimum-and-evidence-policy.md). The combined name/domain rule spans
+two inputs and must not rely on cross-variable validation available only in a newer CLI.
+
+Repeated apply, ignored differences and direct Proxmox cleanup are not supported convergence
+remedies for this DNS contract.
 
 ## References
 
