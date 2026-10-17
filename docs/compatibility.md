@@ -103,6 +103,39 @@ On those targets the guest-agent unit is device-activated: it is bound to the gu
 
 The consumer-supplied source template must support the cloud-init bootstrap inputs used by the OpenTofu module: static IPv4 addressing, gateway, DNS servers, username, and SSH public keys. The template need not contain `qemu-guest-agent`: the module attaches the channel at creation and waits for no agent, so the package arrives afterwards with the Ansible role. A consumer that declares additional attachments also needs a template whose cloud-init applies network configuration to each addressed interface identified by MAC address; the toolkit does not claim that a particular template does. A consumer that selects DHCP needs a template whose cloud-init renders a DHCPv4 subnet into a running DHCP client, and a DHCP service and naming it controls. A consumer that declares IPv6 needs a template whose cloud-init renders a static IPv6 subnet and gateway, and IPv6 service it controls.
 
+## Guest-distribution qualification
+
+[ADR 0017](decisions/0017-guest-distribution-extension-and-qualification.md) governs how a guest distribution release becomes a target, separately for the VM template contract, an LXC capability, and each Ansible role; [Architecture](architecture.md#guest-distribution-extension-and-qualification) sets out the tracks and gates. The targets named above keep their existing wording and evidence until their next requalification.
+
+A release has one of three claim levels:
+
+- **Not targeted**, the default. A release not named on this page may work where it meets a contract, and the toolkit claims nothing for it.
+- **Expected-compatible.** The applicable credential-free evidence below exists for the exact identity recorded. It is never described as validated.
+- **Runtime-validated reference platform.** Guest runtime evidence exists at the level claimed, collected through an accepted isolated live-validation path and recorded here. None exists, and normal public CI remains credential-free.
+
+The evidence classes are kept distinct:
+
+1. **Static and mocked:** what the toolkit declares, through module tests against a mocked provider and static role checks.
+2. **Exact-provider:** schema, source, and credential-free plans for the exact locked provider build, with the Proxmox source on the path it drives.
+3. **Pinned guest source:** distribution packaging, cloud-init, and Proxmox setup-plugin source at the versions the target ships or runs.
+4. **Guest runtime:** observed execution against Proxmox VE and a guest.
+
+Consumer-run results can show a need but are not toolkit runtime evidence.
+
+Each claim is recorded with sanitized, public values only: the track and component; the distribution and architecture; the exact release, or for a rolling distribution the dated image or snapshot evaluated; the public template or image identity, with its checksum where one is published, and never a private storage path or volume; the PVE major and the relevant Proxmox package, the provider build and source revision, and the OpenTofu, `ansible-core`, cloud-init, init system, and Python versions that apply; the evidence class behind each claim; what was executed and what was only inspected; failures and counterexamples; and the toolkit commit evaluated.
+
+A claim covers only the identities recorded, and a release-series name such as Debian Stable does not carry it to a release that was not evaluated. The affected tracks are requalified before a claim is kept when:
+
+- the release changes, including when a release-series name moves, or reaches end of life;
+- a template or image rebuild changes cloud-init, the init system, package or unit names, or SSH defaults;
+- the PVE major or the Proxmox package on the path changes;
+- the provider build changes, as the lifecycle evidence gates above already require;
+- an `ansible-core` change alters target Python support or module behaviour;
+- the component contract changes; or
+- a credible counterexample is reported.
+
+Requalification that keeps the claim and contract updates this page with its record. Narrowing or withdrawing a target also updates the changelog and migration notes, and existing guests are not converted.
+
 ## Consumer revision and example compatibility
 
 The initial coordinated consumer contract is revision-based: a consumer records one immutable full toolkit commit SHA in source control, establishes one checkout at that revision, and consumes both the OpenTofu module and Ansible role from it. This makes the selected source revision reproducible without choosing the consumer's acquisition mechanism or checkout location.
@@ -148,7 +181,7 @@ This evidence does not demonstrate:
 - a consumer's checkout-acquisition mechanism; or
 - compatibility with a live consumer environment.
 
-Static or mocked evidence must not be described as live infrastructure or guest compatibility evidence. A distribution or platform becomes a runtime-validated reference platform only after a [live run](#live-integration-evidence) exercises it to the level claimed and this contract records that evidence, and then only for the identities recorded.
+Static or mocked evidence must not be described as live infrastructure or guest compatibility evidence. A distribution or platform becomes a runtime-validated reference platform only after a [live run](#live-integration-evidence) exercises it to the level claimed and this contract records that evidence, and then only for the identities recorded; for a guest distribution, [Guest-distribution qualification](#guest-distribution-qualification) also applies.
 
 ## Live integration evidence
 
