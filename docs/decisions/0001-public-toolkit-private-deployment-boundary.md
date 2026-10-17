@@ -1,42 +1,31 @@
 # ADR 0001: Public toolkit and private deployment boundary
 
-## Status
-
-Accepted
-
-## Context
-
-The project must provide reusable public building blocks without publishing or depending on one concrete homelab. Environment-specific configuration, concrete provider access, state, and secrets are consumer concerns and cannot become hidden requirements of the public toolkit.
+Status: Accepted.
 
 ## Decision
 
-The public toolkit owns:
+- Keep reusable OpenTofu/Ansible source, interfaces, docs, tooling, validation,
+  sanitized examples and approved reusable schemas in the public toolkit.
+- Keep deployments, composition, inventory, provider/backend access, state,
+  identities, topology, sizing, secrets and workload policy consumer-owned.
+- Require the toolkit to work and validate without any private repository.
+- Require public-safe source and artifacts under [Security](../../SECURITY.md);
+  provider requirements/interfaces never transfer concrete access ownership.
 
-- reusable OpenTofu and Ansible content;
-- public interfaces, documentation, and validation;
-- repository developer tooling;
-- sanitized fixtures and examples;
-- reusable configuration schemas when approved.
+## Rationale
 
-Consumers own:
-
-- environment composition and inventories;
-- concrete provider configuration, credentials, and endpoints;
-- backend configuration and state custody;
-- real hostnames, addresses, domains, identifiers, topology, and sizing;
-- real secrets, recipients, and decryption identities;
-- deployment-specific policies and workload definitions.
-
-The toolkit may later define supported provider requirements, version constraints, and reusable provider-facing interfaces through approved Architecture. Those decisions do not transfer ownership of a consumer's concrete provider configuration, credentials, endpoints, or backend.
-
-The public toolkit repository and its public artifacts must not contain real deployment data, credentials, secrets, decryption identities, generated state, or sensitive plans. Handling policy inside a private consumer repository remains the consumer's responsibility.
-
-The toolkit must validate and remain understandable without access to a particular private repository. Public examples use fictional or standards-reserved values and explain how an unrelated consumer supplies equivalent configuration.
+Reusable infrastructure code cannot be shared safely if it embeds a particular
+homelab's configuration or requires unpublished inputs. A public/private split
+lets unrelated consumers reproduce and review the same components.
 
 ## Consequences
 
-- Public components require explicit, reusable interfaces.
-- Environment-specific defaults and hidden private-file dependencies are prohibited.
-- Consumers maintain their own deployment composition and provider access.
-- Sanitized examples may demonstrate interface shape but cannot serve as real deployments.
-- Private deployment details cannot be used as public tests or documentation fixtures.
+Interfaces must be explicit and examples fictional or standards-reserved.
+Hidden private-file dependencies and environment-specific defaults are prohibited.
+Consumers maintain deployment composition and provider access. Private deployment
+policy remains theirs; private data cannot serve as public test fixtures.
+
+## References
+
+- [Current boundaries](../architecture.md#repository-boundary)
+- [Publication rules](../../SECURITY.md#publication-boundary)
