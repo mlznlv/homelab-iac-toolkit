@@ -8,11 +8,6 @@ Completed consumer changes belong in the [changelog](../CHANGELOG.md).
 
 ## Next priorities
 
-- Correct VM input validation and verify the declared CLI minimum through a
-  consuming root: [#112](https://github.com/mlznlv/proxmox-iac-toolkit/issues/112)
-  and [ADR 0016](decisions/0016-module-cli-minimum-and-evidence-policy.md).
-- Resolve provider acquisition/signing evidence independently:
-  [#111](https://github.com/mlznlv/proxmox-iac-toolkit/issues/111).
 - Implement the accepted explicit VM DNS contract through a focused specification:
   [#121](https://github.com/mlznlv/proxmox-iac-toolkit/issues/121) and
   [ADR 0019](decisions/0019-explicit-vm-dns-search-domain.md).

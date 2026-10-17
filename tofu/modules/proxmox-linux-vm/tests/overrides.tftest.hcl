@@ -93,6 +93,79 @@ run "a_vm_identifier_can_be_supplied" {
   }
 }
 
+# The primary address, gateway, and DNS server rules are written out rather
+# than delegated, so their limits are pinned: an octet of 0 or 255 and both
+# ends of the prefix range are accepted. The values just past them are
+# rejected in invalid_inputs.tftest.hcl.
+run "the_primary_ipv4_inputs_may_use_an_octet_of_255_and_a_prefix_length_of_32" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "192.0.2.255/32"
+    ipv4_gateway      = "198.51.100.255"
+    dns_servers       = ["203.0.113.255"]
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.255/32" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == "198.51.100.255"
+    error_message = "An octet of 255 and a prefix length of 32 must be accepted and reach the primary IP configuration as given."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].dns[0].servers == tolist(["203.0.113.255"])
+    error_message = "A DNS server with an octet of 255 must be accepted and reach cloud-init as given."
+  }
+}
+
+run "the_primary_ipv4_inputs_may_use_an_octet_of_0_and_a_prefix_length_of_8" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "192.0.2.0/8"
+    ipv4_gateway      = "198.51.100.0"
+    dns_servers       = ["203.0.113.0"]
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].address == "192.0.2.0/8" && proxmox_virtual_environment_vm.this.initialization[0].ip_config[0].ipv4[0].gateway == "198.51.100.0"
+    error_message = "An octet of 0 and a prefix length of 8 must be accepted and reach the primary IP configuration as given."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.initialization[0].dns[0].servers == tolist(["203.0.113.0"])
+    error_message = "A DNS server with an octet of 0 must be accepted and reach cloud-init as given."
+  }
+}
+
+# The key rule allows one key per entry on one line, with or without a
+# comment, and ignores the surrounding whitespace a key read from a file
+# carries. Only acceptance is pinned here, so each entry is compared without
+# that whitespace. The ECDSA key is a second throwaway public key, chosen
+# because its encoding ends in the two padding characters base64 allows;
+# nothing holds its private half either.
+run "accepted_key_forms_reach_the_bootstrap_account" {
+  command = plan
+
+  variables {
+    ssh_public_keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91",
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 Fictional User on fictional-workstation",
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid\n",
+      "ecdsa-sha2-nistp384 AAAAE2VjZHNhLXNoYTItbmlzdHAzODQAAAAIbmlzdHAzODQAAABhBLiiaVaauBuzwEZC9gOScy6wYIsRnIW9wHcKxI4dFAvcYFQw+R/WHzhAKFsPlNZ9qpcXgn7Ix6bY5NtdmLFGSODgqQQ71iMl6tWjndxJpVb0lvXgtqKtYIKsEdXwcX3OzA== fictional@example.invalid",
+    ]
+  }
+
+  assert {
+    condition = [for key in proxmox_virtual_environment_vm.this.initialization[0].user_account[0].keys : trimspace(key)] == [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91",
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 Fictional User on fictional-workstation",
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKu7iWiqXXbTjQ5L37P+Vj0mDlDWxowFsZGNXHHLWv91 fictional@example.invalid",
+      "ecdsa-sha2-nistp384 AAAAE2VjZHNhLXNoYTItbmlzdHAzODQAAAAIbmlzdHAzODQAAABhBLiiaVaauBuzwEZC9gOScy6wYIsRnIW9wHcKxI4dFAvcYFQw+R/WHzhAKFsPlNZ9qpcXgn7Ix6bY5NtdmLFGSODgqQQ71iMl6tWjndxJpVb0lvXgtqKtYIKsEdXwcX3OzA== fictional@example.invalid",
+    ]
+    error_message = "A key without a comment, a comment containing spaces, a trailing newline, and two padding characters must all be accepted, and every entry must reach the bootstrap account in the declared order."
+  }
+}
+
 # These runs show the tag reaching the existing network device. They do not
 # show that Proxmox applies it, or that the provider changes it in place: that
 # is provider behaviour, which a mock cannot exercise.
@@ -328,12 +401,17 @@ run "an_addressless_attachment_before_an_addressed_one_keeps_its_slot_empty" {
 run "eight_attachments_in_total_are_accepted" {
   command = plan
 
+  # Written out rather than built with range(), because OpenTofu 1.9.4 does
+  # not allow a function call in a run's variables.
   variables {
     additional_network_attachments = [
-      for slot in range(1, 8) : {
-        bridge            = "vmbr${slot}"
-        ipv4_address_cidr = "198.51.100.${slot}/24"
-      }
+      { bridge = "vmbr1", ipv4_address_cidr = "198.51.100.1/24" },
+      { bridge = "vmbr2", ipv4_address_cidr = "198.51.100.2/24" },
+      { bridge = "vmbr3", ipv4_address_cidr = "198.51.100.3/24" },
+      { bridge = "vmbr4", ipv4_address_cidr = "198.51.100.4/24" },
+      { bridge = "vmbr5", ipv4_address_cidr = "198.51.100.5/24" },
+      { bridge = "vmbr6", ipv4_address_cidr = "198.51.100.6/24" },
+      { bridge = "vmbr7", ipv4_address_cidr = "198.51.100.7/24" },
     ]
   }
 

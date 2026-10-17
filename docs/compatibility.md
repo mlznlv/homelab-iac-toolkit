@@ -24,23 +24,32 @@ updates; a changed durable policy requires an ADR.
 ## OpenTofu CLI compatibility and evidence
 
 [ADR 0016](decisions/0016-module-cli-minimum-and-evidence-policy.md) retains 1.6.0 as the
-intended consumer minimum for both modules. **Current VM source breaches that target.** At
-unmodified source `3a8553a16bcfd5a4e78957988d96f0b5fc9ab543`, consuming-root initialization
-succeeded on the sampled CLIs; nullable-default validation produced:
+consumer minimum for both modules. The corrected VM source in [PR #123](https://github.com/mlznlv/proxmox-iac-toolkit/pull/123),
+module tree `13e5f2b8b576d4a501c5bb7048e873b53831ec68`, passed consuming-root checks on
+1.6.0 and 1.9.4 with unmodified source, fictional inputs and its committed provider lock read-only.
+
+| Corrected VM check | Recorded result on both CLIs |
+| --- | --- |
+| Initialization and validation with nullable defaults | Passed, including `vm_id` and `network_vlan_id` |
+| Address, gateway, DNS and SSH-key rules | Accepted valid boundaries; rejected #112 cases and adjacent octet/prefix failures with module messages |
+| Refresh-disabled plans against fictional unreachable endpoint | DHCP, static IPv6, mixed-family DNS, additional attachment and connection host passed; static/DHCP and duplicate-address preconditions rejected invalid cases |
+
+The [correction evidence](https://github.com/mlznlv/proxmox-iac-toolkit/pull/123#issuecomment-6236986003)
+records CLI/provider identities and each case. Earlier unmodified source
+`3a8553a16bcfd5a4e78957988d96f0b5fc9ab543` had these nullable-default init/validate results:
 
 | CLI | VM | LXC |
 | --- | --- | --- |
 | 1.6.0, 1.9.4 | Failed identifier/VLAN guards | Passed baseline |
 | 1.10.0, 1.12.6 | Passed baseline | Passed baseline |
 
-These are sampled init/validate results, not full-feature or interval-wide qualification.
-[Investigation](https://github.com/mlznlv/proxmox-iac-toolkit/issues/120#issuecomment-6233199326)
-and [correction #112](https://github.com/mlznlv/proxmox-iac-toolkit/issues/112) track evidence;
-the minimum requires fresh final-source checks under
-[Contributing](../CONTRIBUTING.md#module-consumption-compatibility-evidence). Contributor-pin
-mock tests do not establish the minimum. Provider signing remains separate in
-[#111](https://github.com/mlznlv/proxmox-iac-toolkit/issues/111); a CLI warning difference does
-not resolve signing.
+The [baseline investigation](https://github.com/mlznlv/proxmox-iac-toolkit/issues/120#issuecomment-6233199326)
+distinguishes unchanged-source checks from scratch-patched diagnostics. All results are sampled
+behavior at recorded identities, not full-feature or interval-wide qualification.
+[Contributing](../CONTRIBUTING.md#module-consumption-compatibility-evidence) owns the procedure;
+contributor-pin mocks do not establish the minimum or provider/guest runtime behavior. Provider
+signing evidence is recorded separately in [#111](https://github.com/mlznlv/proxmox-iac-toolkit/issues/111);
+a CLI warning difference does not resolve signing.
 
 ## Provider lifecycle evidence
 

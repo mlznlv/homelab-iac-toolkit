@@ -7,9 +7,9 @@ toolkit](../../../docs/using.md).
 
 ## Requirements
 
-Read [Compatibility](../../../docs/compatibility.md), especially the **known VM CLI-minimum
-failure**, before selecting a CLI. Executable requirements are in [`versions.tf`](versions.tf);
-your root lock selects the provider build.
+Read [Compatibility](../../../docs/compatibility.md#opentofu-cli-compatibility-and-evidence)
+for sampled CLI evidence. Executable requirements are in [`versions.tf`](versions.tf); your root
+lock selects the provider build.
 
 Supply a template on the target node whose cloud-init handles your selected addressing, DNS,
 username and SSH public keys. Additional addressed interfaces must be matched by MAC; DHCP needs
@@ -67,11 +67,11 @@ Required:
 | `cpu_cores` | `number` | CPU cores. |
 | `memory_mib` | `number` | Dedicated memory, in MiB. |
 | `network_bridge` | `string` | Bridge for the VM's primary network device, `net0`, such as `vmbr0`. |
-| `ipv4_address_cidr` | `string` | Static IPv4 address with a prefix length, such as `192.0.2.10/24`. Required in static mode, the default; must be null with [DHCP](#dhcp-addressing). |
-| `ipv4_gateway` | `string` | IPv4 default gateway, without a prefix length. Required in static mode; must be null with DHCP. |
+| `ipv4_address_cidr` | `string` | Static IPv4 address in dotted decimal with a prefix length from 8 to 32, such as `192.0.2.10/24`. Required in static mode, the default; must be null with [DHCP](#dhcp-addressing). |
+| `ipv4_gateway` | `string` | IPv4 default gateway in dotted decimal, without a prefix length. Required in static mode; must be null with DHCP. |
 | `dns_servers` | `list(string)` | IPv4 or IPv6 DNS servers, in order of preference. At least one. |
 | `username` | `string` | Bootstrap account cloud-init creates. |
-| `ssh_public_keys` | `list(string)` | OpenSSH **public** keys authorized for that account. At least one. |
+| `ssh_public_keys` | `list(string)` | OpenSSH **public** keys authorized for that account. At least one, each one key on one line; a trailing newline is allowed. |
 
 Optional:
 
@@ -92,7 +92,9 @@ Optional:
 Locally decidable invalid inputs fail before apply. Numeric ranges, DNS-label names, key syntax,
 address families/prefixes, modes, conditional requirements, and duplicate declared IP/MAC
 addresses are checked in [`variables.tf`](variables.tf) and [`main.tf`](main.tf). Runtime
-prerequisites remain the consumer's responsibility.
+prerequisites remain the consumer's responsibility. IPv4 addresses, gateways and DNS servers
+reject leading-zero octets; IPv4-mapped IPv6 is not accepted as IPv4. SSH-key base64 allows at
+most two padding characters.
 
 ## Outputs
 
