@@ -4,5 +4,5 @@ Status: Superseded by [ADR 0014](0014-additional-attachment-retirement-lifecycle
 
 Exact-provider evidence showed retired cloud-init IP configurations remain and do not converge.
 
-The successor retains the unchanged capability and records the corrected decision.
-The original wording remains in Git history; it is not the current contract.
+The successor retains the unchanged capability and records the corrected decision. The original
+wording remains in Git history; it is not the current contract.

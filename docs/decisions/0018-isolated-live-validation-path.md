@@ -1,94 +1,93 @@
 # ADR 0018: Isolated, operator-run live validation
 
 Status: Proposed. Reconciles [PR #127](https://github.com/mlznlv/proxmox-iac-toolkit/pull/127).
-Authority/acceptance remains with [#105](https://github.com/mlznlv/proxmox-iac-toolkit/issues/105),
-including stable-composition/reference-environment prerequisites and Architecture/PO resolution.
-This record authorizes no implementation or live run.
+Authority/acceptance remains with
+[#105](https://github.com/mlznlv/proxmox-iac-toolkit/issues/105), including
+stable-composition/reference-environment prerequisites and Architecture/PO resolution. This
+record authorizes no implementation or live run.
 
 ## Decision
 
-- Keep live validation opt-in and outside repository CI/Task: no repository live
-  credentials, environments/secrets, self-hosted runner, workflow or script default
-  reaching the reference environment; no repository event, schedule or unattended retry.
-  It supplements normal checks and never gates a PR/release or binds contributors.
-- Have a maintainer who owns the reference environment manually select one full
-  merged `main` SHA that passed CI, accepted scenarios and a budget. Run only in
-  a solely operator-controlled context holding only the run credential and access
-  needed by that run; never execute fork, PR-head or unmerged code with it.
-- Use a dedicated identity, privilege-separated per-run expiring API token, revoked
-  at end or suspected exposure, and per-run SSH keys kept in the context. Expiry
-  covers at most run budget plus cleanup. Never use `root@pam`, a personal/deployment
-  identity or an unseparated token. Use declared tools/read-only locks with integrity checks.
-- Confine writes to declared guest IDs, designated storage/bridge/VLANs and template
-  clone/read access. Grant nothing on `/`, other guests/pools, node configuration,
-  storage/user/token/permission administration. Name any further required read-only
-  privilege in the implementation record; remove grants when the run ends.
-- Use an isolated dedicated reference environment, nested or a confined shared part,
-  never a deployment. Templates are read-only/publicly identified; network routes
-  are limited to scenario needs. OpenTofu creates every guest from run-owned roots/state,
-  at initially free IDs with a random non-secret run label; one run holds the environment.
-- Predeclare guest/CPU/memory/disk maxima, wall-clock/per-step/cleanup limits within
-  operator limits; refuse oversized scenarios before creation. Always destroy from
-  run state and verify IDs free. Timeout starts bounded cleanup; failed cleanup or
-  lost context fails/quarantines the environment until manual recovery. No reapply,
-  sweeper, pattern/API cleanup or state rewrite; a retry is a fresh run after cleanup.
-- Publish only an allowlisted outcome record through reviewed PRs passing safety
-  and secret checks. Raw state/plans/inventory/logs/keys/credentials stay private.
-  Report every failed/inconclusive run at the same identities, not only successes;
-  claims cover exact recorded scenarios/identities and require new runs when changed.
+- Keep live validation opt-in and outside repository CI/Task: no repository live credentials,
+  environments/secrets, self-hosted runner, workflow or script default reaching the reference
+  environment; no repository event, schedule or unattended retry. It supplements normal checks
+  and never gates a PR/release or binds contributors.
+- Have a maintainer who owns the reference environment manually select one full merged `main`
+  SHA that passed CI, accepted scenarios and a budget. Run only in a solely operator-controlled
+  context holding only the run credential and access needed by that run; never execute fork,
+  PR-head or unmerged code with it.
+- Use a dedicated identity, privilege-separated per-run expiring API token, revoked at end or
+  suspected exposure, and per-run SSH keys kept in the context. Expiry covers at most run budget
+  plus cleanup. Never use `root@pam`, a personal/deployment identity or an unseparated token.
+  Use declared tools/read-only locks with integrity checks.
+- Confine writes to declared guest IDs, designated storage/bridge/VLANs and template clone/read
+  access. Grant nothing on `/`, other guests/pools, node configuration,
+  storage/user/token/permission administration. Name any further required read-only privilege in
+  the implementation record; remove grants when the run ends.
+- Use an isolated dedicated reference environment, nested or a confined shared part, never a
+  deployment. Templates are read-only/publicly identified; network routes are limited to
+  scenario needs. OpenTofu creates every guest from run-owned roots/state, at initially free IDs
+  with a random non-secret run label; one run holds the environment.
+- Predeclare guest/CPU/memory/disk maxima, wall-clock/per-step/cleanup limits within operator
+  limits; refuse oversized scenarios before creation. Always destroy from run state and verify
+  IDs free. Timeout starts bounded cleanup; failed cleanup or lost context fails/quarantines the
+  environment until manual recovery. No reapply, sweeper, pattern/API cleanup or state rewrite;
+  a retry is a fresh run after cleanup.
+- Publish only an allowlisted outcome record through reviewed PRs passing safety and secret
+  checks. Raw state/plans/inventory/logs/keys/credentials stay private. Report every
+  failed/inconclusive run at the same identities, not only successes; claims cover exact
+  recorded scenarios/identities and require new runs when changed.
 
 ## Rationale
 
-The threats are untrusted code reaching credentials, reviewed code misbehaving,
-destruction outside a run, output leakage, abandoned capacity and overclaiming.
-GitHub environment approval does not isolate self-hosted execution. Manual runs
-outside CI avoid repository credential/reachability paths; short-lived scoped
-credentials bound the damage even from reviewed code/dependencies.
+The threats are untrusted code reaching credentials, reviewed code misbehaving, destruction
+outside a run, output leakage, abandoned capacity and overclaiming. GitHub environment approval
+does not isolate self-hosted execution. Manual runs outside CI avoid repository
+credential/reachability paths; short-lived scoped credentials bound the damage even from
+reviewed code/dependencies.
 
-Pinned Proxmox source permits ACLs on unused IDs and intersects token/user grants.
-Clone needs template clone and target allocation permission; creation needs target
-allocation, storage allocation and bridge/VLAN use. Destroy removes an ID's ACL,
-so same-ID replacement is excluded. These are source findings, not authorization tests.
-Allowlisting fails closed where redacting raw logs could miss a new private value.
+Pinned Proxmox source permits ACLs on unused IDs and intersects token/user grants. Clone needs
+template clone and target allocation permission; creation needs target allocation, storage
+allocation and bridge/VLAN use. Destroy removes an ID's ACL, so same-ID replacement is excluded.
+These are source findings, not authorization tests. Allowlisting fails closed where redacting
+raw logs could miss a new private value.
 
 ## Consequences
 
-The initial catalog covers VM create/no-op re-plan/one supported update/default
-destroy, role convergence/second-run no-change/Proxmox agent reporting, and LXC
-create/no-op re-plan/one supported update/destroy. Scenarios need supported flows,
-a named Compatibility non-claim, run-owned resources and cleanup. Unsupported
-shrink/retirement/nesting toggles are never tested as supported; counterexample or
-same-ID replacement scenarios require a new decision. M8 scenarios need accepted compositions.
+The initial catalog covers VM create/no-op re-plan/one supported update/default destroy, role
+convergence/second-run no-change/Proxmox agent reporting, and LXC create/no-op re-plan/one
+supported update/destroy. Scenarios need supported flows, a named Compatibility non-claim,
+run-owned resources and cleanup. Unsupported shrink/retirement/nesting toggles are never tested
+as supported; counterexample or same-ID replacement scenarios require a new decision. M8
+scenarios need accepted compositions.
 
-On cleanup failure retain state/resource identifiers privately. Recovery first
-retries OpenTofu destroy from retained state; an operator checks each remaining
-resource against the run record before manual removal. Nothing adopts/imports or
-changes deployment state/roots/inventory/guests. Fixture changes get new identities;
-the toolkit restores neither environment nor templates. Costs are operator capacity
-and time, with no paid-service requirement.
+On cleanup failure retain state/resource identifiers privately. Recovery first retries OpenTofu
+destroy from retained state; an operator checks each remaining resource against the run record
+before manual removal. Nothing adopts/imports or changes deployment
+state/roots/inventory/guests. Fixture changes get new identities; the toolkit restores neither
+environment nor templates. Costs are operator capacity and time, with no paid-service
+requirement.
 
 The public record contains toolkit SHA; scenarios/step outcomes; date/durations;
-OpenTofu/provider/Ansible/controller-Python and PVE/relevant-package versions;
-nested status; public template identity/checksum; guest distribution/architecture/
-exact release/cloud-init/init/Python; and remaining non-claims. All other environment
-values, including names, IDs, addresses and MACs, are excluded rather than masked.
-Raw material is deleted after confirmed cleanup/record review unless retained
-privately under operator policy; private SSH keys never leave the context.
+OpenTofu/provider/Ansible/controller-Python and PVE/relevant-package versions; nested status;
+public template identity/checksum; guest distribution/architecture/ exact
+release/cloud-init/init/Python; and remaining non-claims. All other environment values,
+including names, IDs, addresses and MACs, are excluded rather than masked. Raw material is
+deleted after confirmed cleanup/record review unless retained privately under operator policy;
+private SSH keys never leave the context.
 
-A pass establishes neither other versions/templates/storage/networks/environments
-nor reliability, performance, availability, uninterrupted operation, scale or
-untested transitions. Live results complement existing evidence and follow merge.
-Implementation requires a focused PO spec, a public credential-free statically
-checkable harness usable by an unrelated operator with runtime values, and updated
-Architecture/Contributing/Security. Trigger, isolation, credentials, confinement,
-cleanup or publication-boundary changes need a new ADR; tooling/budget values within
-those boundaries do not. This proposal changes no current claim.
+A pass establishes neither other versions/templates/storage/networks/environments nor
+reliability, performance, availability, uninterrupted operation, scale or untested transitions.
+Live results complement existing evidence and follow merge. Implementation requires a focused PO
+spec, a public credential-free statically checkable harness usable by an unrelated operator with
+runtime values, and updated Architecture/Contributing/Security. Trigger, isolation, credentials,
+confinement, cleanup or publication-boundary changes need a new ADR; tooling/budget values
+within those boundaries do not. This proposal changes no current claim.
 
 ## References
 
 - [Public validation boundary](0004-local-validation-task-ci-security-boundary.md)
 - [Qualification](0017-guest-distribution-extension-and-qualification.md)
-
 - [GitHub: hardening for self-hosted runners](https://docs.github.com/en/actions/reference/security/secure-use#hardening-for-self-hosted-runners)
 - [GitHub: environment secrets and required reviewers](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments#environment-secrets)
 - [Proxmox VE API tokens, privilege separation, and expiry](https://github.com/proxmox/pve-docs/blob/b423460d22af888462b3d31dfff374abcfda95fa/pveum.adoc#L84-L116)

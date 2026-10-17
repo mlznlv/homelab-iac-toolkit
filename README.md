@@ -1,11 +1,11 @@
 # Proxmox IaC Toolkit
 
-Reusable OpenTofu modules and Ansible roles for Proxmox VE homelabs, composed
-from a separate consumer repository. Public source contains reusable code and
-fictional examples; your repository holds deployment configuration.
+Reusable OpenTofu modules and Ansible roles for Proxmox VE homelabs, composed from a separate
+consumer repository. Public source contains reusable code and fictional examples; your
+repository holds deployment configuration.
 
-The toolkit is at an early pre-release stage. Read the
-[compatibility evidence](docs/compatibility.md) before choosing a component.
+The toolkit is at an early pre-release stage. Read the [compatibility
+evidence](docs/compatibility.md) before choosing a component.
 
 ## Quick start
 

@@ -1,6 +1,7 @@
 # Architecture Decision Records
 
-Architecture Decision Records document durable, cross-cutting decisions that affect repository boundaries, lifecycle ownership, contributor behavior, or public interfaces.
+Architecture Decision Records document durable, cross-cutting decisions that affect repository
+boundaries, lifecycle ownership, contributor behavior, or public interfaces.
 
 ## Convention
 

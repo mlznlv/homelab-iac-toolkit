@@ -1,9 +1,10 @@
 # A separate consumer repository
 
-This copyable, fictional example composes the [VM module](../../tofu/modules/proxmox-linux-vm/README.md)
-and [guest-agent role](../../ansible/roles/qemu_guest_agent/README.md). It represents
-a separate repository and is not deployment-ready. Reusable components do not
-read it or depend on it. [Using](../../docs/using.md) owns the consumption contract.
+This copyable, fictional example composes the [VM
+module](../../tofu/modules/proxmox-linux-vm/README.md) and [guest-agent
+role](../../ansible/roles/qemu_guest_agent/README.md). It represents a separate repository and
+is not deployment-ready. Reusable components do not read it or depend on it.
+[Using](../../docs/using.md) owns the consumption contract.
 
 ## Layout
 
@@ -47,20 +48,20 @@ read it or depend on it. [Using](../../docs/using.md) owns the consumption contr
    ansible-playbook guest-agent.yml
    ```
 
-Run the play where `ansible.cfg` is discoverable (or select it explicitly).
-Its relative paths resolve against that file. Checkout path changes must reach
-both the module source and role path. Neither the example nor Task acquires the
-checkout, generates inventory, reads state or orchestrates deployment.
+Run the play where `ansible.cfg` is discoverable (or select it explicitly). Its relative paths
+resolve against that file. Checkout path changes must reach both the module source and role
+path. Neither the example nor Task acquires the checkout, generates inventory, reads state or
+orchestrates deployment.
 
 ## Limitations and checks
 
 No backend is declared; the [state warning](../../docs/using.md#credentials-state-and-secrets)
-applies before real use. These live invocation steps describe the accepted
-workflow, not an executed integration test. [Compatibility](../../docs/compatibility.md#current-evidence-level)
-owns evidence limits and [Release policy](../../docs/release-policy.md#maturity)
-owns pre-release guarantees.
+applies before real use. These live invocation steps describe the accepted workflow, not an
+executed integration test. [Compatibility](../../docs/compatibility.md#current-evidence-level)
+owns evidence limits and [Release policy](../../docs/release-policy.md#maturity) owns
+pre-release guarantees.
 
-The repository checks parsing, both paths resolving from a temporary shared
-checkout, unchanged inventory mapping, role resolution, the full-SHA declaration
-and absence of acquisition/state/secret/orchestration mechanisms. Run the checks
-through [Contributing](../../CONTRIBUTING.md#validate-your-change).
+The repository checks parsing, both paths resolving from a temporary shared checkout, unchanged
+inventory mapping, role resolution, the full-SHA declaration and absence of
+acquisition/state/secret/orchestration mechanisms. Run the checks through
+[Contributing](../../CONTRIBUTING.md#validate-your-change).
