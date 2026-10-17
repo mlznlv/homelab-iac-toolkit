@@ -179,3 +179,7 @@ Check the final unmodified module through a fictional consuming root at the exac
 Record the exact source revision, CLI version and verified executable acquisition, provider build/lock, cases and commands actually run, failures and successes, and any source patching. Repeat against the final corrected, unmodified source before accepting its minimum-version claim. Scratch-patched diagnostics or a baseline on another CLI do not satisfy that gate.
 
 The current VM failure and sampled baseline results are recorded in [Compatibility](compatibility.md#opentofu-cli-compatibility-and-evidence). Consumption checks do not require the complete mock suite to run on the minimum. Conversely, a test feature's availability does not establish that the whole current suite works on every later test runner. Normal full validation remains required on the contributor pin, and separately specified older-version checks remain applicable. No permanent additional version matrix is introduced. These checks establish no live provider or guest behavior.
+
+## Live validation
+
+Nothing on this page is live validation, and neither `task validate` nor CI runs any. The opt-in path through which the toolkit may collect live Proxmox and guest evidence is defined in [Architecture](architecture.md#isolated-live-validation) under [ADR 0018](decisions/0018-isolated-live-validation-path.md). It runs outside this repository's CI with an operator's own credentials, has no Task entry point, and is not implemented, so this page documents no command for it.
