@@ -32,3 +32,4 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 | [0013](0013-static-ipv6-primary-attachment.md) | Static IPv6 for the primary VM attachment | Accepted |
 | [0014](0014-additional-attachment-retirement-lifecycle.md) | Constrain additional VM attachment retirement on the pinned provider | Accepted |
 | [0015](0015-first-lxc-lifecycle-and-dns-contract.md) | Constrain the first LXC capability to evidenced lifecycle and explicit consumer DNS | Accepted |
+| [0017](0017-explicit-vm-dns-search-domain.md) | Require an explicit consumer-owned VM DNS search domain | Accepted |
