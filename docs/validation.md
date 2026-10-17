@@ -169,3 +169,7 @@ None of the above reads OpenTofu state, generates inventory, contacts Proxmox, o
 | 16 | `validate:links` | lychee |
 
 CI invokes these same entry points, so the check set, tool versions, configuration and pass-or-fail semantics are defined once. Every check here has a CI counterpart, and the five jobs together invoke exactly what `task validate` invokes.
+
+## Live validation
+
+Nothing on this page is live validation, and neither `task validate` nor CI runs any. The opt-in path through which the toolkit may collect live Proxmox and guest evidence is defined in [Architecture](architecture.md#isolated-live-validation) under [ADR 0018](decisions/0018-isolated-live-validation-path.md). It runs outside this repository's CI with an operator's own credentials, has no Task entry point, and is not implemented, so this page documents no command for it.
