@@ -12,13 +12,13 @@ The clone path copies a template's configured search domain. With no explicit VM
 
 The provider sends a nonempty domain during clone initialization and update, and reads it back. An empty domain is instead omitted; the VM update path does not delete an existing `searchdomain`. Its read-back can consequently restore a value the configuration attempted to remove. This differs from the LXC deletion path and does not establish a supported clearing transition.
 
-An explicit domain also affects generated user data: Proxmox appends it to a single-label VM name to form the FQDN, while an already qualified name keeps its own FQDN. Initialization changes request cloud-init rebuild and reboot on the pinned provider, and changed generated user/network data changes the NoCloud instance identifier.
+An explicit domain also affects generated user data: Proxmox appends it to the module's single-label VM name to form the FQDN. The upstream helper's qualified-name branch does not expand this module's existing name interface. Initialization changes request cloud-init rebuild and reboot on the pinned provider, and changed generated user/network data changes the NoCloud instance identifier.
 
 These are VM-specific source findings, not an extension of [ADR 0015](0015-first-lxc-lifecycle-and-dns-contract.md). The investigation executed only extracted DNS/hostname helper functions with a fictional resolver reader; it did not run full Proxmox/cloud-init or a guest. No live lifecycle, DNS or connectivity evidence is claimed.
 
 ## Decision
 
-Require one explicit, nonempty, consumer-supplied VM DNS search domain alongside the existing required DNS servers. There is no toolkit default, node/template-derived value, domain-list interface or no-search sentinel. The module passes the validated declaration through the existing provider DNS initialization field.
+Require one explicit, nonempty, consumer-supplied VM DNS search domain alongside the existing required DNS servers. There is no toolkit default, node/template-derived value, domain-list interface or no-search sentinel. The module passes the validated declaration through the existing provider DNS initialization field. Locally decidable invalid domain/name combinations fail before apply; validating the domain alone must not permit an overlong generated FQDN or widen the existing single-label VM-name contract.
 
 This refines the previously incomplete VM DNS ownership boundary without changing the resource family or the other decisions in [ADR 0006](0006-guest-agent-channel-at-creation.md), [ADR 0012](0012-dhcp-primary-attachment-addressing.md), [ADR 0013](0013-static-ipv6-primary-attachment.md) or [ADR 0014](0014-additional-attachment-retirement-lifecycle.md). It preserves [public/private boundaries](0001-public-toolkit-private-deployment-boundary.md), [lifecycle ownership](0002-lifecycle-orchestration-ownership.md) and [credential-free validation](0004-local-validation-task-ci-security-boundary.md).
 

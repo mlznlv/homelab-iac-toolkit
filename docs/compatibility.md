@@ -48,7 +48,7 @@ Its lifecycle contract is that switching between static and DHCP preserves the V
 
 ### VM DNS search domain
 
-[ADR 0017](decisions/0017-explicit-vm-dns-search-domain.md) adopts a required explicit consumer-owned single DNS search domain for the VM. This is an approved breaking input addition awaiting implementation, not an existing VM input or a new PVE/provider target. DNS servers remain required, and primary IPv4 static/DHCP, optional static IPv6, additional attachments and declared `connection` metadata retain their contracts.
+[ADR 0017](decisions/0017-explicit-vm-dns-search-domain.md) adopts a required explicit consumer-owned single DNS search domain for the VM. This is an approved breaking input addition awaiting implementation, not an existing VM input or a new PVE/provider target. The VM name remains one DNS label; the combined generated `name.domain` must pass the locally decidable length limit, not just each input separately. DNS servers remain required, and primary IPv4 static/DHCP, optional static IPv6, additional attachments and declared `connection` metadata retain their contracts.
 
 VM-specific source for locked v0.111.1 at `b22fe919fc34476b232191b69c8907f0c1aa5bea` and qemu-server at `14c0f871fa926e04eee090afae5d2d8670aa4a79` establishes independent template/node search-domain inheritance despite explicit nameservers, nonempty-domain request/read mapping and the absent empty-domain deletion path. The VM API accepts a string; neither that acceptance nor LXC's different schema establishes a safe VM no-search sentinel.
 
