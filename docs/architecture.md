@@ -48,7 +48,7 @@ Normal validation is deterministic, non-destructive, and credential-free. Contri
 
 Local and CI parity means the same check set, supported tool versions, configuration, and pass/fail semantics. It does not require identical operating environments.
 
-Live infrastructure testing, if introduced later, requires separate Architecture and must not become a dependency of normal public CI.
+Live infrastructure testing is defined separately, by the [isolated live-validation path](#isolated-live-validation), and must not become a dependency of normal public CI.
 
 Module consumption compatibility is separate from the contributor toolchain and test-runner prerequisites, as recorded in [ADR 0016](decisions/0016-module-cli-minimum-and-evidence-policy.md). A module's declared minimum requires evidence from its final unmodified source through a consuming root; passing the repository's mock suite on the contributor pin does not establish that minimum. Known failures remain visible until corrected and rechecked. [Compatibility](compatibility.md#opentofu-cli-compatibility-and-evidence) records the current target and evidence; [Local validation](validation.md#module-consumption-compatibility-evidence) defines the evidence procedure.
 
