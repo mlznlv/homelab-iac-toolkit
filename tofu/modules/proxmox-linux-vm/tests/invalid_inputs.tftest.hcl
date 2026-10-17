@@ -80,6 +80,26 @@ run "an_address_with_a_prefix_below_8_is_rejected" {
   expect_failures = [var.ipv4_address_cidr]
 }
 
+run "an_address_with_an_octet_above_255_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "192.0.2.256/24"
+  }
+
+  expect_failures = [var.ipv4_address_cidr]
+}
+
+run "an_address_with_a_prefix_above_32_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_address_cidr = "192.0.2.10/33"
+  }
+
+  expect_failures = [var.ipv4_address_cidr]
+}
+
 run "a_gateway_carrying_a_prefix_length_is_rejected" {
   command = plan
 
@@ -95,6 +115,16 @@ run "a_gateway_with_a_leading_zero_is_rejected" {
 
   variables {
     ipv4_gateway = "192.0.2.01"
+  }
+
+  expect_failures = [var.ipv4_gateway]
+}
+
+run "a_gateway_with_an_octet_above_255_is_rejected" {
+  command = plan
+
+  variables {
+    ipv4_gateway = "192.0.2.256"
   }
 
   expect_failures = [var.ipv4_gateway]
@@ -137,6 +167,16 @@ run "a_dns_server_with_a_leading_zero_is_rejected" {
 
   variables {
     dns_servers = ["192.0.2.053"]
+  }
+
+  expect_failures = [var.dns_servers]
+}
+
+run "a_dns_server_with_an_octet_above_255_is_rejected" {
+  command = plan
+
+  variables {
+    dns_servers = ["192.0.2.256"]
   }
 
   expect_failures = [var.dns_servers]

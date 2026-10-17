@@ -9,6 +9,7 @@ This file records consumer-facing change. It does not restate platform targets o
 ### Changed
 
 - **The repository is now `proxmox-iac-toolkit`,** renamed from `homelab-iac-toolkit`. Commits and tags are unchanged, so the full SHA you record still names the same source, and no module, role, input, output or behaviour changed. The worked example's checkout convention is now `vendor/proxmox-iac-toolkit/`. Update any Git remote or module `source` that names the old repository, keeping the same commit, and either keep your checkout path or change every reference to it together. No state change is involved. [Using the toolkit](docs/consuming-the-toolkit.md#moving-from-homelab-iac-toolkit) has the commands.
+- **The `proxmox-linux-vm` module rejects more malformed inputs when you plan.** `ipv4_address_cidr`, `ipv4_gateway` and IPv4 `dns_servers` must be dotted decimal without leading zeros, `ipv4_address_cidr` needs a prefix length from 8 to 32, and an IPv4-mapped IPv6 address is no longer read as IPv4. Each `ssh_public_keys` entry must be one key on one line, with at most two base64 padding characters. A configuration that used one of these values planned before and now stops at plan with the module's message; correct the value as the message says. `vm_id` and `network_vlan_id` left at `null` no longer fail validation on older OpenTofu releases. [Compatibility](docs/compatibility.md#opentofu-cli-compatibility-and-evidence) records the versions checked.
 
 ## 0.1.0-alpha.1 - 2026-09-08
 
