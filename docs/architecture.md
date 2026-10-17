@@ -80,7 +80,7 @@ The module exposes a required, non-sensitive `connection` output of `host`, `use
 
 ### VM DNS search domain
 
-[ADR 0017](decisions/0017-explicit-vm-dns-search-domain.md) requires an explicit consumer-owned search domain as a breaking addition to the existing VM bootstrap interface. It is approved Architecture for a later focused implementation, not a claim that the input is already available.
+[ADR 0019](decisions/0019-explicit-vm-dns-search-domain.md) requires an explicit consumer-owned search domain as a breaking addition to the existing VM bootstrap interface. It is approved Architecture for a later focused implementation, not a claim that the input is already available.
 
 The input is `dns_search_domain`: a required, non-null string with no default, containing one ASCII DNS name. Labels are 1–63 letters/digits or inner hyphens, separated by dots; the complete value is at most 253 characters and has no trailing dot. A single-label domain is allowed. The existing VM `name` remains one DNS label of at most 63 characters; the generated `name.domain` must also fit 253 characters, so a known overlong combination is rejected before apply even when each input is valid alone. These presentation limits preserve the [DNS label and encoded-name bounds](https://www.rfc-editor.org/rfc/rfc1035.html#section-2.3.4) for this ASCII interface. Null, empty or whitespace-containing values, domain lists, malformed names and the bare `.` value are rejected before apply. The validated value maps unchanged to `initialization.dns.domain`; it is not derived from the VM name, template or node. No no-search mode or sentinel is exposed.
 

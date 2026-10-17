@@ -1,4 +1,4 @@
-# ADR 0017: Require an explicit consumer-owned VM DNS search domain
+# ADR 0019: Require an explicit consumer-owned VM DNS search domain
 
 ## Status
 
