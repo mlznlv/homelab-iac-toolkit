@@ -36,7 +36,7 @@ The exact input and validation contract belongs in [Architecture](../architectur
 - Consumers review the plan and bootstrap/disruption consequences before explicit apply. The toolkit does not rewrite configuration, mutate state, clear Proxmox fields directly, or migrate consumers automatically.
 - The primary IPv4 modes, static IPv6, additional-attachment lifecycle, required DNS servers and metadata-only `connection` contract stay unchanged. The domain is global DNS initialization, not per-attachment addressing.
 - An explicit no-search mode remains deferred: an accepted API string is not evidence of reliable no-search semantics across generated user/network data and guest renderers.
-- Architecture acceptance rests on pinned source evidence and explicit limits; Developer acceptance separately requires module tests, exact-provider implementation evidence and reconciled existing documentation/callers.
+- Architecture acceptance rests on pinned source evidence and explicit limits; Developer acceptance separately requires module tests, exact-provider implementation evidence, the consumption-minimum evidence of [ADR 0016](0016-module-cli-minimum-and-evidence-policy.md) and reconciled existing documentation/callers.
 - No provider/CLI upgrade, PVE target change, LXC change, new Ansible capability, live-testing requirement or orchestration is introduced.
 
 ## Alternatives considered
