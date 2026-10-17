@@ -57,6 +57,8 @@ DHCP addressing for the primary attachment belongs in the same root and resource
 
 Static IPv6 for the primary attachment also belongs in the same root and resource. It adds no IPv6 routing, router-advertisement, or address-management integration, example, or orchestration entry point; its inputs, a fictional usage example with documentation-reserved IPv6 addresses, the consumer-owned IPv6 prerequisites, and the addressing-change warning belong in that module's co-located README when implemented.
 
+The explicit VM DNS search-domain contract in [ADR 0019](decisions/0019-explicit-vm-dns-search-domain.md) also belongs in the existing VM root and resource. Its required input, fictional domain example, breaking adoption guidance and cloud-init/FQDN/reboot warnings belong in the module README and existing consumer guidance when implemented. That implementation must keep the existing consumer example and validation fixtures consistent with the new required input; it introduces no new example, module, Ansible role, DNS abstraction or orchestration, and leaves the separate LXC contract unchanged.
+
 Component documentation and contract tests are co-located with their owning component. A small test fixture may demonstrate required connection-descriptor composition, but it must not become a consumer example, read real state, or couple the Ansible role to OpenTofu.
 
 Additional module, role, collection, shared-library, or platform hierarchies remain deferred until approved content requires them.

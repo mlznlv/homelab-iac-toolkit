@@ -34,3 +34,4 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 | [0015](0015-first-lxc-lifecycle-and-dns-contract.md) | Constrain the first LXC capability to evidenced lifecycle and explicit consumer DNS | Accepted |
 | [0016](0016-module-cli-minimum-and-evidence-policy.md) | Separate module CLI compatibility from contributor validation | Accepted |
 | [0017](0017-guest-distribution-extension-and-qualification.md) | Qualify guest distributions separately for VM templates, LXC, and Ansible roles | Accepted |
+| [0019](0019-explicit-vm-dns-search-domain.md) | Require an explicit consumer-owned VM DNS search domain | Accepted |
