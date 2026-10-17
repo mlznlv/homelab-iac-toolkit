@@ -4,14 +4,19 @@ Architecture Decision Records document durable, cross-cutting decisions that aff
 
 ## Convention
 
-- Filenames use a four-digit identifier followed by a concise title.
-- Every ADR contains Status, Context, Decision, and Consequences.
-- Valid statuses are `Proposed`, `Accepted`, `Rejected`, and `Superseded`.
-- Proposed ADRs are not authoritative until accepted.
-- The decision text of an accepted ADR is immutable.
-- A later change is recorded in a new ADR that supersedes the earlier decision.
-- Non-semantic corrections may be reviewed without changing the decision.
-- ADRs do not duplicate roadmap sequencing or implementation specifications.
+- Use a unique four-digit identifier and concise title: `NNNN-title.md`.
+- Metadata records `Proposed`, `Accepted`, `Rejected`, or `Superseded`, plus
+  the authority and successor where applicable. A proposal is not authority.
+- Accepted decisions are **semantically immutable**. Editorial compression,
+  wording, structure, and reference repairs are allowed when they preserve
+  obligations, rationale, safety constraints, and consequences.
+- Change a decision through a new ADR that supersedes the affected decision;
+  identify retained contracts when supersession is partial.
+- Use metadata, **Decision** (3–7 bullets), **Rationale**, **Consequences**, and
+  **References**. Aim for 40–60 lines for active records and 5–15 for superseded
+  records; completeness matters more than the line target.
+- ADRs explain why. Link to current interfaces, evidence, procedures, and
+  execution tracking under [documentation ownership](../../CONTRIBUTING.md#documentation-ownership).
 
 ## Index
 

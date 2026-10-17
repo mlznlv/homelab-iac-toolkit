@@ -60,3 +60,29 @@ values.
 cases, not a substitute for looking at what a change publishes.
 [Security](SECURITY.md) describes the repository's security posture and how to
 report a problem.
+
+## Documentation ownership
+
+Each kind of information has one authoritative home. Other documents link to
+that home instead of repeating its rules, tables, or validation logs.
+
+| Information | Owner |
+| --- | --- |
+| Purpose, minimal quick start, navigation | `README.md` |
+| Contributor setup, check procedures, contribution workflow | `CONTRIBUTING.md` |
+| Publication safety and vulnerability reporting | `SECURITY.md` |
+| Consumer-visible changes and migration actions | `CHANGELOG.md` |
+| Cross-component consumer workflow | `docs/using.md` |
+| System boundaries, dependency direction, repository ownership | `docs/architecture.md` |
+| Supported targets and evidence level | `docs/compatibility.md` |
+| Near-term direction | `docs/roadmap.md` |
+| Current execution state, blockers, and run logs | GitHub Issues and Projects |
+| Release rules | `docs/release-policy.md` |
+| Reasons for durable decisions | `docs/decisions/` |
+| Current interface, lifecycle, examples, limitations | Component and example READMEs |
+| Commands, versions, dependency resolution | `Taskfile.yml`, executable declarations and lock files |
+| Agent-only procedures | `CLAUDE.md` and `.claude/skills/` |
+
+Keep public guides and component, role, and example READMEs reachable from the
+root README. Update the owning document when a contract changes; use links for
+context elsewhere. Accepted ADRs preserve decisions, not their original wording.
