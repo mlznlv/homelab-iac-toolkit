@@ -129,8 +129,8 @@ Required inputs have no defaults, so every value the module cannot reasonably gu
 
 ```text
 var.ipv4_address_cidr is "192.0.2.10"
-The ipv4_address_cidr must be an IPv4 address with a prefix length, such as
-192.0.2.10/24.
+The ipv4_address_cidr must be an IPv4 address in dotted decimal, without
+leading zeros, with a prefix length from 8 to 32, such as 192.0.2.10/24.
 ```
 
 The module validates its inputs and says what it expected. The message names the rule that rejected the value.

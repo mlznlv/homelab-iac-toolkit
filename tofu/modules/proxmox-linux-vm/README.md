@@ -65,11 +65,11 @@ Required:
 | `cpu_cores` | `number` | CPU cores. |
 | `memory_mib` | `number` | Dedicated memory, in MiB. |
 | `network_bridge` | `string` | Bridge for the VM's primary network device, `net0`, such as `vmbr0`. |
-| `ipv4_address_cidr` | `string` | Static IPv4 address with a prefix length, such as `192.0.2.10/24`. Required in static mode, the default; must be null with [DHCP](#dhcp-addressing). |
-| `ipv4_gateway` | `string` | IPv4 default gateway, without a prefix length. Required in static mode; must be null with DHCP. |
+| `ipv4_address_cidr` | `string` | Static IPv4 address in dotted decimal with a prefix length from 8 to 32, such as `192.0.2.10/24`. Required in static mode, the default; must be null with [DHCP](#dhcp-addressing). |
+| `ipv4_gateway` | `string` | IPv4 default gateway in dotted decimal, without a prefix length. Required in static mode; must be null with DHCP. |
 | `dns_servers` | `list(string)` | IPv4 or IPv6 DNS servers, in order of preference. At least one. |
 | `username` | `string` | Bootstrap account cloud-init creates. |
-| `ssh_public_keys` | `list(string)` | OpenSSH **public** keys authorized for that account. At least one. |
+| `ssh_public_keys` | `list(string)` | OpenSSH **public** keys authorized for that account. At least one, each a single key on one line; a trailing newline is allowed. |
 
 Optional:
 
@@ -87,7 +87,7 @@ Optional:
 | `ipv6_address_cidr` | `string` | `null` | Static IPv6 address with a prefix length from `8` to `128`, such as `2001:db8::10/64`, added to the primary attachment beside its IPv4 addressing. Null declares no IPv6. See [Static IPv6](#static-ipv6). |
 | `ipv6_gateway` | `string` | `null` | IPv6 default gateway, global or link-local, without a prefix length. Needs `ipv6_address_cidr`. |
 
-Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address in an IPv4 input or an IPv4 one in an IPv6 input, a gateway carrying a prefix, an IPv6 gateway without an IPv6 address, an IPv6 prefix length outside `8` to `128`, Proxmox's non-address IPv6 forms `auto`, `dhcp`, and `manual`, a DNS server that is not an IPv4 or IPv6 address, an empty key list, a value that is not an OpenSSH public key line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, a null in place of the attachment list, an additional address that is not dotted-decimal IPv4, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, an addressing mode other than `static` or `dhcp`, a static configuration missing its address or gateway, a DHCP configuration that declares either or supplies no connection host, a connection host that is not a hostname or a plainly written IP address, and so on.
+Values that can be judged without contacting Proxmox are checked when you plan, not when Proxmox rejects them: an address without a prefix length, an IPv6 address in an IPv4 input or an IPv4 one in an IPv6 input, an IPv4 address, gateway, or DNS server with an octet written with a leading zero, an IPv4 prefix length outside `8` to `32`, a gateway carrying a prefix, an IPv6 gateway without an IPv6 address, an IPv6 prefix length outside `8` to `128`, Proxmox's non-address IPv6 forms `auto`, `dhcp`, and `manual`, a DNS server that is not an IPv4 or IPv6 address, an empty key list, an entry that is not one OpenSSH public key on one line, an identifier outside Proxmox's range, a VLAN tag that is not a whole number from `1` to `4094`, more than eight network attachments, a null in place of the attachment list, an additional address that is not dotted-decimal IPv4, the same IPv4 address on two attachments, a MAC address that is malformed or multicast, the same MAC address declared on two attachments, an addressing mode other than `static` or `dhcp`, a static configuration missing its address or gateway, a DHCP configuration that declares either or supplies no connection host, a connection host that is not a hostname or a plainly written IP address, and so on.
 
 ## Outputs
 
